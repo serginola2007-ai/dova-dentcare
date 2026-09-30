@@ -1,0 +1,44 @@
+# DOVA en Render — versión GRATIS, solo para PROBAR.
+#   - La base de datos gratis se BORRA a los 30 días de creada.
+#   - El servidor se apaga tras 15 min sin uso (el primer ingreso tarda ~1 min).
+#   - Sin disco: fotos/estudios/adjuntos subidos se pierden en cada actualización.
+# Para uso real en la clínica usar render.yaml (planes pagos).
+# Uso: Render → New → Blueprint → Blueprint Path: render-gratis.yaml
+services:
+  - type: web
+    name: dova
+    runtime: node
+    plan: free
+    region: virginia
+    # En el plan gratis no existe preDeployCommand: la base se prepara en el build.
+    buildCommand: cd backend && npm ci && npm run migrate:up && npm run seed
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dova-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: DOVA_TZ
+        value: America/Asuncion
+
+databases:
+  - name: dova-db
+    plan: free
+    region: virginia
+    postgresMajorVersion: "16"
+    databaseName: dova
+    user: dova
