@@ -162,8 +162,14 @@ estructura de cualquiera de los 3 actuales), agregarlo a la lista
 ### Todo en Render (recomendado): un solo servicio, una sola dirección
 
 El servidor de DOVA sirve **la API y las pantallas** (los 3 diseños) desde
-la misma dirección, así que no hace falta Netlify ni configurar CORS. El
-archivo `render.yaml` de la raíz crea todo junto:
+la misma dirección, así que no hace falta Netlify ni configurar CORS.
+
+Hay dos blueprints:
+- `render.yaml` (el que Render toma por defecto): **gratis, para probar**. La
+  base se borra a los 30 días, el servidor se apaga tras 15 min sin uso y
+  los archivos subidos se pierden al actualizar.
+- `render-pago.yaml` (**uso real**; en Render → Blueprint Path poner
+  `render-pago.yaml`) crea:
 
 | Recurso | Plan | Para qué |
 |---|---|---|
@@ -179,10 +185,10 @@ permite disco para archivos.
 1. Subí la carpeta `DOVA` completa a un repositorio **privado** de GitHub.
 2. En [render.com](https://render.com) conectá tu GitHub y cargá una
    tarjeta (los planes son pagos).
-3. **New → Blueprint** → elegí el repositorio → **Apply**. No hay que
+3. **New → Blueprint** → elegí el repositorio (para uso real, en
+   *Blueprint Path* poné `render-pago.yaml`) → **Apply**. No hay que
    completar ninguna variable: las claves secretas se generan solas.
-4. Render instala, prepara la base (`migrate:up` + `seed` en el
-   `preDeployCommand`) y arranca. Tarda unos minutos la primera vez.
+4. Render instala, prepara la base (`migrate:up` + `seed`) y arranca. Tarda unos minutos la primera vez.
 5. Abrí la dirección que te da Render (ej. `https://dova.onrender.com`),
    entrá con **admin / admin** y elegí la contraseña nueva que DOVA pide.
 

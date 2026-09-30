@@ -94,13 +94,13 @@ const DovaOperativo = (() => {
   }
 
   /* Formulario de turno. turno = existente (reprogramar) o null (nuevo).
-     fijo = { pacienteId, pacienteNombre, fecha } para precargar. */
+     fijo = { pacienteId, pacienteNombre, fecha, hora, odontologoId } para precargar. */
   async function modalTurno({ turno = null, fijo = {}, alGuardar } = {}) {
     const { odos, trats, sillones } = await catalogosTurno();
     const v = turno ? {
       odontologoId: turno.odontologo_id, fecha: String(turno.fecha).slice(0, 10), horaInicio: hora5(turno.hora_inicio),
       duracionMinutos: turno.duracion_minutos, tratamientoId: turno.tratamiento_id, sillonId: turno.sillon_id, motivo: turno.motivo, observaciones: turno.observaciones,
-    } : { fecha: fijo.fecha || hoy(), duracionMinutos: 30, odontologoId: (DOVA.usuarioActual() || {}).odontologoId || (odos.length === 1 ? odos[0].id : '') };
+    } : { fecha: fijo.fecha || hoy(), horaInicio: fijo.hora || '', duracionMinutos: 30, odontologoId: fijo.odontologoId || (DOVA.usuarioActual() || {}).odontologoId || (odos.length === 1 ? odos[0].id : '') };
     const campos = [
       { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', req: true, opciones: odos.map((o) => [o.id, o.nombre]) },
       { k: 'fecha', label: 'Fecha', tipo: 'fecha', req: true },
@@ -143,42 +143,224 @@ const DovaOperativo = (() => {
   // =================================================================
   async function agenda(root, navegar) {
     root.innerHTML = `<h2 class="dova-view-title">Agenda</h2><div data-subs></div>`;
+    // En el celular arranca en "Día" (una semana entera no entra en la pantalla).
+    let vista = window.innerWidth < 700 ? 'dia' : 'semana';
+    try { vista = localStorage.getItem('dova-agenda-vista') || vista; } catch (_e) { /* sin almacenamiento */ }
     X.subPestanas(root.querySelector('[data-subs]'), [
-      { id: 'dia', texto: 'Turnos', visible: true, render: (c) => agendaDia(c, navegar, { fecha: hoy() }) },
+      { id: 'dia', texto: 'Turnos', visible: true, render: (c) => agendaVista(c, navegar, { fecha: hoy(), vista }) },
       { id: 'espera', texto: 'Lista de espera', visible: puede('lista_espera.manage'), render: (c) => listaEspera(c, navegar) },
     ]);
   }
 
-  async function agendaDia(c, navegar, estado) {
+  // ---- Calendario: vistas Día (columnas por odontólogo), Semana, Mes y Lista ----
+  const VISTAS = [['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes'], ['lista', 'Lista']];
+  const PALETA = ['#2E7D32', '#1565C0', '#AD1457', '#EF6C00', '#6A1B9A', '#00838F', '#5D4037', '#C62828'];
+  const colorOdo = (o) => (o && /^#[0-9a-f]{3,8}$/i.test(o.color_agenda || '') ? o.color_agenda : PALETA[((o && o.id) || 0) % PALETA.length]);
+  const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const diaSemana = (iso) => (new Date(`${iso}T12:00:00Z`).getUTCDay() + 6) % 7; // 0 = lunes
+  const lunesDe = (iso) => sumarDias(iso, -diaSemana(iso));
+  const primeroDeMes = (iso) => `${iso.slice(0, 8)}01`;
+  const sumarMesesIso = (iso, n) => { const d = new Date(`${primeroDeMes(iso)}T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };
+  const minutos = (h) => { const [a, b] = String(h).split(':'); return Number(a) * 60 + Number(b || 0); };
+  const fmtLargo = (iso, opc) => { const t = new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-PY', { ...opc, timeZone: 'UTC' }); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const OCULTOS = ['cancelado', 'reprogramado'];
+
+  function rangoVista(e) {
+    const f = e.fecha;
+    if (e.vista === 'dia') return [f, f];
+    if (e.vista === 'semana') { const l = lunesDe(f); return [l, sumarDias(l, 6)]; }
+    if (e.vista === 'mes') { const ini = lunesDe(primeroDeMes(f)); return [ini, sumarDias(ini, 41)]; }
+    return [f, e.dias ? sumarDias(f, e.dias - 1) : f];
+  }
+  function moverFecha(e, dir) {
+    if (e.vista === 'semana') return sumarDias(e.fecha, 7 * dir);
+    if (e.vista === 'mes') return sumarMesesIso(e.fecha, dir);
+    if (e.vista === 'lista') return sumarDias(e.fecha, (e.dias || 1) * dir);
+    return sumarDias(e.fecha, dir);
+  }
+  function tituloVista(e, desde, hasta) {
+    if (e.vista === 'dia') return fmtLargo(e.fecha, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (e.vista === 'semana') return `${fmtLargo(desde, { day: 'numeric', month: 'short' })} – ${fmtLargo(hasta, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    if (e.vista === 'mes') return fmtLargo(primeroDeMes(e.fecha), { month: 'long', year: 'numeric' });
+    return fmtLargo(e.fecha, { weekday: 'long', day: 'numeric', month: 'long' }) + (e.dias ? ' y 6 días más' : '');
+  }
+
+  function chipTurno(t, i, odo, { corto } = {}) {
+    const clase = `dova-cal-chip dova-cal-${t.estado}`;
+    const nombre = `${t.paciente_nombre || ''} ${t.paciente_apellido || ''}`.trim();
+    const titulo = `${hora5(t.hora_inicio)} · ${nombre} · ${t.tratamiento_nombre || t.motivo || ''} · ${t.odontologo_nombre} · ${etiqueta(t.estado)}`;
+    return `<button type="button" class="${clase}" data-turno="${i}" style="--c:${colorOdo(odo)}" title="${esc(titulo)}">
+      <strong>${hora5(t.hora_inicio)}</strong> ${esc(corto ? (t.paciente_nombre || '') : nombre)}${!corto && (t.tratamiento_nombre || t.motivo) ? `<span>${esc(t.tratamiento_nombre || t.motivo)}</span>` : ''}
+    </button>`;
+  }
+
+  async function agendaVista(c, navegar, estado) {
     const { odos } = await catalogosTurno();
-    const f = estado.fecha;
-    const q = new URLSearchParams({ desde: f, hasta: estado.dias ? sumarDias(f, estado.dias - 1) : f });
-    if (estado.odontologoId) q.set('odontologoId', estado.odontologoId);
-    const turnos = await DOVA.get(`/agenda?${q}`);
-    const activos = turnos.filter((t) => !['cancelado', 'reprogramado'].includes(t.estado));
-    const puedeEditar = puede('agenda.edit');
-    const diaTxt = new Date(`${f}T12:00:00Z`).toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-    const dia = diaTxt.charAt(0).toUpperCase() + diaTxt.slice(1);
+    const e = { vista: 'semana', ...estado };
+    try { localStorage.setItem('dova-agenda-vista', e.vista); } catch (_e) { /* sin almacenamiento */ }
+    const [desde, hasta] = rangoVista(e);
+    const q = new URLSearchParams({ desde, hasta });
+    if (e.odontologoId) q.set('odontologoId', e.odontologoId);
+    const todos = await DOVA.get(`/agenda?${q}`);
+    const turnos = todos.filter((t) => (e.estadoFiltro ? (e.estadoFiltro === 'todos' || t.estado === e.estadoFiltro) : !OCULTOS.includes(t.estado)));
+    const odoPorId = Object.fromEntries(odos.map((o) => [o.id, o]));
+    const activos = turnos.filter((t) => !OCULTOS.includes(t.estado)).length;
+    const puedeCrear = puede('agenda.create');
+    const recargar = (cambios = {}) => agendaVista(c, navegar, { ...e, ...cambios });
+
     c.innerHTML = `
       <div class="dova-toolbar dova-op-toolbar">
         <div class="dova-op-nav">
-          <button class="dova-btn-secundario" data-dia="-1" title="Día anterior">◀</button>
+          <button class="dova-btn-secundario" data-mover="-1" title="Anterior" aria-label="Anterior">◀</button>
           <button class="dova-btn-secundario" data-hoy>Hoy</button>
-          <button class="dova-btn-secundario" data-dia="1" title="Día siguiente">▶</button>
-          <input type="date" value="${f}" data-fecha aria-label="Fecha" />
-          <select data-rango aria-label="Rango"><option value="">Solo ese día</option><option value="7" ${estado.dias === 7 ? 'selected' : ''}>7 días</option></select>
-          <select data-odo aria-label="Odontólogo"><option value="">Todos los odontólogos</option>${odos.map((o) => `<option value="${o.id}" ${String(o.id) === String(estado.odontologoId || '') ? 'selected' : ''}>${esc(o.nombre)}</option>`).join('')}</select>
+          <button class="dova-btn-secundario" data-mover="1" title="Siguiente" aria-label="Siguiente">▶</button>
+          <input type="date" value="${e.fecha}" data-fecha aria-label="Ir a la fecha" />
+          <div class="dova-cal-vistas" role="group" aria-label="Vista">${VISTAS.map(([v, t]) => `<button type="button" class="${v === e.vista ? 'activo' : ''}" data-vista="${v}" aria-pressed="${v === e.vista}">${t}</button>`).join('')}</div>
+          ${e.vista === 'lista' ? `<select data-rango aria-label="Rango"><option value="">Solo ese día</option><option value="7" ${e.dias === 7 ? 'selected' : ''}>7 días</option></select>` : ''}
+          <select data-odo aria-label="Odontólogo"><option value="">Todos los odontólogos</option>${odos.map((o) => `<option value="${o.id}" ${String(o.id) === String(e.odontologoId || '') ? 'selected' : ''}>${esc(o.nombre)}</option>`).join('')}</select>
+          <select data-est aria-label="Estado"><option value="">Turnos activos</option>${['reservado', 'confirmado', 'atendido', 'no_asistio', 'cancelado', 'reprogramado'].map((x) => `<option value="${x}" ${e.estadoFiltro === x ? 'selected' : ''}>${esc(etiqueta(x))}</option>`).join('')}<option value="todos" ${e.estadoFiltro === 'todos' ? 'selected' : ''}>Todos (incluye cancelados)</option></select>
         </div>
-        ${puede('agenda.create') ? '<button class="dova-btn-primary" data-nuevo-turno>+ Nuevo turno</button>' : ''}
+        ${puedeCrear ? '<button class="dova-btn-primary" data-nuevo-turno>+ Nuevo turno</button>' : ''}
       </div>
-      <p class="dova-subtitulo">${esc(dia)}${estado.dias ? ` y 6 días más` : ''} · ${activos.length} turno${activos.length === 1 ? '' : 's'}</p>
+      <div class="dova-cal-cabecera"><h3 class="dova-section-title" style="margin:0">${esc(tituloVista(e, desde, hasta))}</h3>
+        <span class="dova-nota">${activos} turno${activos === 1 ? '' : 's'}${puedeCrear && e.vista !== 'mes' && e.vista !== 'lista' ? ' · tocá un espacio libre para dar un turno' : ''}</span></div>
+      <div class="dova-cal-leyenda">${odos.filter((o) => !e.odontologoId || String(o.id) === String(e.odontologoId)).map((o) => `<span><i style="background:${colorOdo(o)}"></i>${esc(o.nombre)}</span>`).join('')}</div>
+      <div data-cal></div>`;
+
+    const cal = c.querySelector('[data-cal]');
+    if (e.vista === 'lista') await listaTurnos(cal, navegar, e, turnos, () => recargar());
+    else if (e.vista === 'mes') cal.innerHTML = htmlMes(e, desde, turnos, odoPorId);
+    else cal.innerHTML = htmlGrilla(e, desde, turnos, odos, odoPorId);
+
+    c.querySelectorAll('[data-mover]').forEach((b) => b.addEventListener('click', () => recargar({ fecha: moverFecha(e, Number(b.dataset.mover)) })));
+    c.querySelector('[data-hoy]').addEventListener('click', () => recargar({ fecha: hoy() }));
+    c.querySelector('[data-fecha]').addEventListener('change', (ev) => ev.target.value && recargar({ fecha: ev.target.value }));
+    c.querySelectorAll('[data-vista]').forEach((b) => b.addEventListener('click', () => recargar({ vista: b.dataset.vista })));
+    const rango = c.querySelector('[data-rango]');
+    if (rango) rango.addEventListener('change', (ev) => recargar({ dias: ev.target.value ? Number(ev.target.value) : 0 }));
+    c.querySelector('[data-odo]').addEventListener('change', (ev) => recargar({ odontologoId: ev.target.value }));
+    c.querySelector('[data-est]').addEventListener('change', (ev) => recargar({ estadoFiltro: ev.target.value }));
+    const bn = c.querySelector('[data-nuevo-turno]');
+    if (bn) bn.addEventListener('click', () => modalTurno({ fijo: { fecha: e.vista === 'semana' || e.vista === 'mes' ? (desde <= hoy() && hoy() <= hasta ? hoy() : e.fecha) : e.fecha, odontologoId: e.odontologoId }, alGuardar: () => recargar() }));
+    // Calendario: tocar un turno abre su detalle; tocar un espacio libre da un turno ahí.
+    cal.querySelectorAll('[data-turno]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); detalleTurno(turnos[Number(b.dataset.turno)], navegar, () => recargar()); }));
+    if (puedeCrear) cal.querySelectorAll('[data-slot]').forEach((s) => s.addEventListener('click', (ev) => {
+      if (ev.target !== s) return;
+      const [fecha, hora, odontologoId] = s.dataset.slot.split('|');
+      modalTurno({ fijo: { fecha, hora, odontologoId: odontologoId || e.odontologoId }, alGuardar: () => recargar() });
+    }));
+    cal.querySelectorAll('[data-ir-dia]').forEach((b) => b.addEventListener('click', (ev) => { if (ev.target.closest('[data-turno]')) return; recargar({ vista: 'dia', fecha: b.dataset.irDia }); }));
+  }
+
+  // Grilla por horas. Semana: una columna por día. Día: una columna por odontólogo.
+  function htmlGrilla(e, desde, turnos, odos, odoPorId) {
+    let columnas;
+    if (e.vista === 'dia') {
+      // Una columna por odontólogo (o solo el filtrado).
+      const lista = e.odontologoId ? odos.filter((o) => String(o.id) === String(e.odontologoId)) : odos;
+      columnas = lista.map((o) => ({ fecha: e.fecha, odo: o, titulo: esc(o.nombre), color: colorOdo(o) }));
+      if (!columnas.length) columnas = [{ fecha: e.fecha, titulo: 'Turnos' }];
+    } else {
+      const dias = Array.from({ length: 7 }, (_, i) => sumarDias(desde, i));
+      const hayDomingo = turnos.some((t) => String(t.fecha).slice(0, 10) === dias[6]);
+      columnas = (hayDomingo ? dias : dias.slice(0, 6)).map((d) => ({ fecha: d, titulo: `<button type="button" class="dova-cal-dia-btn" data-ir-dia="${d}">${DIAS_CORTOS[diaSemana(d)]} <b>${Number(d.slice(8))}</b></button>` }));
+    }
+    const enCol = (col) => turnos.filter((t) => String(t.fecha).slice(0, 10) === col.fecha && (!col.odo || t.odontologo_id === col.odo.id));
+    // Rango horario: 8 a 19 h, ampliado si hay turnos antes o después.
+    let hIni = 8; let hFin = 19;
+    turnos.forEach((t) => { const m = minutos(t.hora_inicio); hIni = Math.min(hIni, Math.floor(m / 60)); hFin = Math.max(hFin, Math.ceil((m + (t.duracion_minutos || 30)) / 60)); });
+    hFin = Math.min(hFin, 24);
+    const horas = []; for (let h = hIni; h < hFin; h++) horas.push(h);
+    const h = hoy();
+    const minAhora = minutos(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()));
+    const cols = `56px repeat(${columnas.length}, minmax(${e.vista === 'dia' ? 180 : 120}px, 1fr))`;
+    let html = `<div class="dova-cal-scroll"><div class="dova-cal-grilla" style="grid-template-columns:${cols}">`;
+    html += '<div class="dova-cal-esquina"></div>';
+    columnas.forEach((col) => { html += `<div class="dova-cal-col-titulo ${col.fecha === h && e.vista !== 'dia' ? 'hoy' : ''}" ${col.color ? `style="border-top:3px solid ${col.color}"` : ''}>${col.titulo}</div>`; });
+    horas.forEach((hr) => {
+      const hh = `${String(hr).padStart(2, '0')}:00`;
+      html += `<div class="dova-cal-hora">${hh}</div>`;
+      columnas.forEach((col) => {
+        const enHora = enCol(col).filter((t) => Math.floor(minutos(t.hora_inicio) / 60) === hr).sort((a, b) => minutos(a.hora_inicio) - minutos(b.hora_inicio));
+        const esAhora = col.fecha === h && Math.floor(minAhora / 60) === hr;
+        html += `<div class="dova-cal-celda ${col.fecha === h ? 'hoy' : ''} ${esAhora ? 'ahora' : ''}" data-slot="${col.fecha}|${hh}|${col.odo ? col.odo.id : ''}">${enHora.map((t) => chipTurno(t, turnos.indexOf(t), odoPorId[t.odontologo_id])).join('')}</div>`;
+      });
+    });
+    return `${html}</div></div>`;
+  }
+
+  function htmlMes(e, desde, turnos, odoPorId) {
+    const mes = e.fecha.slice(0, 7); const h = hoy();
+    let html = `<div class="dova-cal-scroll"><div class="dova-cal-mes">${DIAS_CORTOS.map((d) => `<div class="dova-cal-mes-dia">${d}</div>`).join('')}`;
+    for (let i = 0; i < 42; i++) {
+      const d = sumarDias(desde, i);
+      if (i === 35 && d.slice(0, 7) !== mes) break; // sexta semana solo si hace falta
+      const delDia = turnos.filter((t) => String(t.fecha).slice(0, 10) === d).sort((a, b) => minutos(a.hora_inicio) - minutos(b.hora_inicio));
+      html += `<div class="dova-cal-mes-celda ${d.slice(0, 7) !== mes ? 'fuera' : ''} ${d === h ? 'hoy' : ''}" data-ir-dia="${d}" title="Ver el día">
+        <div class="dova-cal-mes-num">${Number(d.slice(8))}</div>
+        ${delDia.slice(0, 3).map((t) => chipTurno(t, turnos.indexOf(t), odoPorId[t.odontologo_id], { corto: true })).join('')}
+        ${delDia.length > 3 ? `<div class="dova-cal-mas">+${delDia.length - 3} más</div>` : ''}
+      </div>`;
+    }
+    return `${html}</div></div>`;
+  }
+
+  // Cambiar el estado de un turno (con confirmación si es cancelar / no asistió).
+  async function cambiarEstadoTurno(t, nuevo, alTerminar) {
+    if (['cancelado', 'no_asistio'].includes(nuevo)) {
+      const ok = await confirmar(nuevo === 'cancelado' ? '¿Cancelar el turno?' : '¿Marcar que no asistió?', `${esc(t.paciente_nombre)} ${esc(t.paciente_apellido || '')} — ${fmtFecha(t.fecha)} ${hora5(t.hora_inicio)}`, nuevo === 'cancelado' ? 'Cancelar turno' : 'No asistió');
+      if (!ok) return;
+    }
+    try { await DOVA.patch(`/agenda/${t.id}/estado`, { estado: nuevo }); toast('Turno actualizado', 'ok'); alTerminar(); } catch (ex) { toast(ex.message, 'error'); }
+  }
+
+  // Detalle de un turno tocado en el calendario, con todas sus acciones.
+  function detalleTurno(t, navegar, alTerminar) {
+    const editable = puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado);
+    X.modal(`${hora5(t.hora_inicio)} · ${t.paciente_nombre} ${t.paciente_apellido || ''}`, `
+      <div class="dova-cal-detalle">
+        <p>${badge(etiqueta(t.estado), ESTADO_NIVEL[t.estado] || 'info')} ${t.primera_vez ? badge('1ª vez', 'info') : ''}</p>
+        <p><strong>${fmtLargo(String(t.fecha).slice(0, 10), { weekday: 'long', day: 'numeric', month: 'long' })}</strong>, ${hora5(t.hora_inicio)} (${t.duracion_minutos} min)</p>
+        <p>${esc(t.odontologo_nombre)}${t.sillon_nombre ? ` · ${esc(t.sillon_nombre)}` : ''}</p>
+        <p>${esc(t.tratamiento_nombre || t.motivo || 'Sin tratamiento indicado')}</p>
+        ${t.paciente_telefono ? `<p class="dova-nota">Tel. ${esc(t.paciente_telefono)}</p>` : ''}
+        ${t.observaciones ? `<p class="dova-nota">${esc(t.observaciones)}</p>` : ''}
+        <div data-ctx-detalle></div>
+      </div>
+      <div class="dova-modal-actions dova-cal-acciones">
+        <button class="dova-btn-secundario" data-d="ficha">Ver ficha</button>
+        ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? '<button class="dova-btn-secundario" data-d="consulta">Consulta</button>' : ''}
+        ${editable ? `
+          ${t.estado === 'reservado' ? '<button class="dova-btn-secundario" data-d="confirmado">Confirmar</button>' : ''}
+          <button class="dova-btn-secundario" data-d="reprogramar">Reprogramar</button>
+          <button class="dova-btn-secundario" data-d="no_asistio">No asistió</button>
+          <button class="dova-btn-secundario dova-ext-peligro" data-d="cancelado">Cancelar turno</button>
+          <button class="dova-btn-primary" data-d="atendido">Atendido</button>` : '<button class="dova-btn-primary" data-cerrar-modal>Cerrar</button>'}
+      </div>`, { ancho: 'ancho' });
+    const box = document.querySelector('.dova-modal-box');
+    const ctx = box.querySelector('[data-ctx-detalle]');
+    DOVA.get(`/agenda/${t.id}/contexto-clinico`).then((r) => { ctx.innerHTML = Vistas.renderContextoClinicoTurno(r); }).catch(() => { ctx.innerHTML = ''; });
+    box.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => {
+      const a = b.dataset.d;
+      X.cerrarModal();
+      if (a === 'ficha') return navegar('paciente', t.paciente_id);
+      if (a === 'consulta') return navegar('consulta', t.paciente_id);
+      if (a === 'reprogramar') return modalTurno({ turno: t, alGuardar: alTerminar });
+      return cambiarEstadoTurno(t, a, alTerminar);
+    }));
+  }
+
+  // Vista "Lista": tabla con acciones directas y contexto clínico desplegable.
+  async function listaTurnos(c, navegar, e, turnos, recargar) {
+    const puedeEditar = puede('agenda.edit');
+    c.innerHTML = `
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla">
-        <thead><tr><th></th>${estado.dias ? '<th>Fecha</th>' : ''}<th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Tratamiento / motivo</th><th>Sillón</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th></th>${e.dias ? '<th>Fecha</th>' : ''}<th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Tratamiento / motivo</th><th>Sillón</th><th>Estado</th><th></th></tr></thead>
         <tbody>
         ${turnos.map((t, i) => `
           <tr class="${['cancelado', 'no_asistio', 'reprogramado'].includes(t.estado) ? 'dova-op-fila-apagada' : ''}">
             <td><button class="dova-btn-link" data-expandir="${i}" title="Contexto clínico">▸</button></td>
-            ${estado.dias ? `<td>${fmtFecha(t.fecha)}</td>` : ''}
+            ${e.dias ? `<td>${fmtFecha(t.fecha)}</td>` : ''}
             <td>${hora5(t.hora_inicio)} <span class="dova-nota">${t.duracion_minutos}′</span></td>
             <td><button class="dova-btn-link" data-ficha="${t.paciente_id}">${esc(t.paciente_nombre)} ${esc(t.paciente_apellido || '')}</button>${t.primera_vez ? ` ${badge('1ª vez', 'info')}` : ''}</td>
             <td>${esc(t.odontologo_nombre)}</td>
@@ -195,28 +377,12 @@ const DovaOperativo = (() => {
               ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? `<button class="dova-btn-link" data-consulta="${t.paciente_id}">Consulta</button>` : ''}
             </td>
           </tr>
-          <tr data-ctx="${i}" style="display:none"><td colspan="${estado.dias ? 9 : 8}"></td></tr>`).join('') || `<tr><td colspan="${estado.dias ? 9 : 8}">Sin turnos ${estado.dias ? 'en esos días' : 'ese día'}.</td></tr>`}
+          <tr data-ctx="${i}" style="display:none"><td colspan="${e.dias ? 9 : 8}"></td></tr>`).join('') || `<tr><td colspan="${e.dias ? 9 : 8}">Sin turnos ${e.dias ? 'en esos días' : 'ese día'}.</td></tr>`}
         </tbody></table></div>`;
-    const recargar = (cambios = {}) => agendaDia(c, navegar, { ...estado, ...cambios });
-    c.querySelectorAll('[data-dia]').forEach((b) => b.addEventListener('click', () => recargar({ fecha: sumarDias(f, Number(b.dataset.dia) * (estado.dias || 1)) })));
-    c.querySelector('[data-hoy]').addEventListener('click', () => recargar({ fecha: hoy() }));
-    c.querySelector('[data-fecha]').addEventListener('change', (e) => e.target.value && recargar({ fecha: e.target.value }));
-    c.querySelector('[data-rango]').addEventListener('change', (e) => recargar({ dias: e.target.value ? Number(e.target.value) : 0 }));
-    c.querySelector('[data-odo]').addEventListener('change', (e) => recargar({ odontologoId: e.target.value }));
-    const bn = c.querySelector('[data-nuevo-turno]');
-    if (bn) bn.addEventListener('click', () => modalTurno({ fijo: { fecha: f }, alGuardar: () => recargar() }));
     c.querySelectorAll('[data-ficha]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.ficha)));
     c.querySelectorAll('[data-consulta]').forEach((b) => b.addEventListener('click', () => navegar('consulta', b.dataset.consulta)));
-    c.querySelectorAll('[data-reprogramar]').forEach((b) => b.addEventListener('click', () => modalTurno({ turno: turnos[Number(b.dataset.reprogramar)], alGuardar: () => recargar() })));
-    c.querySelectorAll('[data-estado]').forEach((b) => b.addEventListener('click', async () => {
-      const t = turnos[Number(b.dataset.i)];
-      const nuevo = b.dataset.estado;
-      if (['cancelado', 'no_asistio'].includes(nuevo)) {
-        const ok = await confirmar(nuevo === 'cancelado' ? '¿Cancelar el turno?' : '¿Marcar que no asistió?', `${esc(t.paciente_nombre)} ${esc(t.paciente_apellido || '')} — ${fmtFecha(t.fecha)} ${hora5(t.hora_inicio)}`, nuevo === 'cancelado' ? 'Cancelar turno' : 'No asistió');
-        if (!ok) return;
-      }
-      try { await DOVA.patch(`/agenda/${t.id}/estado`, { estado: nuevo }); toast('Turno actualizado', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
-    }));
+    c.querySelectorAll('[data-reprogramar]').forEach((b) => b.addEventListener('click', () => modalTurno({ turno: turnos[Number(b.dataset.reprogramar)], alGuardar: recargar })));
+    c.querySelectorAll('[data-estado]').forEach((b) => b.addEventListener('click', () => cambiarEstadoTurno(turnos[Number(b.dataset.i)], b.dataset.estado, recargar)));
     c.querySelectorAll('[data-expandir]').forEach((b) => b.addEventListener('click', async () => {
       const i = b.dataset.expandir;
       const fila = c.querySelector(`[data-ctx="${i}"]`);
@@ -224,7 +390,7 @@ const DovaOperativo = (() => {
       fila.style.display = ''; b.textContent = '▾';
       const celda = fila.querySelector('td');
       celda.innerHTML = cargando;
-      try { celda.innerHTML = Vistas.renderContextoClinicoTurno(await DOVA.get(`/agenda/${turnos[i].id}/contexto-clinico`)); } catch (e) { celda.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; }
+      try { celda.innerHTML = Vistas.renderContextoClinicoTurno(await DOVA.get(`/agenda/${turnos[i].id}/contexto-clinico`)); } catch (ex) { celda.innerHTML = `<p class="dova-error-text">${esc(ex.message)}</p>`; }
     }));
   }
 
