@@ -1,0 +1,317 @@
+/* DOVA — variables y estilos base compartidos por los 3 diseños.
+   Paleta idéntica a la identidad visual ya validada por el cliente. */
+:root {
+  --cream: #F7F3EC;
+  --ink: #2B2420;
+  --ink-soft: #6B6055;
+  --terracotta: #C1673F;
+  --terracotta-dark: #A5522F;
+  --sage: #7A8B76;
+  --sage-dark: #5F7259;
+  --rust: #B8443A;
+  --border: #E4DACA;
+  --border-strong: #D8C9B2;
+  --white: #FFFFFF;
+  --on-dark: #F7F3EC;
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --shadow-menu: 0 8px 24px rgba(43,36,32,0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cream: #201C18;
+    --ink: #F2EBE1;
+    --ink-soft: #A79C8E;
+    --terracotta: #D98159;
+    --terracotta-dark: #E8A57C;
+    --sage: #8FA189;
+    --sage-dark: #A3B69C;
+    --rust: #E0776C;
+    --border: #3A342E;
+    --border-strong: #4A423A;
+    --white: #2A2521;
+    --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
+  }
+}
+:root[data-theme="dark"] {
+  --cream: #201C18; --ink: #F2EBE1; --ink-soft: #A79C8E; --terracotta: #D98159;
+  --terracotta-dark: #E8A57C; --sage: #8FA189; --sage-dark: #A3B69C; --rust: #E0776C;
+  --border: #3A342E; --border-strong: #4A423A; --white: #2A2521;
+  --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Inter', sans-serif; background: var(--cream); color: var(--ink); }
+h1, h2, h3 { font-family: 'Fraunces', serif; font-weight: 500; margin: 0 0 8px; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--white); color: var(--ink); width: 100%; margin-bottom: 12px; }
+label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+
+.dova-btn-primary, .dova-btn-secundario {
+  padding: 10px 18px; border-radius: var(--radius-s); border: none; font-size: 14px; font-weight: 600;
+}
+.dova-btn-primary { background: var(--terracotta); color: var(--white); }
+.dova-btn-primary:hover { background: var(--terracotta-dark); }
+.dova-btn-secundario { background: transparent; border: 1px solid var(--border-strong); color: var(--ink); }
+.dova-btn-link { background: none; border: none; color: var(--terracotta); text-decoration: underline; font-size: 13px; padding: 0; }
+
+.dova-login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 20px; }
+.dova-login-card { width: 100%; max-width: 380px; margin: 0 auto; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 32px; box-shadow: var(--shadow-menu); transition: max-width .15s; }
+.dova-login-card:has(.dova-login-disenos), .dova-login-card-ancha { max-width: 720px; }
+.dova-login-title { text-align: center; margin-bottom: 20px; }
+.dova-error-text { color: var(--rust); font-size: 13px; margin-top: 8px; }
+
+/* Selector de diseño integrado al login: mismas tarjetas que en
+   Configuración > Apariencia, pero funcionando como un grupo de radio
+   buttons (el <input type="radio"> real queda oculto, la tarjeta entera
+   es el control visual y clickeable). */
+.dova-login-disenos { border: none; padding: 0; margin: 18px 0 4px; }
+.dova-login-disenos legend { font-size: 13px; color: var(--ink-soft); padding: 0; margin-bottom: 8px; }
+.dova-disenos-grid-login { max-width: none; gap: 12px; }
+@media (max-width: 768px) { .dova-disenos-grid-login { grid-template-columns: 1fr; } }
+.dova-diseno-card-radio { cursor: pointer; padding: 12px; position: relative; }
+.dova-diseno-card-radio input[type="radio"] {
+  position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; margin: 0; accent-color: var(--terracotta);
+}
+.dova-diseno-card-radio h3 { font-size: 14px; }
+.dova-diseno-card-radio p { font-size: 12px; margin-bottom: 0; }
+.dova-diseno-card-radio .dova-preview { pointer-events: none; }
+
+.dova-view-title { margin-bottom: 4px; }
+.dova-subtitulo { color: var(--ink-soft); font-size: 13px; margin: 0 0 16px; }
+.dova-section-title { margin-top: 28px; font-size: 16px; }
+
+.dova-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 16px 0; }
+.dova-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 16px; }
+.dova-card-valor { font-size: 26px; font-weight: 700; font-family: 'Fraunces', serif; }
+.dova-card-label { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+.dova-card-alerta { border-color: var(--rust); }
+.dova-card-alerta .dova-card-valor { color: var(--rust); }
+.dova-card-ok .dova-card-valor { color: var(--sage-dark); }
+.dova-card-clicable { display: block; width: 100%; text-align: left; cursor: pointer; font: inherit; transition: box-shadow .15s, transform .15s; }
+.dova-card-clicable:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); transform: translateY(-1px); }
+.dova-card-clicable:focus-visible { outline: 2px solid var(--ink-soft); outline-offset: 2px; }
+
+.dova-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.dova-input-buscar { max-width: 280px; margin-bottom: 0; }
+
+.dova-tabla { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); overflow: hidden; }
+.dova-tabla th, .dova-tabla td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.dova-tabla th { background: var(--cream); color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+.dova-tabla tr:last-child td { border-bottom: none; }
+.dova-fila-alerta { background: rgba(184, 68, 58, 0.06); }
+
+.dova-nota { font-size: 13px; color: var(--ink-soft); }
+.dova-nota-alerta { color: var(--rust); }
+
+.dova-modal-overlay { position: fixed; inset: 0; background: rgba(43,36,32,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.dova-modal-box { background: var(--white); border-radius: var(--radius-m); padding: 24px; width: 90%; max-width: 420px; box-shadow: var(--shadow-menu); }
+.dova-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+.dova-cargando { padding: 40px; text-align: center; color: var(--ink-soft); }
+
+/* ---- Ficha clínica 360° ---- */
+.dova-ficha-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+
+.dova-alertas-clinicas { display: flex; flex-direction: column; gap: 6px; margin: 12px 0 20px; }
+.dova-alerta-clinica { background: rgba(184,68,58,0.08); border: 1px solid var(--rust); color: var(--rust); border-radius: var(--radius-s); padding: 8px 12px; font-size: 13px; }
+.dova-alerta-clinica strong { color: var(--rust); }
+
+.dova-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; }
+.dova-tab { background: none; border: none; padding: 10px 16px; font-size: 14px; color: var(--ink-soft); border-bottom: 2px solid transparent; }
+.dova-tab:hover { color: var(--ink); }
+.dova-tab.activo { color: var(--terracotta); border-bottom-color: var(--terracotta); font-weight: 600; }
+
+.dova-timeline { display: flex; flex-direction: column; gap: 0; margin-top: 12px; }
+.dova-timeline-item { display: flex; gap: 14px; padding: 12px 0; border-left: 2px solid var(--border); padding-left: 20px; margin-left: 10px; position: relative; }
+.dova-timeline-item:not(:last-child) { border-left: 2px solid var(--border); }
+.dova-timeline-icono { position: absolute; left: -13px; background: var(--cream); font-size: 16px; width: 24px; text-align: center; }
+.dova-timeline-fecha { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.3px; }
+.dova-timeline-titulo { font-weight: 600; margin-top: 2px; }
+.dova-timeline-subtitulo { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+.dova-odontograma-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; max-width: 720px; margin: 16px 0; }
+.dova-pieza { aspect-ratio: 1; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--white); font-size: 11px; color: var(--ink-soft); }
+.dova-pieza:hover { border-color: var(--terracotta); }
+.dova-pieza.pieza-caries, .dova-pieza.pieza-extraccion_indicada { background: rgba(184,68,58,0.15); border-color: var(--rust); color: var(--rust); }
+.dova-pieza.pieza-endodoncia, .dova-pieza.pieza-tratamiento_realizado { background: rgba(122,139,118,0.2); border-color: var(--sage-dark); color: var(--sage-dark); }
+.dova-pieza.pieza-restauracion, .dova-pieza.pieza-corona, .dova-pieza.pieza-sellante { background: rgba(193,103,63,0.12); border-color: var(--terracotta); color: var(--terracotta-dark); }
+.dova-pieza.pieza-ausente { background: var(--border); color: var(--ink-soft); text-decoration: line-through; }
+
+.dova-expediente-pieza, .dova-etapas-box { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 16px; margin-top: 12px; }
+.dova-lista-simple { margin: 8px 0; padding-left: 18px; font-size: 13px; }
+.dova-checklist { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.dova-checklist li { padding: 8px 10px; border-radius: var(--radius-s); background: var(--cream); font-size: 14px; }
+.dova-checklist li > span:first-child { display: inline-block; margin-right: 8px; }
+.dova-checklist li.completada > span:first-child { color: var(--sage-dark); text-decoration: line-through; opacity: 0.7; }
+
+/* ---- Fase 5: materiales consumidos por etapa/sesión (inventario ↔ procedimientos) ---- */
+.dova-materiales-box { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 13px; }
+.dova-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.dova-badge-ok { background: rgba(122,139,118,0.2); color: var(--sage-dark); }
+
+/* ---- Modo Consulta ---- */
+.dova-consulta-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.dova-consulta-acciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 16px 0 28px; }
+.dova-consulta-accion { background: var(--white); border: 1px solid var(--border-strong); border-radius: var(--radius-m); padding: 16px 10px; text-align: center; font-size: 13px; font-weight: 600; }
+.dova-consulta-accion:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* ---- Administración: permisos por módulo ---- */
+.dova-permiso-modulo { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 10px 14px; margin-bottom: 10px; }
+.dova-permiso-modulo-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; text-transform: capitalize; }
+.dova-permiso-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; margin-bottom: 0; cursor: pointer; }
+.dova-permiso-item input { width: auto; margin: 0; }
+
+/* ---- Contexto clínico en Agenda ---- */
+.dova-contexto-clinico { padding: 16px; background: var(--cream); border-radius: var(--radius-m); }
+.dova-contexto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 10px; }
+.dova-contexto-grid strong { font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--ink-soft); }
+.dova-contexto-grid p { margin: 4px 0 0; }
+
+/* ---- Búsqueda global ---- */
+.dova-buscador-global { position: relative; margin-top: 12px; }
+.dova-buscador-global input { margin-bottom: 0; font-size: 13px; }
+.dova-buscador-resultados { position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; background: var(--white); border: 1px solid var(--border-strong); border-radius: var(--radius-m); box-shadow: var(--shadow-menu); max-height: 420px; overflow-y: auto; z-index: 500; }
+.dova-buscador-categoria { border-bottom: 1px solid var(--border); }
+.dova-buscador-categoria:last-child { border-bottom: none; }
+.dova-buscador-categoria-titulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--ink-soft); padding: 10px 14px 4px; }
+.dova-buscador-item { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; background: none; border: none; padding: 8px 14px; font-size: 13px; color: var(--ink); }
+.dova-buscador-item:hover { background: var(--cream); }
+
+/* ---- Fase 6 — Responsive (desktop/tablet/mobile) ---- */
+
+/* Botón hamburguesa: invisible en desktop, cada skin lo muestra en su
+   propio breakpoint de mobile/tablet (ver skin.css de cada diseño). */
+.dova-menu-toggle {
+  display: none; background: none; border: none; font-size: 20px; line-height: 1;
+  color: inherit; padding: 4px 8px; margin-right: 4px; cursor: pointer;
+}
+
+/* Overlay para cerrar el menú tocando afuera en mobile. Se activa solo
+   cuando <body> tiene la clase dova-menu-abierto (ver dova-menu-toggle en
+   app.js) y el propio breakpoint de mobile lo muestra. */
+.dova-menu-overlay { display: none; }
+body.dova-menu-abierto .dova-menu-overlay {
+  display: block; position: fixed; inset: 0; background: rgba(43,36,32,0.4); z-index: 900;
+}
+
+@media (max-width: 1024px) {
+  .dova-main { padding: 24px !important; max-width: none !important; }
+  .dova-cards-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .dova-odontograma-grid { grid-template-columns: repeat(8, 1fr); max-width: none; }
+}
+
+@media (max-width: 768px) {
+  .dova-menu-toggle { display: inline-block; }
+  .dova-main { padding: 16px !important; }
+  .dova-view-title { font-size: 20px; }
+
+  /* Formularios y toolbars a una sola columna. */
+  .dova-toolbar { flex-direction: column; align-items: stretch; }
+  .dova-input-buscar { max-width: none; }
+  .dova-cards-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dova-contexto-grid { grid-template-columns: 1fr; }
+  .dova-consulta-acciones { grid-template-columns: repeat(2, 1fr); }
+  .dova-odontograma-grid { grid-template-columns: repeat(6, 1fr); gap: 3px; }
+
+  /* Modal ocupa casi toda la pantalla en vez de una caja centrada chica. */
+  .dova-modal-box { width: 94%; max-width: none; max-height: 88vh; overflow-y: auto; }
+
+  /* Tablas -> tarjetas apiladas (mismo <table> HTML, solo cambia el layout). */
+  .dova-tabla { border: none; background: none; }
+  .dova-tabla thead { display: none; }
+  .dova-tabla tbody { display: flex; flex-direction: column; gap: 10px; }
+  .dova-tabla tr { display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 10px 12px; }
+  .dova-tabla td { border-bottom: none; padding: 4px 0; display: flex; justify-content: space-between; gap: 10px; }
+  .dova-tabla td:empty { display: none; }
+  .dova-tabla td::before {
+    content: attr(data-th); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
+    color: var(--ink-soft); font-weight: 600; flex-shrink: 0;
+  }
+  .dova-tabla td:not([data-th])::before { content: none; }
+}
+
+@media (max-width: 480px) {
+  .dova-cards-grid { grid-template-columns: 1fr; }
+  .dova-consulta-acciones { grid-template-columns: 1fr 1fr; }
+  .dova-odontograma-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ---- Selector de diseño (primer login) y Configuración > Apariencia ----
+   Estas tarjetas se ven IGUAL sin importar qué skin.css esté cargado: son
+   autocontenidas (no dependen de .dova-shell/.dova-topbar de cada diseño)
+   para poder mostrar una mini-previsualización fiel de los 3 estilos desde
+   cualquiera de ellos. */
+.dova-selector-diseno {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 20px; text-align: center;
+}
+.dova-selector-diseno-titulo { font-size: 28px; margin-bottom: 8px; }
+.dova-selector-diseno-subtitulo { color: var(--ink-soft); font-size: 14px; margin: 0 0 32px; max-width: 480px; }
+
+.dova-disenos-grid, .dova-apariencia-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;
+  max-width: 940px; width: 100%;
+}
+@media (max-width: 768px) {
+  .dova-disenos-grid, .dova-apariencia-grid { grid-template-columns: 1fr; max-width: 420px; }
+}
+
+.dova-diseno-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m);
+  padding: 18px; text-align: left; display: flex; flex-direction: column;
+  transition: border-color .15s, box-shadow .15s;
+}
+.dova-diseno-card:hover { border-color: var(--terracotta); box-shadow: var(--shadow-menu); }
+.dova-diseno-card.seleccionado { border-color: var(--terracotta); border-width: 2px; }
+.dova-diseno-card h3 { font-size: 16px; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+.dova-diseno-card p { font-size: 13px; color: var(--ink-soft); margin: 0 0 14px; flex: 1; }
+.dova-diseno-card .dova-btn-primary,
+.dova-diseno-card .dova-btn-secundario { width: 100%; }
+
+/* Mini-previsualización de cada estilo, dibujada con CSS puro. */
+.dova-preview {
+  border-radius: var(--radius-s); overflow: hidden; border: 1px solid var(--border);
+  margin-bottom: 14px; height: 92px; display: flex; flex-direction: column;
+}
+.dova-preview-barra { height: 18px; display: flex; align-items: center; gap: 4px; padding: 0 8px; flex-shrink: 0; }
+.dova-preview-cuerpo { flex: 1; display: flex; gap: 6px; padding: 8px; }
+.dova-preview-bloque { border-radius: 3px; flex: 1; }
+.dova-preview-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+.dova-preview-moderno .dova-preview-barra { background: #FFFFFF; border-bottom: 1px solid #E4E4E7; }
+.dova-preview-moderno .dova-preview-cuerpo { background: #FAFAFA; }
+.dova-preview-moderno .dova-preview-bloque { background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-radius: 6px; }
+.dova-preview-moderno .dova-preview-dot { background: #C1673F; }
+
+.dova-preview-minimalista .dova-preview-barra { background: #F7F3EC; }
+.dova-preview-minimalista .dova-preview-cuerpo { background: #FFFFFF; padding-top: 16px; gap: 10px; }
+.dova-preview-minimalista .dova-preview-bloque { background: transparent; border-bottom: 1px solid #E4DACA; border-radius: 0; }
+.dova-preview-minimalista .dova-preview-dot { background: #C1673F; }
+
+.dova-preview-tecnico .dova-preview-barra { background: #2B2420; }
+.dova-preview-tecnico .dova-preview-dot { background: #C1673F; border-radius: 2px; width: 16px; height: 6px; }
+.dova-preview-tecnico .dova-preview-cuerpo { background: #F7F3EC; gap: 3px; }
+.dova-preview-tecnico .dova-preview-bloque { background: #FFFFFF; border: 1px solid #D8C9B2; border-radius: 2px; }
+
+/* Refuerzo responsive (mobile ≤768px): evita que el nombre de la clínica
+   empuje la barra superior más allá del ancho de pantalla. Cada skin fija
+   flex-shrink:0 en .dova-marca para que no se aplaste en desktop; acá,
+   solo en mobile, se le permite encogerse y el nombre largo de la clínica
+   se trunca con "…" en vez de desbordar. */
+@media (max-width: 768px) {
+  .dova-marca { flex-shrink: 1 !important; min-width: 0; max-width: 100%; }
+  .dova-marca-clinica {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 55vw; display: inline-block;
+  }
+}
+.dova-diseno-habitual { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-m); padding: 10px 12px; margin-bottom: 12px; cursor: pointer; }
+.dova-diseno-habitual input { width: auto; margin: 3px 0 0; accent-color: var(--terracotta); }
+.dova-diseno-habitual.seleccionado { border-color: var(--terracotta); box-shadow: 0 0 0 1px var(--terracotta); }
+
+/* Cambio de contraseña (primer ingreso y Configuración > Seguridad) */
+.dova-form-clave { display: grid; gap: 6px; max-width: 380px; }
+.dova-form-clave input { width: 100%; }
+.dova-form-clave button { margin-top: 8px; justify-self: start; }
+.dova-card-clave { padding: 16px; max-width: 460px; }

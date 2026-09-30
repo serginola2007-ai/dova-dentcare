@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  /* Selector de diseño: si esta sesión ya tiene guardada una preferencia
+     de diseño DISTINTA a esta carpeta, redirigir a la carpeta correcta
+     ANTES de pintar nada (evita cargar fuentes/CSS del diseño equivocado
+     y el flash de un diseño para saltar enseguida a otro). Corre igual en
+     las 3 carpetas (moderno/minimalista/tecnico); solo cambia ESTE_TEMA. */
+  (function () {
+    var ESTE_TEMA = 'minimalista';
+    var TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
+    try {
+      var sesion = JSON.parse(localStorage.getItem('dova_session') || 'null');
+      var pref = sesion && sesion.usuario && sesion.usuario.disenoPreferido;
+      if (pref && TEMAS_VALIDOS.indexOf(pref) !== -1 && pref !== ESTE_TEMA) {
+        var nuevaRuta = location.pathname.replace(new RegExp('/' + ESTE_TEMA + '(/|$)'), '/' + pref + '$1');
+        location.replace(nuevaRuta + location.search + location.hash);
+      }
+    } catch (e) { /* sesión corrupta o localStorage no disponible: seguir acá normalmente */ }
+  })();
+</script>
+<title>DOVA — DentCareRC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/base.css" />
+<link rel="stylesheet" href="../shared/ext/ext.css" />
+<link rel="stylesheet" href="/minimalista/skin.css" />
+</head>
+<body>
+  <div id="login-root"></div>
+  <div id="shell-root" class="dova-shell" style="display:none;">
+    <header class="dova-topbar">
+      <div id="marca-root" class="dova-marca"></div>
+      <nav id="menu-root" class="dova-menu"></nav>
+      <button id="logout-btn" class="dova-logout">Cerrar sesión</button>
+    </header>
+    <main id="main-root" class="dova-main"></main>
+  </div>
+
+  <script src="../shared/config.js"></script>
+  <script src="../shared/api.js"></script>
+  <script src="../shared/views.js"></script>
+  <script src="../shared/ext/ext-core.js"></script>
+  <script src="../shared/ext/ext-ficha.js"></script>
+  <script src="../shared/ext/ext-secciones.js"></script>
+  <script src="../shared/ext/ext-operativo.js"></script>
+  <script src="../shared/app.js"></script>
+  <script>
+    DovaApp.iniciar({
+      mainId: 'main-root', menuId: 'menu-root', marcaId: 'marca-root',
+      loginId: 'login-root', shellId: 'shell-root', logoutId: 'logout-btn',
+    });
+  </script>
+</body>
+</html>

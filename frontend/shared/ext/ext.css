@@ -1,0 +1,158 @@
+/* DOVA — estilos del seguimiento integral. Usa las variables de base.css,
+   así que cada diseño (moderno/minimalista/técnico) lo tiñe con su skin. */
+:root { --dova-ext-marca: #C1673F; --dova-ext-grid: #EDE6DA; --dova-ext-critica-bg: rgba(184,68,58,0.12); --dova-ext-atencion-bg: rgba(193,103,63,0.14); --dova-ext-info-bg: rgba(122,139,118,0.16); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dova-ext-marca: #CC7550; --dova-ext-grid: #3A342E; } }
+:root[data-theme="dark"] { --dova-ext-marca: #CC7550; --dova-ext-grid: #3A342E; }
+
+/* Formularios */
+.dova-ext-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 14px; }
+.dova-ext-campo-completo { grid-column: 1 / -1; }
+.dova-ext-campo input, .dova-ext-campo select, .dova-ext-campo textarea { margin-bottom: 10px; }
+.dova-ext-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin: 6px 0 12px; }
+.dova-ext-check input { width: auto; margin: 0; }
+.dova-ext-ayuda { font-size: 12px; color: var(--ink-soft); margin: -6px 0 10px; }
+.dova-modal-box.dova-ext-modal-box-ancho { max-width: 760px; max-height: 88vh; overflow-y: auto; }
+.dova-modal-box.dova-ext-modal-box-muyancho { max-width: 1100px; width: 96%; max-height: 90vh; overflow-y: auto; }
+.dova-ext-modal h3 { margin-bottom: 14px; }
+
+/* Tablas y barras de herramientas */
+.dova-ext-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 10px; }
+.dova-ext-tabla-wrap { overflow-x: auto; }
+.dova-ext-acciones { white-space: nowrap; text-align: right; }
+.dova-ext-acciones .dova-btn-link { margin-left: 10px; }
+.dova-ext-peligro { color: var(--rust) !important; }
+.dova-ext-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 6px 0 12px; }
+.dova-ext-filtros > div { min-width: 150px; }
+.dova-ext-filtros input, .dova-ext-filtros select { margin-bottom: 0; }
+tr.dova-ext-fila-alerta td { background: var(--dova-ext-critica-bg); }
+tr.dova-ext-fila-aviso td { background: var(--dova-ext-atencion-bg); }
+
+/* Badges */
+.dova-ext-badge-critica { background: var(--dova-ext-critica-bg); color: var(--rust); }
+.dova-ext-badge-atencion { background: var(--dova-ext-atencion-bg); color: var(--terracotta-dark); }
+.dova-ext-badge-info { background: var(--dova-ext-info-bg); color: var(--sage-dark); }
+
+/* Sub-pestañas */
+.dova-ext-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.dova-ext-subtab { background: transparent; border: 1px solid var(--border); color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+.dova-ext-subtab.activo { background: var(--terracotta); border-color: var(--terracotta); color: #fff; }
+.dova-ext-subtab:focus-visible, .dova-btn-link:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
+
+/* Alertas médicas */
+.dova-ext-alertas-medicas { border: 1px solid var(--rust); background: var(--dova-ext-critica-bg); border-radius: var(--radius-m); padding: 10px 14px; margin: 10px 0 14px; }
+.dova-ext-alertas-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dova-ext-alertas-cab strong { color: var(--rust); }
+.dova-ext-alertas-lista { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.dova-ext-alertas-lista li { padding: 4px 0; border-top: 1px dashed var(--border); }
+
+/* Tarjetas del panel */
+.dova-ext-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin: 12px 0 18px; }
+.dova-ext-kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 14px; }
+.dova-ext-kpi-valor { font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.dova-ext-kpi-label { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+.dova-ext-kpi-sub { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.dova-ext-kpi.alerta { border-color: var(--rust); }
+.dova-ext-kpi.alerta .dova-ext-kpi-valor { color: var(--rust); }
+button.dova-ext-kpi { text-align: left; cursor: pointer; font: inherit; }
+button.dova-ext-kpi:hover { border-color: var(--terracotta); }
+.dova-ext-progreso { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+.dova-ext-progreso > span { display: block; height: 100%; background: var(--dova-ext-marca); border-radius: 999px; }
+
+/* Gráficos */
+.dova-ext-graficos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.dova-ext-grafico { position: relative; margin: 0; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px; }
+.dova-ext-grafico figcaption { font-size: 14px; margin-bottom: 6px; color: var(--ink); }
+.dova-ext-grafico svg { width: 100%; height: auto; display: block; }
+.dova-ext-marca { fill: var(--dova-ext-marca); }
+.dova-ext-linea { stroke: var(--dova-ext-marca); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dova-ext-punto { fill: var(--dova-ext-marca); stroke: var(--white); stroke-width: 2; }
+.dova-ext-grid { stroke: var(--dova-ext-grid); stroke-width: 1; }
+.dova-ext-g-eje { fill: var(--ink-soft); font-size: 11px; }
+.dova-ext-g-valor { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dova-ext-hit { cursor: default; }
+.dova-ext-hit-activo { fill: var(--ink); fill-opacity: 0.05; }
+.dova-ext-tooltip { position: absolute; transform: translateX(-50%); background: var(--ink); color: var(--cream); font-size: 12px; padding: 6px 10px; border-radius: 6px; pointer-events: none; white-space: nowrap; z-index: 5; }
+.dova-ext-g-tabla summary { font-size: 12px; color: var(--ink-soft); cursor: pointer; margin-top: 6px; }
+
+/* Periodontograma */
+.dova-perio-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--white); padding: 8px; }
+.dova-perio { border-collapse: collapse; font-size: 11px; }
+.dova-perio th, .dova-perio td { border: 1px solid var(--border); padding: 1px; text-align: center; }
+.dova-perio th.dova-perio-rot { background: var(--cream); color: var(--ink-soft); font-weight: 600; text-align: right; padding: 2px 6px; white-space: nowrap; position: sticky; left: 0; z-index: 1; }
+.dova-perio th.dova-perio-pieza { background: var(--cream); font-size: 12px; }
+.dova-perio input[type=text] { width: 22px; padding: 2px 0; text-align: center; margin: 0; font-size: 12px; border-radius: 2px; }
+.dova-perio input[type=checkbox] { width: 14px; height: 14px; margin: 0; }
+.dova-perio select { width: 38px; padding: 1px; margin: 0; font-size: 11px; }
+.dova-perio .ps-alto { background: var(--dova-ext-critica-bg); color: var(--rust); font-weight: 700; }
+.dova-perio .ps-medio { background: var(--dova-ext-atencion-bg); }
+.dova-perio td.ausente, .dova-perio th.ausente { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--border) 4px, var(--border) 5px); opacity: .6; }
+.dova-perio .sang-si { background: var(--rust); color: #fff; }
+.dova-perio .placa-si { background: #3F6FA1; color: #fff; }
+.dova-perio-sep td { height: 10px; border: none; }
+.dova-perio-leyenda { font-size: 12px; color: var(--ink-soft); margin: 8px 0; display: flex; flex-wrap: wrap; gap: 14px; }
+.dova-perio-leyenda span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; background: var(--c); }
+
+/* Varios */
+.dova-ext-dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.dova-ext-caja { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px 14px; background: var(--white); margin-bottom: 14px; }
+.dova-ext-caja h4 { margin: 0 0 8px; }
+.dova-ext-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dova-ext-grupo-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 14px; margin-bottom: 12px; }
+.dova-ext-pregunta { display: grid; grid-template-columns: 1fr 150px; gap: 8px; align-items: center; border-bottom: 1px dashed var(--border); padding: 4px 0; font-size: 13px; }
+.dova-ext-pregunta select, .dova-ext-pregunta input { margin: 0; }
+.dova-ext-fichaje { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dova-ext-estado-grande { font-size: 18px; font-weight: 700; }
+@media (max-width: 768px) {
+  .dova-ext-dos-col { grid-template-columns: 1fr; }
+  .dova-ext-pregunta { grid-template-columns: 1fr; }
+  .dova-ext-acciones { white-space: normal; text-align: left; }
+  .dova-ext-acciones .dova-btn-link { margin: 0 10px 0 0; }
+  .dova-ext-graficos { grid-template-columns: 1fr; }
+}
+@media print { .dova-ext-subtabs, .dova-ext-toolbar button, .dova-ext-acciones { display: none !important; } }
+@media (forced-colors: active) { .dova-ext-marca { fill: CanvasText; } .dova-ext-linea { stroke: CanvasText; } }
+
+/* Menú con más secciones: en escritorio los ítems pasan a una segunda línea
+   en vez de desbordar la barra; en celular el menú desplegable puede
+   scrollear (13 ítems no entran en los 400 px originales). Vale para los 3
+   diseños porque todos usan #menu-root.dova-menu. */
+@media (min-width: 769px) {
+  #menu-root.dova-menu { flex-wrap: wrap; min-width: 0; row-gap: 2px; }
+  .dova-topbar { min-width: 0; }
+}
+@media (max-width: 768px) {
+  body.dova-menu-abierto #menu-root.dova-menu { max-height: 75vh; overflow-y: auto; }
+}
+/* Ajustes visuales tras revisión */
+.dova-ext-g-eje { font-size: 13px; }
+.dova-ext-g-valor { font-size: 14px; }
+button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; justify-content: flex-start; }
+.dova-perio td { min-width: 16px; height: 20px; }
+.dova-perio th.dova-perio-pieza { min-width: 54px; }
+.dova-ext-toolbar { justify-content: flex-start; }
+.dova-ext-toolbar > :first-child { margin-right: auto; }
+@media (max-width: 768px) {
+  .dova-ext-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .dova-ext-kpi { padding: 10px; }
+  .dova-ext-kpi-valor { font-size: 20px; }
+}
+
+/* ===== Operación diaria (ext-operativo.js) ===== */
+.dova-op-toolbar { flex-wrap: wrap; gap: 10px; }
+.dova-op-nav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dova-op-nav input, .dova-op-nav select { width: auto; min-width: 0; }
+.dova-op-fila-apagada td { opacity: .55; }
+.dova-op-buscapac { position: relative; }
+.dova-op-resultados { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--white); max-height: 240px; overflow-y: auto; }
+.dova-op-resultados:empty { display: none; }
+.dova-op-res-item { text-align: left; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--border); background: transparent; cursor: pointer; font: inherit; color: inherit; }
+.dova-op-res-item:hover, .dova-op-res-item:focus { background: rgba(0,0,0,.05); }
+.dova-op-items input, .dova-op-items select { width: 100%; min-width: 0; }
+.dova-op-items td { vertical-align: top; }
+.dova-op-total { font-size: 18px; text-align: right; margin: 10px 0; }
+.dova-op-firma { width: 100%; max-width: 600px; height: auto; border: 1px dashed var(--border); border-radius: 8px; background: #fff; touch-action: none; display: block; }
+.dova-op-consent-texto { max-height: 160px; overflow-y: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; font-size: 14px; }
+@media (max-width: 700px) {
+  .dova-op-nav { width: 100%; }
+  .dova-op-nav select { flex: 1 1 140px; }
+}

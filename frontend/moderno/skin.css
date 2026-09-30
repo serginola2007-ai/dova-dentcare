@@ -1,0 +1,121 @@
+/* Diseño MODERNO: estética tipo Linear/Notion — fondo claro, sans-serif en
+   todo (se pisa el Fraunces heredado de base.css), sidebar blanca liviana,
+   tarjetas con sombra suave en vez de bordes marcados, radios generosos.
+   Mantiene el acento de marca (--terracotta, #C1673F) pero redefine el resto
+   de la paleta a tonos neutros grises/blancos. No toca base.css: todas las
+   variables se sobreescriben acá para no afectar a los otros 3 skins. */
+
+:root:not([data-theme="dark"]) {
+  --cream: #FAFAFA;
+  --ink: #1A1A1A;
+  --ink-soft: #71717A;
+  --border: #E4E4E7;
+  --border-strong: #D4D4D8;
+  --white: #FFFFFF;
+  --radius-s: 6px;
+  --radius-m: 12px;
+  --shadow-menu: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 12px rgba(0,0,0,0.04);
+}
+
+/* Modo oscuro explícito (toggle manual), independiente de prefers-color-scheme.
+   Colores neutros grises/azulados, no marrón — pedido específico: "moderno". */
+:root[data-theme="dark"] {
+  --cream: #121214;
+  --ink: #F4F4F5;
+  --ink-soft: #A1A1AA;
+  --terracotta: #E08B62;
+  --terracotta-dark: #EDA989;
+  --sage: #8FA189;
+  --sage-dark: #A3B69C;
+  --rust: #F09A90;
+  --border: #2A2A2E;
+  --border-strong: #38383D;
+  --white: #1C1C1F;
+  --shadow-menu: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 12px rgba(0,0,0,0.2);
+}
+
+body { font-family: 'Inter', sans-serif; }
+h1, h2, h3, .dova-marca-producto, .dova-marca-clinica,
+.dova-card-valor { font-family: 'Inter', sans-serif !important; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
+.dova-view-title { font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+
+/* ---- Layout: barra superior blanca liviana ---- */
+.dova-shell { min-height: 100vh; background: var(--cream); }
+.dova-topbar {
+  display: flex; align-items: center; gap: 28px;
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 12px 32px; position: sticky; top: 0; z-index: 100;
+}
+.dova-marca { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.dova-marca-producto { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.dova-marca-clinica { font-size: 11px; color: var(--ink-soft); font-style: normal; }
+
+.dova-menu { display: flex; flex-direction: row; gap: 2px; flex: 1; }
+.dova-menu-item {
+  background: none; border: none; color: var(--ink-soft); text-align: left;
+  padding: 8px 14px; border-radius: var(--radius-s); font-size: 13.5px; font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.dova-menu-item:hover { background: var(--cream); color: var(--ink); }
+.dova-menu-item.activo { background: rgba(193,103,63,0.1); color: var(--terracotta-dark); font-weight: 600; }
+
+.dova-logout {
+  flex-shrink: 0; padding: 8px 14px; background: none; border: 1px solid var(--border);
+  color: var(--ink-soft); border-radius: var(--radius-s); font-size: 13px; font-weight: 500;
+}
+.dova-logout:hover { background: var(--cream); border-color: var(--border-strong); }
+
+.dova-main { padding: 32px 40px; max-width: 1140px; margin: 0 auto; }
+
+/* ---- Tarjetas y tablas: solo sombra flotante, sin borde marcado ---- */
+.dova-card, .dova-login-card {
+  border: none; border-radius: var(--radius-m);
+  box-shadow: var(--shadow-card); background: var(--white);
+}
+.dova-card-valor { font-weight: 800; letter-spacing: -0.02em; }
+
+.dova-tabla { border: none; border-radius: var(--radius-m); box-shadow: var(--shadow-card); }
+.dova-tabla th { background: var(--cream); font-weight: 600; letter-spacing: 0.02em; border-bottom: 1px solid var(--border); }
+.dova-tabla td { border-bottom: 1px solid var(--border); }
+.dova-tabla tr:last-child td { border-bottom: none; }
+
+/* ---- Toggle de tema claro/oscuro ---- */
+.dova-theme-toggle {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 0; display: flex;
+  align-items: center; justify-content: center; background: none;
+  border: 1px solid var(--border); color: var(--ink-soft); border-radius: var(--radius-s);
+  font-size: 15px; line-height: 1;
+}
+.dova-theme-toggle:hover { background: var(--cream); border-color: var(--border-strong); }
+
+.dova-btn-primary {
+  border-radius: var(--radius-s); font-weight: 600; letter-spacing: -0.01em;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.dova-btn-secundario { border-radius: var(--radius-s); font-weight: 500; }
+
+.dova-modal-box { border-radius: var(--radius-m); box-shadow: 0 10px 40px rgba(0,0,0,0.16); }
+
+.dova-buscador-resultados { border-radius: var(--radius-m); box-shadow: 0 10px 32px rgba(0,0,0,0.12); }
+
+/* ---- Fase 6 — Responsive ---- */
+@media (max-width: 1024px) {
+  .dova-topbar { padding: 12px 20px; }
+  .dova-main { max-width: none; padding: 24px; }
+}
+@media (max-width: 768px) {
+  .dova-topbar { flex-wrap: wrap; padding: 12px 16px; position: sticky; z-index: 901; background: var(--white); }
+  .dova-marca { order: 1; }
+  .dova-logout { order: 2; margin-left: auto; }
+  .dova-menu {
+    order: 3; width: 100%; flex-direction: column; gap: 2px; margin-top: 8px;
+    max-height: 0; overflow: hidden; transition: max-height 0.2s ease;
+  }
+  body.dova-menu-abierto .dova-menu { max-height: 400px; }
+  .dova-menu-item { text-align: left; padding: 10px 14px; }
+  .dova-main { padding: 16px; }
+}

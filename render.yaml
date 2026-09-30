@@ -1,0 +1,61 @@
+# DOVA en Render — un solo servicio sirve la API (/api) y las pantallas
+# (los 3 diseños), con la base de datos Postgres y un disco para las fotos,
+# estudios y adjuntos. Uso: Render → New → Blueprint → elegir el repositorio.
+#
+# Planes pagos mínimos (la base gratis se borra a los 30 días y el disco
+# persistente no existe en el plan gratis):
+#   - Servicio web 0.5c-512mb ("Starter")  ~ US$ 7/mes
+#   - Postgres     0.1c-256mb ("Basic")    ~ US$ 6/mes + US$ 0,30/GB
+#   - Disco de 1 GB para archivos          ~ US$ 0,25/mes
+services:
+  - type: web
+    name: dova
+    runtime: node
+    plan: 0.5c-512mb
+    region: virginia            # la región más cercana a Paraguay
+    buildCommand: cd backend && npm ci
+    # Antes de cada puesta en marcha: actualiza la estructura de la base y
+    # completa roles/permisos/datos iniciales (es seguro correrlo siempre).
+    preDeployCommand: cd backend && npm run migrate:up && npm run seed
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: dova-archivos
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dova-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # Fotos, estudios y adjuntos van al disco persistente.
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      # "Hoy" es el día de Paraguay para toda la aplicación y la base.
+      - key: DOVA_TZ
+        value: America/Asuncion
+
+databases:
+  - name: dova-db
+    plan: 0.1c-256mb
+    region: virginia
+    postgresMajorVersion: "16"
+    databaseName: dova
+    user: dova
+    diskSizeGB: 5
+    # Sin acceso desde internet: solo el servicio de DOVA (red interna de
+    # Render) puede conectarse a la base de pacientes.
+    ipAllowList: []
