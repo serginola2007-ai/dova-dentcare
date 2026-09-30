@@ -1,14 +1,14 @@
 /* Diseño TÉCNICO: barra de menú superior (no sidebar), grid denso,
    numéricos en monoespaciado, look de panel operativo/ERP. */
 .dova-shell { min-height: 100vh; }
-.dova-topbar { display: flex; align-items: center; gap: 24px; padding: 8px 20px; background: var(--ink); color: var(--on-dark); border-bottom: 3px solid var(--terracotta); }
+.dova-topbar { display: flex; align-items: center; gap: 24px; padding: 8px 20px; background: var(--barra); color: var(--on-dark); border-bottom: 3px solid var(--terracotta); }
 .dova-marca { display: flex; align-items: baseline; gap: 8px; }
 .dova-marca-producto { font-family: 'Inter', monospace; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
 .dova-marca-clinica { font-size: 11px; color: var(--terracotta); }
 .dova-menu { display: flex; gap: 0; flex: 1; }
 .dova-menu-item { background: none; border: none; border-right: 1px solid rgba(247,243,236,0.15); color: var(--on-dark); padding: 8px 14px; font-size: 13px; font-family: monospace; }
 .dova-menu-item:hover { background: rgba(247,243,236,0.1); }
-.dova-menu-item.activo { background: var(--terracotta); color: var(--white); }
+.dova-menu-item.activo { background: var(--terracotta); color: #FFFFFF; }
 .dova-logout { background: none; border: 1px solid rgba(247,243,236,0.3); color: var(--on-dark); font-size: 12px; padding: 6px 10px; border-radius: 2px; }
 .dova-main { padding: 20px; max-width: 1300px; }
 
@@ -29,10 +29,12 @@
   .dova-topbar { flex-wrap: wrap; gap: 10px; position: relative; z-index: 901; }
   .dova-menu-toggle { color: var(--on-dark); }
   .dova-menu {
-    order: 3; width: 100%; flex-direction: column;
+    order: 3; width: 100%; flex-basis: 100%; flex-direction: column;
     max-height: 0; overflow: hidden; transition: max-height 0.2s ease;
   }
-  body.dova-menu-abierto .dova-menu { max-height: 400px; }
+  /* Alto suficiente para todas las opciones (el admin tiene 15+). */
+  body.dova-menu-abierto .dova-menu { max-height: 80vh; overflow-y: auto; }
+  .dova-logout, .dova-instalar-btn, .dova-theme-toggle { order: 4; }
   .dova-menu-item { border-right: none; border-bottom: 1px solid rgba(247,243,236,0.15); text-align: left; }
   .dova-main { padding: 14px; }
 }

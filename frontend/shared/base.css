@@ -13,6 +13,9 @@
   --border-strong: #D8C9B2;
   --white: #FFFFFF;
   --on-dark: #F7F3EC;
+  /* Barra superior oscura: se mantiene oscura también en modo oscuro (si
+     usara --ink, en modo oscuro quedaba clara con letras claras: invisible). */
+  --barra: #2B2420;
   --radius-s: 4px;
   --radius-m: 8px;
   --shadow-menu: 0 8px 24px rgba(43,36,32,0.12);
@@ -31,6 +34,7 @@
     --border-strong: #4A423A;
     --white: #2A2521;
     --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
+    --barra: #15120F;
   }
 }
 :root[data-theme="dark"] {
@@ -38,6 +42,7 @@
   --terracotta-dark: #E8A57C; --sage: #8FA189; --sage-dark: #A3B69C; --rust: #E0776C;
   --border: #3A342E; --border-strong: #4A423A; --white: #2A2521;
   --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
+  --barra: #15120F;
 }
 
 * { box-sizing: border-box; }
