@@ -315,3 +315,12 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-form-clave input { width: 100%; }
 .dova-form-clave button { margin-top: 8px; justify-self: start; }
 .dova-card-clave { padding: 16px; max-width: 460px; }
+
+/* Botón "Instalar app" (PWA) en la barra superior */
+.dova-instalar-btn { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; opacity: .9; }
+.dova-instalar-btn:hover { opacity: 1; }
+.dova-pwa-pasos { padding-left: 20px; line-height: 1.7; }
+/* Abierta como app: respetar la muesca / barra de estado del celular */
+@media (display-mode: standalone) {
+  .dova-topbar { padding-top: max(env(safe-area-inset-top), 0px); }
+}

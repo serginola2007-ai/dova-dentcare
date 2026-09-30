@@ -245,12 +245,14 @@ const Vistas = (() => {
         <p class="dova-nota">Cambiá tu contraseña de ingreso a DOVA.</p>
         ${formCambioClaveHtml()}
       </div>
+      ${window.DovaPWA ? DovaPWA.tarjetaHtml() : ''}
     `;
   }
 
   function initConfiguracion() {
     const fc = document.getElementById('form-cambio-clave');
     if (fc) initCambioClave(fc, () => fc.actual.value, () => { fc.reset(); toast('Contraseña actualizada', 'ok'); });
+    if (window.DovaPWA) DovaPWA.activarTarjeta();
     document.querySelectorAll('[data-elegir-diseno-config]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const tema = btn.dataset.elegirDisenoConfig;

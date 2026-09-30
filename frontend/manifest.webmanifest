@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "DOVA — DentCareRC",
+  "short_name": "DOVA",
+  "description": "Gestión odontológica de DentCareRC: agenda, pacientes, cobros, caja y seguimiento.",
+  "lang": "es",
+  "start_url": "/?app=1",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#F7F3EC",
+  "theme_color": "#2B2420",
+  "categories": ["medical", "business", "productivity"],
+  "icons": [
+    { "src": "/iconos/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/iconos/icono-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/iconos/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Agenda", "url": "/moderno/#agenda", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
+    { "name": "Pacientes", "url": "/moderno/#pacientes", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
+    { "name": "Caja", "url": "/moderno/#caja", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] }
+  ]
+}

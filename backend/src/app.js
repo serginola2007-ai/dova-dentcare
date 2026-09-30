@@ -141,7 +141,10 @@ if (fs.existsSync(path.join(carpetaFrontend, 'moderno', 'index.html'))) {
     setHeaders: (res, archivo) => {
       // El HTML se revalida siempre (así una actualización llega enseguida);
       // el resto se cachea poco para no servir versiones viejas.
-      res.setHeader('Cache-Control', archivo.endsWith('.html') ? 'no-cache' : 'public, max-age=300');
+      // El service worker y el manifiesto de la app se revalidan siempre.
+      const siempreFresco = archivo.endsWith('.html') || archivo.endsWith('sw.js') || archivo.endsWith('.webmanifest');
+      res.setHeader('Cache-Control', siempreFresco ? 'no-cache' : 'public, max-age=300');
+      if (archivo.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json');
     },
   }));
 }

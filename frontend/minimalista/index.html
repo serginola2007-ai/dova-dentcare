@@ -23,6 +23,15 @@
   })();
 </script>
 <title>DOVA — DentCareRC</title>
+<!-- App instalable (PWA): ícono, pantalla completa y apertura sin internet -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#2B2420" />
+<link rel="icon" type="image/png" href="/iconos/favicon-32.png" />
+<link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="DOVA" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../shared/base.css" />
@@ -47,6 +56,7 @@
   <script src="../shared/ext/ext-ficha.js"></script>
   <script src="../shared/ext/ext-secciones.js"></script>
   <script src="../shared/ext/ext-operativo.js"></script>
+  <script src="../shared/pwa.js"></script>
   <script src="../shared/app.js"></script>
   <script>
     DovaApp.iniciar({
