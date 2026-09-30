@@ -287,14 +287,14 @@ const Vistas = (() => {
     const alertas = await manejarError(() => DOVA.get('/reportes/dashboard/alertas'));
     const items = [
       { label: 'Turnos hoy', valor: alertas.turnosHoy, tono: 'info' },
-      { label: 'Stock bajo', valor: alertas.stockBajo, tono: alertas.stockBajo > 0 ? 'alerta' : 'ok' },
+      { label: 'Insumos por acabarse', valor: alertas.stockBajo, tono: alertas.stockBajo > 0 ? 'alerta' : 'ok' },
       { label: 'Cuotas vencidas', valor: alertas.cuotasVencidas, tono: alertas.cuotasVencidas > 0 ? 'alerta' : 'ok' },
       { label: 'Lista de espera', valor: alertas.listaEsperaPendiente, tono: 'info' },
       { label: 'Insumos por vencer (30d)', valor: alertas.insumosPorVencer, tono: alertas.insumosPorVencer > 0 ? 'alerta' : 'ok' },
-      { label: 'Tickets Helpdesk abiertos', valor: alertas.ticketsHelpdeskAbiertos, tono: alertas.ticketsHelpdeskAbiertos > 0 ? 'alerta' : 'ok' },
+      { label: 'Pedidos de ayuda técnica sin resolver', valor: alertas.ticketsHelpdeskAbiertos, tono: alertas.ticketsHelpdeskAbiertos > 0 ? 'alerta' : 'ok' },
     ];
     return `
-      <h2 class="dova-view-title">Panel general</h2>
+      <h2 class="dova-view-title">Inicio</h2>
       <div class="dova-cards-grid">
         ${items.map((it) => `
           <div class="dova-card dova-card-${it.tono}">
@@ -321,7 +321,7 @@ const Vistas = (() => {
       { ruta: 'helpdesk', label: 'Helpdesk', icono: '🎫' },
     ].filter((a) => DOVA.tienePermiso(`${a.ruta}.view`));
     return `
-      <h2 class="dova-view-title">Panel general</h2>
+      <h2 class="dova-view-title">Inicio</h2>
       <p class="dova-nota">${nombre ? `Hola, ${nombre}. ` : ''}Estos son tus accesos rápidos:</p>
       <div class="dova-cards-grid">
         ${accesos.map((a) => `
@@ -699,8 +699,8 @@ const Vistas = (() => {
         <button class="dova-tab activo" data-tab="resumen">Resumen</button>
         ${puedeHistorial ? '<button class="dova-tab" data-tab="historial">Historial clínico</button>' : ''}
         ${puedeOdontograma ? '<button class="dova-tab" data-tab="odontograma">Odontograma</button>' : ''}
-        <button class="dova-tab" data-tab="documentacion">Documentación</button>
-        ${puedeFinanzas ? '<button class="dova-tab" data-tab="administrativo">Administrativo</button>' : ''}
+        <button class="dova-tab" data-tab="documentacion">Consentimientos</button>
+        ${puedeFinanzas ? '<button class="dova-tab" data-tab="administrativo">Pagos y presupuestos</button>' : ''}
         <button class="dova-tab" data-tab="agenda">Agenda</button>
       </div>
 
@@ -997,7 +997,7 @@ const Vistas = (() => {
           ${insumos.map((i) => `
             <tr class="${Number(i.stock_actual) <= Number(i.stock_minimo) ? 'dova-fila-alerta' : ''}">
               <td>${esc(i.nombre)}</td><td>${i.stock_actual}</td><td>${i.stock_minimo}</td>
-              <td>${Number(i.stock_actual) <= Number(i.stock_minimo) ? 'Stock bajo' : 'OK'}</td>
+              <td>${Number(i.stock_actual) <= Number(i.stock_minimo) ? 'Insumos por acabarse' : 'OK'}</td>
             </tr>`).join('') || '<tr><td colspan="4">Sin insumos registrados.</td></tr>'}
         </tbody>
       </table>
@@ -1008,14 +1008,14 @@ const Vistas = (() => {
   async function vistaHelpdesk() {
     const tickets = await manejarError(() => DOVA.get('/helpdesk'));
     return `
-      <h2 class="dova-view-title">Soporte (Helpdesk)</h2>
+      <h2 class="dova-view-title">Ayuda técnica</h2>
       <div class="dova-toolbar">
-        <button id="btn-nuevo-ticket" class="dova-btn-primary">+ Nuevo ticket</button>
+        <button id="btn-nuevo-ticket" class="dova-btn-primary">+ Pedir ayuda</button>
       </div>
       <table class="dova-tabla">
         <thead><tr><th>Título</th><th>Categoría</th><th>Estado</th></tr></thead>
         <tbody>
-          ${tickets.map((t) => `<tr><td>${esc(t.titulo)}</td><td>${esc(t.categoria)}</td><td>${esc(t.estado)}</td></tr>`).join('') || '<tr><td colspan="3">Sin tickets.</td></tr>'}
+          ${tickets.map((t) => `<tr><td>${esc(t.titulo)}</td><td>${esc(DovaExt.etiqueta(t.categoria || ''))}</td><td>${esc(DovaExt.etiqueta(t.estado || ''))}</td></tr>`).join('') || '<tr><td colspan="3">No hay pedidos de ayuda.</td></tr>'}
         </tbody>
       </table>
       <div id="modal-root"></div>
@@ -1024,7 +1024,7 @@ const Vistas = (() => {
   function initHelpdesk() {
     document.getElementById('btn-nuevo-ticket').addEventListener('click', () => {
       abrirModal(`
-        <h3>Nuevo ticket de soporte</h3>
+        <h3>Pedir ayuda técnica</h3>
         <form id="form-nuevo-ticket">
           <label>Título</label><input required id="nt-titulo" />
           <label>Categoría</label>
@@ -1036,7 +1036,7 @@ const Vistas = (() => {
           <label>Descripción</label><textarea required id="nt-descripcion" rows="4"></textarea>
           <div class="dova-modal-actions">
             <button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button>
-            <button type="submit" class="dova-btn-primary">Crear ticket</button>
+            <button type="submit" class="dova-btn-primary">Enviar pedido</button>
           </div>
         </form>
       `);
@@ -1047,7 +1047,7 @@ const Vistas = (() => {
           categoria: document.getElementById('nt-categoria').value,
           descripcion: document.getElementById('nt-descripcion').value,
         }));
-        toast('Ticket creado', 'ok');
+        toast('Pedido de ayuda enviado', 'ok');
         location.reload();
       });
     });
@@ -1791,7 +1791,7 @@ const Vistas = (() => {
   const LABELS_BUSQUEDA = {
     pacientes: 'Pacientes', citas: 'Citas', tratamientos: 'Tratamientos',
     presupuestos: 'Presupuestos', pagos: 'Pagos', evoluciones: 'Evoluciones clínicas',
-    tickets: 'Tickets de soporte', usuarios: 'Usuarios',
+    tickets: 'Pedidos de ayuda técnica', usuarios: 'Usuarios',
   };
 
   function vistaBuscadorGlobal() {

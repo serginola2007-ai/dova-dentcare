@@ -14,7 +14,23 @@ const DovaExt = (() => {
   const puede = (...c) => c.some((x) => DOVA.tienePermiso(x));
   const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
   const sumarDias = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-  const ETIQ = { whatsapp: 'WhatsApp', sms: 'SMS', ept: 'EPT (eléctrica)', ips: 'IPS', atencion: 'Atención', critica: 'Crítica', reevaluacion: 'Reevaluación', asa: 'ASA', eva_dolor: 'EVA dolor', oleary: "O'Leary", psr: 'PSR' };
+  const ETIQ = {
+    whatsapp: 'WhatsApp', sms: 'SMS', ept: 'EPT (eléctrica)', ips: 'IPS', atencion: 'Atención', critica: 'Crítica', reevaluacion: 'Reevaluación', asa: 'ASA', eva_dolor: 'EVA dolor', oleary: "O'Leary", psr: 'PSR',
+    // Palabras con tilde y nombres técnicos en lenguaje simple
+    no_asistio: 'No asistió', administracion: 'Administración', esterilizacion: 'Esterilización', historia_clinica: 'Historia clínica', odontologos: 'Odontólogos',
+    prevencion: 'Prevención', planes_pago: 'Planes de pago', planes_tratamiento: 'Planes de tratamiento', listas_precios: 'Listas de precios', helpdesk: 'Ayuda técnica',
+    protesis: 'Prótesis', cirugia: 'Cirugía', observacion: 'Observación', produccion: 'Trabajos realizados (Gs.)', tasa_aceptacion: 'Presupuestos aceptados (%)',
+    recomendacion_paciente: 'Recomendación de un paciente', recomendacion_profesional: 'Recomendación de un profesional', seguro_convenio: 'Seguro o convenio',
+    paso_por_la_zona: 'Pasó por la zona', campana: 'Campaña', tiktok: 'TikTok', aspiracion: 'Aspiración', lampara_fotocurado: 'Lámpara de fotocurado',
+    escaner_intraoral: 'Escáner intraoral', sensor_rx: 'Sensor de rayos X', rayos_x: 'Rayos X', sillon: 'Sillón', motor_endo: 'Motor de endodoncia',
+    recall: 'Control periódico', recalls: 'Controles periódicos', recordatorio_turno: 'Recordatorio de turno', confirmacion: 'Confirmación', cumpleanos: 'Cumpleaños',
+    reactivacion: 'Paciente que no volvió', tratamiento_pendiente: 'Tratamiento pendiente', cobranza: 'Cobranza', fichaje: 'Asistencia del personal',
+    kpis: 'Estadísticas', seguimiento: 'Seguimiento', operaciones: 'Clínica', en_proceso: 'En curso', en_curso: 'En curso', en_cuarentena: 'Esperando control biológico',
+    sin_confirmar: 'Sin confirmar', recordatorio_enviado: 'Recordatorio enviado', no_responde: 'No responde', pide_reprogramar: 'Pide reprogramar',
+    inicio_pausa: 'Inicio de pausa', fin_pausa: 'Fin de pausa', nota_credito: 'Nota de crédito', bonificacion: 'Bonificación', cortesia: 'Cortesía',
+    diagnostico: 'Diagnóstico', estetica: 'Estética', periodoncia: 'Periodoncia', ortodoncia: 'Ortodoncia', endodoncia: 'Endodoncia', implantologia: 'Implantología',
+    odontopediatria: 'Odontopediatría', radiologia: 'Radiología', panoramica: 'Panorámica', tomografia: 'Tomografía', electronico: 'Electrónico',
+  };
   const etiqueta = (s) => ETIQ[s] || String(s ?? '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const fmtFechaHora = (f) => (f ? new Date(f).toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' }) : '-');
   const cargando = '<div class="dova-cargando">Cargando…</div>';

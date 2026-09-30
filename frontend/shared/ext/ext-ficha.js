@@ -85,7 +85,7 @@ const DovaFicha = (() => {
       alGuardar: () => panelSalud(root, pid, true),
     });
     X.tablaCrud({
-      root: root.querySelector('#salud-condiciones'), titulo: 'Condiciones sistémicas', endpoint: '/salud/condiciones', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
+      root: root.querySelector('#salud-condiciones'), titulo: 'Enfermedades generales', endpoint: '/salud/condiciones', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
       puedeCrear: edita, puedeEditar: edita, puedeBorrar: edita, vacio: 'Sin condiciones registradas.',
       columnas: [
         { t: 'Condición', v: (r) => `<strong>${esc((cat.condiciones.find((c) => c.codigo === r.condicion) || {}).nombre || r.condicion)}</strong>${r.detalle ? `<br><span class="dova-nota">${esc(r.detalle)}</span>` : ''}` },
@@ -106,7 +106,7 @@ const DovaFicha = (() => {
       root: root.querySelector('#salud-alertas-man'), titulo: 'Avisos del equipo', endpoint: '/salud/alertas-manuales', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
       descripcion: 'Notas visibles para todos (ej.: "siempre llega tarde", "muy ansioso", "pide turnos por la tarde"). Las marcadas como emergentes aparecen en una ventana al abrir la ficha.',
       puedeCrear: puede('salud.edit', 'seguimiento.manage'), puedeEditar: puede('salud.edit', 'seguimiento.manage'), puedeBorrar: puede('salud.edit', 'seguimiento.manage'),
-      columnas: [{ t: 'Aviso', v: (r) => esc(r.texto) }, { t: 'Nivel', v: (r) => badge(NIVEL_TXT[r.nivel] || r.nivel, r.nivel) }, { t: 'Emergente', v: (r) => siNo(r.emergente) }],
+      columnas: [{ t: 'Aviso', v: (r) => esc(r.texto) }, { t: 'Nivel', v: (r) => badge(NIVEL_TXT[r.nivel] || r.nivel, r.nivel) }, { t: 'Aparece al abrir la ficha', v: (r) => siNo(r.emergente) }],
       alGuardar: () => panelSalud(root, pid, true),
       campos: [{ k: 'texto', label: 'Aviso', req: true, ancho: 'completo' }, { k: 'nivel', label: 'Nivel', tipo: 'select', opciones: Object.entries(NIVEL_TXT) }, { k: 'emergente', label: 'Mostrar en ventana emergente', tipo: 'bool' }, { k: 'activa', label: 'Activo', tipo: 'bool', soloEditar: true }],
     });
@@ -449,7 +449,7 @@ const DovaFicha = (() => {
     }).then((filas) => {
       if (!filas || !filas.length) return;
       const p = c.querySelector('[data-pasaporte]');
-      p.innerHTML = '<button class="dova-btn-secundario" data-pas>Imprimir pasaporte de implantes</button>';
+      p.innerHTML = '<button class="dova-btn-secundario" data-pas>Imprimir tarjeta de implantes para el paciente</button>';
       p.querySelector('[data-pas]').addEventListener('click', async () => {
         const d = await DOVA.get(`/especialidades/implantes-pasaporte/${pid}`);
         X.imprimir('Pasaporte de implantes', `<h1>Pasaporte de implantes dentales</h1>
@@ -526,7 +526,7 @@ const DovaFicha = (() => {
     const CL = OPC(['I', 'II', 'II_1', 'II_2', 'III', 'no_evaluable']);
     X.tablaCrud({
       root: c.querySelector('[data-casos]'), titulo: 'Casos de ortodoncia', endpoint: '/especialidades/orto-casos', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
-      descripcion: 'Fase activa: DOVA programa el control mensual. Al pasar a contención: controles a 1, 3, 6 y 12 meses y recall semestral de retenedores.',
+      descripcion: 'Fase activa: DOVA programa el control mensual. Al pasar a contención: controles a 1, 3, 6 y 12 meses y control de retenedores cada 6 meses.',
       puedeCrear: ed, puedeEditar: ed, puedeBorrar: ed,
       columnas: [
         { t: 'Aparatología', v: (r) => esc(etiqueta(r.tipo_aparatologia) + (r.marca ? ` (${r.marca})` : '')) },
@@ -578,7 +578,7 @@ const DovaFicha = (() => {
     c.innerHTML = '<div data-prev></div><div data-riesgo></div>';
     X.tablaCrud({
       root: c.querySelector('[data-prev]'), titulo: 'Aplicaciones preventivas', endpoint: '/especialidades/preventivos', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
-      descripcion: 'Sellantes, flúor y profilaxis actualizan solos el recall correspondiente.',
+      descripcion: 'Sellantes, flúor y profilaxis actualizan solos el próximo control.',
       puedeCrear: ed, puedeEditar: ed, puedeBorrar: ed,
       columnas: [{ t: 'Fecha', v: (r) => fmtFecha(r.fecha) }, { t: 'Tipo', v: (r) => esc(etiqueta(r.tipo)) }, { t: 'Pieza', v: (r) => esc(r.pieza || '-') }, { t: 'Producto / lote', v: (r) => esc([r.producto, r.lote].filter(Boolean).join(' / ') || '-') }, { t: 'Retención', v: (r) => (r.estado_retencion ? badge(etiqueta(r.estado_retencion), r.estado_retencion === 'perdida' ? 'critica' : r.estado_retencion === 'parcial' ? 'atencion' : 'ok') : '-') }],
       campos: [
@@ -593,7 +593,7 @@ const DovaFicha = (() => {
     const rc = c.querySelector('[data-riesgo]');
     await X.tablaCrud({
       root: rc, titulo: 'Riesgo de caries', endpoint: '/especialidades/riesgo-caries', query: `pacienteId=${pid}`, puedeBorrar: ed,
-      descripcion: 'Evaluación tipo CAMBRA: el nivel y el intervalo de control se calculan solos y actualizan los recalls de control y flúor.',
+      descripcion: 'Evaluación tipo CAMBRA: el nivel y el intervalo de control se calculan solos y actualizan los controles periódicos de control y flúor.',
       columnas: [{ t: 'Fecha', v: (r) => fmtFecha(r.fecha) }, { t: 'Nivel', v: (r) => badge(etiqueta(r.nivel), r.nivel === 'bajo' ? 'ok' : r.nivel === 'moderado' ? 'atencion' : 'critica') }, { t: 'Control sugerido', v: (r) => `cada ${r.recall_sugerido_meses} meses` }, { t: 'Recomendaciones', v: (r) => `<span class="dova-nota">${esc(r.recomendaciones || '')}</span>` }],
     });
     if (ed) {
@@ -693,7 +693,7 @@ const DovaFicha = (() => {
     const [tipos, seg] = await Promise.all([X.catalogo('recallTipos', '/recalls/tipos').catch(() => []), DOVA.get(`/seguimiento/paciente/${pid}`)]);
     const ods = await X.opcionesOdontologos();
     root.innerHTML = `
-      <div class="dova-ext-toolbar"><h3 class="dova-section-title" style="margin:0">Controles periódicos (recalls)</h3>${man ? '<button class="dova-btn-primary" data-asignar>+ Asignar recall</button>' : ''}</div>
+      <div class="dova-ext-toolbar"><h3 class="dova-section-title" style="margin:0">Controles periódicos</h3>${man ? '<button class="dova-btn-primary" data-asignar>+ Programar control periódico</button>' : ''}</div>
       <table class="dova-tabla"><thead><tr><th>Tipo</th><th>Cada</th><th>Última</th><th>Próxima</th><th>Estado</th><th>Contactos</th><th></th></tr></thead><tbody>
       ${seg.recalls.map((r) => `<tr><td><strong>${esc(r.tipo_nombre)}</strong></td><td>${r.intervalo_efectivo} meses</td><td>${fmtFecha(r.ultima_fecha)}</td><td>${r.estado === 'activo' ? badgeFecha(r.proxima_fecha) : fmtFecha(r.proxima_fecha)}</td>
         <td>${badge(etiqueta(r.estado), r.estado === 'activo' ? 'ok' : 'info')}${r.pausado_hasta ? `<br><span class="dova-nota">hasta ${fmtFecha(r.pausado_hasta)}</span>` : ''}</td>
@@ -705,14 +705,14 @@ const DovaFicha = (() => {
     const recargar = () => panelSeguimiento(root, pid);
     const b = (sel, fn) => root.querySelectorAll(sel).forEach((el) => el.addEventListener('click', () => fn(seg.recalls.find((r) => r.id === Number(Object.values(el.dataset)[0])))));
     const ba = root.querySelector('[data-asignar]');
-    if (ba) ba.addEventListener('click', () => X.modalForm('Asignar recall', [
+    if (ba) ba.addEventListener('click', () => X.modalForm('Programar control periódico', [
       { k: 'recallTipoId', label: 'Tipo de control', tipo: 'select', req: true, opciones: tipos.filter((t) => t.activo).map((t) => [t.id, `${t.nombre} (cada ${t.intervalo_meses} m)`]) },
-      { k: 'intervaloMeses', label: 'Intervalo propio (meses)', tipo: 'numero', ayuda: 'Vacío = el del tipo' }, { k: 'ultimaFecha', label: 'Última vez realizado', tipo: 'fecha', ayuda: 'Vacío = hoy' },
+      { k: 'intervaloMeses', label: 'Cada cuántos meses (solo para este paciente)', tipo: 'numero', ayuda: 'Vacío = el del tipo' }, { k: 'ultimaFecha', label: 'Última vez realizado', tipo: 'fecha', ayuda: 'Vacío = hoy' },
       { k: 'proximaFecha', label: 'Próxima fecha (opcional)', tipo: 'fecha' }, { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', opciones: ods }, { k: 'notas', label: 'Notas', tipo: 'textarea' },
     ], {}, async (d) => { await DOVA.post('/recalls', { ...d, pacienteId: pid }); X.toast('Recall asignado', 'ok'); recargar(); }));
     b('[data-rec-contacto]', (r) => modalContactoRecall(r, recargar));
     b('[data-rec-completar]', async (r) => { try { await DOVA.post(`/recalls/${r.id}/completar`, {}); X.toast('Registrado: próxima fecha recalculada', 'ok'); recargar(); } catch (e) { X.toast(e.message, 'error'); } });
-    b('[data-rec-editar]', (r) => X.modalForm(`Editar recall — ${r.tipo_nombre}`, [{ k: 'intervaloMeses', label: 'Intervalo propio (meses)', tipo: 'numero' }, { k: 'proximaFecha', label: 'Próxima fecha', tipo: 'fecha' }, { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', opciones: ods }, { k: 'notas', label: 'Notas', tipo: 'textarea' }],
+    b('[data-rec-editar]', (r) => X.modalForm(`Editar control periódico — ${r.tipo_nombre}`, [{ k: 'intervaloMeses', label: 'Cada cuántos meses (solo para este paciente)', tipo: 'numero' }, { k: 'proximaFecha', label: 'Próxima fecha', tipo: 'fecha' }, { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', opciones: ods }, { k: 'notas', label: 'Notas', tipo: 'textarea' }],
       { intervaloMeses: r.intervalo_meses, proximaFecha: r.proxima_fecha, odontologoId: r.odontologo_id, notas: r.notas }, async (d) => { await DOVA.put(`/recalls/${r.id}`, d); recargar(); }, { editando: true }));
     b('[data-rec-pausar]', (r) => X.modalForm('Pausar recall', [{ k: 'pausadoHasta', label: 'Pausar hasta', tipo: 'fecha', req: true }, { k: 'motivo', label: 'Motivo' }], {}, async (d) => { await DOVA.post(`/recalls/${r.id}/estado`, { estado: 'pausado', ...d }); recargar(); }));
     b('[data-rec-activar]', async (r) => { await DOVA.post(`/recalls/${r.id}/estado`, { estado: 'activo' }); recargar(); });
@@ -806,7 +806,7 @@ const DovaFicha = (() => {
       { k: 'listaPrecioId', label: 'Lista de precios', tipo: 'select', opciones: listas.map((l) => [l.id, l.nombre]) },
       { k: 'aceptaWhatsapp', label: 'Acepta mensajes de WhatsApp', tipo: 'bool' }, { k: 'aceptaRecordatorios', label: 'Acepta recordatorios de controles', tipo: 'bool' },
     ];
-    cont.innerHTML = `<div class="dova-ext-caja"><h4>Datos de seguimiento del paciente</h4><form data-datos-seg>${X.formHtml(campos, p)}<button class="dova-btn-primary">Guardar datos</button> <button type="button" class="dova-btn-secundario" data-exportar style="display:${puede('pacientes.export') ? '' : 'none'}">Exportar expediente completo</button></form></div>`;
+    cont.innerHTML = `<div class="dova-ext-caja"><h4>Datos de seguimiento del paciente</h4><form data-datos-seg>${X.formHtml(campos, p)}<button class="dova-btn-primary">Guardar datos</button> <button type="button" class="dova-btn-secundario" data-exportar style="display:${puede('pacientes.export') ? '' : 'none'}">Descargar ficha completa</button></form></div>`;
     const f = cont.querySelector('[data-datos-seg]');
     f.addEventListener('submit', async (e) => { e.preventDefault(); try { await DOVA.put(`/pacientes/${pid}`, X.leerForm(f, campos, true)); X.toast('Datos guardados', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); } });
     // Grupo familiar: para agendar a la familia junta y ver quién es responsable de quién.
@@ -837,7 +837,7 @@ const DovaFicha = (() => {
     const t = cc.tramos;
     c.innerHTML = `
       <div class="dova-ext-kpis">
-        <div class="dova-ext-kpi ${cc.saldo > 0 ? 'alerta' : ''}"><div class="dova-ext-kpi-valor">${fmtGs(Math.max(cc.saldo, 0))}</div><div class="dova-ext-kpi-label">Saldo deudor</div></div>
+        <div class="dova-ext-kpi ${cc.saldo > 0 ? 'alerta' : ''}"><div class="dova-ext-kpi-valor">${fmtGs(Math.max(cc.saldo, 0))}</div><div class="dova-ext-kpi-label">Debe</div></div>
         ${cc.saldoAFavor > 0 ? `<div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${fmtGs(cc.saldoAFavor)}</div><div class="dova-ext-kpi-label">Saldo a favor</div></div>` : ''}
         <div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${fmtGs(t['0_30'])}</div><div class="dova-ext-kpi-label">Deuda 0–30 días</div></div>
         <div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${fmtGs(t['31_60'])}</div><div class="dova-ext-kpi-label">31–60 días</div></div>
@@ -846,7 +846,7 @@ const DovaFicha = (() => {
         <div class="dova-ext-kpi ${cc.cuotasVencidas ? 'alerta' : ''}"><div class="dova-ext-kpi-valor">${cc.cuotasPendientes.length}</div><div class="dova-ext-kpi-label">Cuotas pendientes (${cc.cuotasVencidas} vencidas)</div></div>
       </div>
       <h3 class="dova-section-title">Movimientos</h3>
-      <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Concepto</th><th>Debe</th><th>Haber</th><th>Saldo</th></tr></thead><tbody>
+      <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Concepto</th><th>Cargos</th><th>Pagos</th><th>Saldo</th></tr></thead><tbody>
       ${cc.movimientos.map((m) => `<tr><td>${fmtFecha(m.fecha)}</td><td>${esc(m.concepto)}</td><td>${m.debe ? fmtGs(m.debe) : ''}</td><td>${m.haber ? fmtGs(m.haber) : ''}</td><td><strong>${fmtGs(m.saldo)}</strong></td></tr>`).join('') || '<tr><td colspan="5">Sin movimientos.</td></tr>'}
       </tbody></table></div>
       <div data-ajustes></div>`;
@@ -905,8 +905,8 @@ const DovaFicha = (() => {
       { id: 'salud', texto: 'Salud', visible: puede('salud.view', 'salud.edit', 'pacientes.clinical.view'), render: panelSalud },
       { id: 'perio', texto: 'Periodoncia', visible: puede('periodoncia.edit', 'pacientes.clinical.view', 'odontograma.view'), render: panelPerio },
       { id: 'especialidades', texto: 'Especialidades', visible: puede('especialidades.edit', 'pacientes.clinical.view'), render: panelEspecialidades },
-      { id: 'seguimiento', texto: 'Seguimiento', visible: puede('seguimiento.view', 'recalls.view', 'seguimiento.manage'), render: panelSeguimiento },
-      { id: 'cuenta', texto: 'Cuenta', visible: puede('cuenta_corriente.view', 'pagos.view', 'aseguradoras.manage'), render: panelCuenta },
+      { id: 'seguimiento', texto: 'Controles y contactos', visible: puede('seguimiento.view', 'recalls.view', 'seguimiento.manage'), render: panelSeguimiento },
+      { id: 'cuenta', texto: 'Estado de cuenta', visible: puede('cuenta_corriente.view', 'pagos.view', 'aseguradoras.manage'), render: panelCuenta },
     ].filter((t) => t.visible);
     const ancla = document.getElementById('modal-root');
     for (const t of nuevas) {

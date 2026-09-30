@@ -19,7 +19,7 @@ Antes el backend ya permitía todo, pero la interfaz no tenía los formularios. 
 | **Ficha → Agenda** | Próximos turnos e historial del paciente; dar turno con el paciente ya elegido; reprogramar y cancelar. |
 | **Ficha → Documentación** | **Consentimientos**: crear desde plantilla, **firmar en pantalla** (dedo o mouse; paciente y profesional), PDF, anular. |
 | **Inventario** | Buscar, **nuevo insumo**, **movimientos** (entrada, salida, pérdida, vencimiento, ajuste), historial, **registrar compra** (suma stock), proveedores. |
-| **Catálogo** (menú nuevo, admin) | **Tratamientos y precios** (con duración y control periódico) y **odontólogos**. |
+| **Tratamientos** (menú nuevo, admin) | **Tratamientos y precios** (con duración y control periódico) y **odontólogos**. |
 
 Además: abrir un modal en una sección sin contenedor propio (Operaciones, Seguimiento…) **borraba toda la página**; corregido.
 
@@ -92,3 +92,34 @@ Los datos que ya quedaron mal **antes** de esta versión (turnos superpuestos, c
 - La base trabaja en hora de Paraguay (`DOVA_TZ`): "hoy" es el día local también después de las 21 h.
 - Cabeceras de seguridad (CSP) ajustadas a las pantallas de DOVA; `.gitignore` para no subir `node_modules`, `.env` ni archivos de pacientes.
 - Probado sirviendo todo desde el mismo servidor: 34/34 pantallas nuevas y 173/173 secciones con un año de datos.
+
+---
+
+## Nombres simples en pantalla
+
+Para que cualquier persona de la clínica entienda el sistema sin haber participado en su desarrollo, se reemplazaron términos técnicos o en inglés:
+
+| Antes | Ahora |
+|---|---|
+| Panel | Inicio |
+| Operaciones | Clínica |
+| Indicadores / KPIs | Estadísticas |
+| Auditoría | Historial de cambios |
+| Catálogo | Tratamientos |
+| Soporte / Helpdesk / tickets | Ayuda técnica / pedidos de ayuda |
+| Recall | Control periódico |
+| Controles (post-tratamiento) | Controles después de un tratamiento |
+| Reactivación | Pacientes que no volvieron |
+| Comunicaciones | Llamadas y mensajes |
+| Fichaje | Asistencia del personal |
+| NPS | Satisfacción de pacientes |
+| Producción | Trabajos realizados (Gs.) |
+| Liquidar comisión | Registrar pago de comisión |
+| Antigüedad de deuda | Quién debe y desde cuándo |
+| Cierre contable | Cerrar meses |
+| Ficha: Administrativo / Cuenta / Documentación / Seguimiento | Pagos y presupuestos / Estado de cuenta / Consentimientos / Controles y contactos |
+| Debe / Haber | Cargos / Pagos |
+| Exportar CSV | Descargar lista (Excel) |
+| Rol "Helpdesk" | Soporte técnico |
+
+También se corrigieron palabras que aparecían sin tilde (No asistio, Odontologos, Esterilizacion…). Los términos clínicos que usa el odontólogo (periodontograma, endodoncia, BOP…) se mantienen.

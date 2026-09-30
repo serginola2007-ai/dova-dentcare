@@ -60,12 +60,12 @@ const PERMISOS = [
   { codigo: 'lista_espera.manage', modulo: 'agenda', descripcion: 'Gestionar lista de espera' },
 
   // Helpdesk (fase futura, ya reservado)
-  { codigo: 'helpdesk.view', modulo: 'helpdesk', descripcion: 'Ver Helpdesk' },
-  { codigo: 'helpdesk.create', modulo: 'helpdesk', descripcion: 'Crear tickets' },
-  { codigo: 'helpdesk.view_all', modulo: 'helpdesk', descripcion: 'Ver todos los tickets (no solo propios)' },
-  { codigo: 'helpdesk.reply', modulo: 'helpdesk', descripcion: 'Responder tickets' },
-  { codigo: 'helpdesk.assign', modulo: 'helpdesk', descripcion: 'Asignar tickets' },
-  { codigo: 'helpdesk.resolve', modulo: 'helpdesk', descripcion: 'Resolver tickets' },
+  { codigo: 'helpdesk.view', modulo: 'helpdesk', descripcion: 'Ver pedidos de ayuda técnica' },
+  { codigo: 'helpdesk.create', modulo: 'helpdesk', descripcion: 'Pedir ayuda técnica' },
+  { codigo: 'helpdesk.view_all', modulo: 'helpdesk', descripcion: 'Ver todos los pedidos de ayuda (no solo los propios)' },
+  { codigo: 'helpdesk.reply', modulo: 'helpdesk', descripcion: 'Responder pedidos de ayuda' },
+  { codigo: 'helpdesk.assign', modulo: 'helpdesk', descripcion: 'Asignar pedidos de ayuda' },
+  { codigo: 'helpdesk.resolve', modulo: 'helpdesk', descripcion: 'Marcar pedidos de ayuda como resueltos' },
 
   // Historia clínica / archivos clínicos
   { codigo: 'historia_clinica.view', modulo: 'pacientes', descripcion: 'Ver historia clínica' },
@@ -86,8 +86,8 @@ const PERMISOS = [
   // Seguimiento integral (migración 0020)
   { codigo: 'salud.view', modulo: 'salud', descripcion: 'Ver alergias, medicación, condiciones y alertas médicas' },
   { codigo: 'salud.edit', modulo: 'salud', descripcion: 'Registrar alergias, medicación, condiciones, anamnesis y signos vitales' },
-  { codigo: 'recalls.view', modulo: 'seguimiento', descripcion: 'Ver recalls (controles periódicos) de pacientes' },
-  { codigo: 'recalls.manage', modulo: 'seguimiento', descripcion: 'Gestionar recalls y registrar contactos' },
+  { codigo: 'recalls.view', modulo: 'seguimiento', descripcion: 'Ver controles periódicos de pacientes' },
+  { codigo: 'recalls.manage', modulo: 'seguimiento', descripcion: 'Gestionar controles periódicos y registrar llamadas/mensajes' },
   { codigo: 'seguimiento.manage', modulo: 'seguimiento', descripcion: 'Registrar comunicaciones, encuestas, observaciones y controles programados' },
   { codigo: 'periodoncia.edit', modulo: 'especialidades', descripcion: 'Registrar periodontogramas y PSR' },
   { codigo: 'especialidades.edit', modulo: 'especialidades', descripcion: 'Registrar implantes, endodoncias, ortodoncia, preventivos, biopsias y anestesia' },
@@ -95,8 +95,8 @@ const PERMISOS = [
   { codigo: 'agenda.config', modulo: 'agenda', descripcion: 'Configurar sillones y bloqueos de agenda' },
   { codigo: 'esterilizacion.manage', modulo: 'operaciones', descripcion: 'Registrar ciclos de esterilización y paquetes' },
   { codigo: 'equipos.manage', modulo: 'operaciones', descripcion: 'Gestionar equipos y mantenimientos' },
-  { codigo: 'fichaje.use', modulo: 'operaciones', descripcion: 'Marcar entrada/salida propia' },
-  { codigo: 'fichaje.view_all', modulo: 'operaciones', descripcion: 'Ver fichajes de todo el personal' },
+  { codigo: 'fichaje.use', modulo: 'operaciones', descripcion: 'Marcar su propia entrada y salida' },
+  { codigo: 'fichaje.view_all', modulo: 'operaciones', descripcion: 'Ver la asistencia de todo el personal' },
   { codigo: 'aseguradoras.manage', modulo: 'finanzas', descripcion: 'Gestionar seguros, prepagas, convenios, coberturas y autorizaciones' },
   { codigo: 'listas_precios.manage', modulo: 'finanzas', descripcion: 'Gestionar listas de precios' },
   { codigo: 'cuenta_corriente.view', modulo: 'finanzas', descripcion: 'Ver cuenta corriente y antigüedad de deuda' },
@@ -104,7 +104,7 @@ const PERMISOS = [
   { codigo: 'comisiones.view', modulo: 'finanzas', descripcion: 'Ver comisiones y producción de odontólogos' },
   { codigo: 'comisiones.manage', modulo: 'finanzas', descripcion: 'Configurar reglas y liquidar comisiones' },
   { codigo: 'metas.manage', modulo: 'finanzas', descripcion: 'Configurar metas de producción' },
-  { codigo: 'kpis.view', modulo: 'reportes', descripcion: 'Ver indicadores de gestión (KPIs)' },
+  { codigo: 'kpis.view', modulo: 'reportes', descripcion: 'Ver estadísticas de la clínica' },
   { codigo: 'pacientes.export', modulo: 'pacientes', descripcion: 'Exportar el expediente completo de un paciente' },
 ];
 

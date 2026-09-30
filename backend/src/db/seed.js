@@ -51,7 +51,7 @@ async function run() {
       { codigo: 'odontologo', nombre: 'Odontólogo' },
       { codigo: 'recepcion', nombre: 'Recepción' },
       { codigo: 'asistente', nombre: 'Asistente' },
-      { codigo: 'helpdesk', nombre: 'Helpdesk' },
+      { codigo: 'helpdesk', nombre: 'Soporte técnico' },
     ];
     const rolIdPorCodigo = {};
     for (const r of rolesDefinidos) {

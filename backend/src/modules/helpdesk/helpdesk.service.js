@@ -19,10 +19,10 @@ async function listar(clinicaId, usuario, filtros) {
 
 async function obtener(clinicaId, id, usuario) {
   const ticket = await repo.obtenerPorId(clinicaId, id);
-  if (!ticket) throw new ApiError(404, 'Ticket no encontrado');
+  if (!ticket) throw new ApiError(404, 'Pedido de ayuda no encontrado');
   const puedeVerTodos = usuario.permisos.includes('helpdesk.view_all');
   if (!puedeVerTodos && ticket.creador_id !== usuario.id && ticket.asignado_id !== usuario.id) {
-    throw new ApiError(403, 'No tenés acceso a este ticket');
+    throw new ApiError(403, 'No tenés acceso a este pedido de ayuda');
   }
   ticket.mensajes = await repo.listarMensajes(id);
   return ticket;
@@ -61,7 +61,7 @@ async function crear(clinicaId, datos, usuario) {
 async function cambiarEstado(clinicaId, id, estado, resolucion, usuario) {
   if (!ESTADOS_VALIDOS.includes(estado)) throw new ApiError(400, `Estado inválido: ${ESTADOS_VALIDOS.join(', ')}`);
   const ticket = await repo.actualizarEstado(clinicaId, id, estado, resolucion);
-  if (!ticket) throw new ApiError(404, 'Ticket no encontrado');
+  if (!ticket) throw new ApiError(404, 'Pedido de ayuda no encontrado');
 
   await auditoria.registrar({
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
@@ -79,7 +79,7 @@ async function cambiarEstado(clinicaId, id, estado, resolucion, usuario) {
 
 async function asignar(clinicaId, id, asignadoId, usuario) {
   const ticket = await repo.asignar(clinicaId, id, asignadoId);
-  if (!ticket) throw new ApiError(404, 'Ticket no encontrado');
+  if (!ticket) throw new ApiError(404, 'Pedido de ayuda no encontrado');
   await auditoria.registrar({
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
     accion: 'asignar_ticket', modulo: 'helpdesk', entidadId: id, detalle: { asignadoId },
@@ -89,10 +89,10 @@ async function asignar(clinicaId, id, asignadoId, usuario) {
 
 async function agregarMensaje(clinicaId, ticketId, contenido, usuario) {
   const ticket = await repo.obtenerPorId(clinicaId, ticketId);
-  if (!ticket) throw new ApiError(404, 'Ticket no encontrado');
+  if (!ticket) throw new ApiError(404, 'Pedido de ayuda no encontrado');
   const puedeVerTodos = usuario.permisos.includes('helpdesk.view_all');
   if (!puedeVerTodos && ticket.creador_id !== usuario.id && ticket.asignado_id !== usuario.id) {
-    throw new ApiError(403, 'No tenés acceso a este ticket');
+    throw new ApiError(403, 'No tenés acceso a este pedido de ayuda');
   }
   if (!contenido || !contenido.trim()) throw new ApiError(400, 'El mensaje no puede estar vacío');
 
@@ -122,12 +122,12 @@ async function agregarAdjunto(clinicaId, ticketId, mensajeId, usuario, archivoMu
   const ticket = await repo.obtenerPorId(clinicaId, ticketId);
   if (!ticket) {
     await fs.unlink(archivoMulter.path).catch(() => {});
-    throw new ApiError(404, 'Ticket no encontrado');
+    throw new ApiError(404, 'Pedido de ayuda no encontrado');
   }
   const puedeVerTodos = usuario.permisos.includes('helpdesk.view_all');
   if (!puedeVerTodos && ticket.creador_id !== usuario.id && ticket.asignado_id !== usuario.id) {
     await fs.unlink(archivoMulter.path).catch(() => {});
-    throw new ApiError(403, 'No tenés acceso a este ticket');
+    throw new ApiError(403, 'No tenés acceso a este pedido de ayuda');
   }
   if (!MIME_PERMITIDOS.includes(archivoMulter.mimetype)) {
     await fs.unlink(archivoMulter.path).catch(() => {});

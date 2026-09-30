@@ -863,7 +863,7 @@ const DovaOperativo = (() => {
         return `<tr class="${bajo ? 'dova-fila-alerta' : ''}"><td>${esc(i.nombre)}${i.lote ? ` <span class="dova-nota">lote ${esc(i.lote)}</span>` : ''}</td><td>${esc(i.categoria || '-')}</td>
           <td><strong>${num(i.stock_actual)}</strong> ${bajo ? badge('bajo', 'critica') : ''}</td><td>${num(i.stock_minimo)}</td>
           <td>${i.fecha_vencimiento ? `${fmtFecha(i.fecha_vencimiento)} ${vencido ? badge('vencido', 'critica') : ''}` : '-'}</td><td>${esc(i.proveedor_nombre || '-')}</td>
-          <td class="dova-ext-acciones">${maneja ? `<button class="dova-btn-link" data-mov="${i.id}">Movimiento</button>` : ''}<button class="dova-btn-link" data-hist="${i.id}">Historial</button></td></tr>`;
+          <td class="dova-ext-acciones">${maneja ? `<button class="dova-btn-link" data-mov="${i.id}">Entrada / salida</button>` : ''}<button class="dova-btn-link" data-hist="${i.id}">Historial</button></td></tr>`;
       }).join('') || '<tr><td colspan="7">Sin insumos.</td></tr>'}
       </tbody></table></div>`;
     const fi = c.querySelector('[data-filtro]');
@@ -874,7 +874,7 @@ const DovaOperativo = (() => {
       { k: 'nombre', label: 'Nombre', req: true, max: 150 },
       { k: 'categoria', label: 'Categoría', max: 80 },
       { k: 'stockActual', label: 'Stock inicial', tipo: 'numero', min: 0 },
-      { k: 'stockMinimo', label: 'Stock mínimo (alerta)', tipo: 'numero', min: 0 },
+      { k: 'stockMinimo', label: 'Avisar cuando queden menos de', tipo: 'numero', min: 0 },
       { k: 'proveedorId', label: 'Proveedor', tipo: 'select', opciones: provs.map((p) => [p.id, p.nombre]) },
       { k: 'precioCompra', label: 'Precio de compra (Gs.)', tipo: 'numero', min: 0 },
       { k: 'lote', label: 'Lote', max: 60 },
@@ -967,7 +967,7 @@ const DovaOperativo = (() => {
   // CATÁLOGO: tratamientos y odontólogos
   // =================================================================
   async function catalogo(root) {
-    root.innerHTML = `<h2 class="dova-view-title">Catálogo</h2><div data-subs></div>`;
+    root.innerHTML = `<h2 class="dova-view-title">Tratamientos y odontólogos</h2><div data-subs></div>`;
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'trat', texto: 'Tratamientos y precios', visible: puede('tratamientos.manage'), render: tratamientos },
       { id: 'odo', texto: 'Odontólogos', visible: puede('usuarios.manage'), render: odontologos },
@@ -978,7 +978,7 @@ const DovaOperativo = (() => {
     const tipos = await DOVA.get('/recalls/tipos').catch(() => []);
     await X.tablaCrud({
       root: c, endpoint: '/tratamientos', query: 'incluirInactivos=true', puedeCrear: true, puedeEditar: true, nuevoTexto: '+ Nuevo tratamiento', tituloModal: 'Tratamiento',
-      descripcion: 'Lo que se elige al dar turnos y armar presupuestos. El control periódico hace que DOVA agende solo el recall cuando se termina el tratamiento.',
+      descripcion: 'Lo que se elige al dar turnos y armar presupuestos. El control periódico hace que DOVA agende solo el próximo control cuando se termina el tratamiento.',
       claseFila: (r) => (r.activo === false ? 'dova-op-fila-apagada' : ''),
       columnas: [
         { t: 'Tratamiento', v: (r) => esc(r.nombre) }, { t: 'Categoría', v: (r) => esc(r.categoria || '-') }, { t: 'Precio', v: (r) => fmtGs(r.precio) },

@@ -36,7 +36,7 @@ async function obtener(clinicaId, id) {
 
 async function tipoDe(clinicaId, tipoId) {
   const r = await query('SELECT * FROM recall_tipos WHERE clinica_id=$1 AND id=$2', [clinicaId, tipoId]);
-  if (!r.rowCount) throw new ApiError(400, 'Tipo de recall inexistente en esta clínica');
+  if (!r.rowCount) throw new ApiError(400, 'Ese tipo de control periódico no existe en esta clínica');
   return r.rows[0];
 }
 
@@ -163,7 +163,7 @@ const CANALES = ['whatsapp', 'llamada', 'sms', 'email', 'presencial', 'carta'];
 
 async function registrarContacto(clinicaId, id, { canal = 'whatsapp', resultado, nota }, usuario) {
   const rec = await obtener(clinicaId, id);
-  if (!rec) throw new ApiError(404, 'Recall no encontrado');
+  if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
   if (!RESULTADOS.includes(resultado)) throw new ApiError(400, `Resultado inválido. Opciones: ${RESULTADOS.join(', ')}`);
   if (!CANALES.includes(canal)) throw new ApiError(400, `Canal inválido. Opciones: ${CANALES.join(', ')}`);
   await query(
@@ -185,7 +185,7 @@ async function registrarContacto(clinicaId, id, { canal = 'whatsapp', resultado,
 
 async function completar(clinicaId, id, { fecha }, usuario) {
   const rec = await obtener(clinicaId, id);
-  if (!rec) throw new ApiError(404, 'Recall no encontrado');
+  if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
   const f = fecha || hoyIso();
   const proxima = sumarMeses(f, rec.intervalo_efectivo);
   await query(
@@ -199,7 +199,7 @@ async function completar(clinicaId, id, { fecha }, usuario) {
 
 async function cambiarEstado(clinicaId, id, { estado, pausadoHasta, motivo }, usuario) {
   const rec = await obtener(clinicaId, id);
-  if (!rec) throw new ApiError(404, 'Recall no encontrado');
+  if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
   if (!['activo', 'pausado', 'desactivado'].includes(estado)) throw new ApiError(400, 'Estado inválido (activo, pausado, desactivado)');
   if (estado === 'pausado' && !pausadoHasta) throw new ApiError(400, 'Indicá hasta qué fecha se pausa');
   await query(
@@ -212,7 +212,7 @@ async function cambiarEstado(clinicaId, id, { estado, pausadoHasta, motivo }, us
 
 async function editar(clinicaId, id, { intervaloMeses, proximaFecha, odontologoId, notas }, usuario) {
   const rec = await obtener(clinicaId, id);
-  if (!rec) throw new ApiError(404, 'Recall no encontrado');
+  if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
   const intervalo = intervaloMeses === undefined ? rec.intervalo_meses : (intervaloMeses === null || intervaloMeses === '' ? null : Number(intervaloMeses));
   if (intervalo !== null && (!Number.isInteger(intervalo) || intervalo < 1 || intervalo > 60)) throw new ApiError(400, 'El intervalo debe ser de 1 a 60 meses');
   if (proximaFecha !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(proximaFecha))) throw new ApiError(400, 'Fecha inválida');
@@ -226,7 +226,7 @@ async function editar(clinicaId, id, { intervaloMeses, proximaFecha, odontologoI
 
 async function eliminar(clinicaId, id, usuario) {
   const rec = await obtener(clinicaId, id);
-  if (!rec) throw new ApiError(404, 'Recall no encontrado');
+  if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
   await query('DELETE FROM paciente_recalls WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
   await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'borrar_recall', modulo: 'recalls', entidadId: id, detalle: rec });
 }

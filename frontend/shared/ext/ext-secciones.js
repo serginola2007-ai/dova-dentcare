@@ -26,7 +26,7 @@ const DovaSecciones = (() => {
     root.innerHTML = `<h2 class="dova-view-title">Seguimiento de pacientes</h2>
       <p class="dova-subtitulo">Todo lo que hay que hacer para que ningún paciente se pierda: controles vencidos, tratamientos sin turno, pacientes para reactivar y recordatorios.</p>
       <div class="dova-ext-kpis">
-        ${kpi(p.recallsVencidos, 'Recalls vencidos', { alerta: p.recallsVencidos > 0, ir: 'recalls', sub: `${p.recallsProximos} en los próximos 30 días` })}
+        ${kpi(p.recallsVencidos, 'Controles periódicos atrasados', { alerta: p.recallsVencidos > 0, ir: 'recalls', sub: `${p.recallsProximos} en los próximos 30 días` })}
         ${kpi(p.controlesVencidos, 'Controles vencidos', { alerta: p.controlesVencidos > 0, ir: 'controles', sub: `${p.controlesSemana} esta semana` })}
         ${kpi(p.observacionesVencidas, 'Piezas para reevaluar', { alerta: p.observacionesVencidas > 0, ir: 'observacion' })}
         ${kpi(p.tratamientosSinTurno, 'Tratamientos sin turno', { alerta: p.tratamientosSinTurno > 0, ir: 'sinturno' })}
@@ -36,22 +36,22 @@ const DovaSecciones = (() => {
         ${kpi(p.biopsiasPendientes, 'Biopsias sin resultado', { alerta: p.biopsiasPendientes > 0, ir: 'biopsias' })}
         ${kpi(p.laboratorioAtrasado, 'Trabajos de laboratorio atrasados', { alerta: p.laboratorioAtrasado > 0 })}
         ${kpi(p.tareasPendientes, 'Tareas pendientes', { ir: 'tareas' })}
-        ${p.nps ? kpi(p.nps.puntaje, 'NPS (6 meses)', { sub: `${p.nps.encuestas} encuestas` }) : ''}
+        ${p.nps ? kpi(p.nps.puntaje, 'Satisfacción de pacientes (últimos 6 meses)', { sub: `${p.nps.encuestas} encuestas` }) : ''}
       </div>
       <div data-subs></div>`;
     const subs = root.querySelector('[data-subs]');
     const pest = [
-      { id: 'recalls', texto: 'Recalls', visible: puede('recalls.view', 'recalls.manage'), render: subRecalls },
-      { id: 'controles', texto: 'Controles', render: subControles },
-      { id: 'observacion', texto: 'Observación', render: subObservacion },
+      { id: 'recalls', texto: 'Controles periódicos', visible: puede('recalls.view', 'recalls.manage'), render: subRecalls },
+      { id: 'controles', texto: 'Controles después de un tratamiento', render: subControles },
+      { id: 'observacion', texto: 'Piezas en observación', render: subObservacion },
       { id: 'sinturno', texto: 'Tratamientos sin turno', visible: puede('planes_tratamiento.view', 'seguimiento.view'), render: subSinTurno },
       { id: 'presupuestos', texto: 'Presupuestos sin respuesta', visible: puede('presupuestos.view'), render: subPresupuestos },
       { id: 'recordatorios', texto: 'Recordatorios de turnos', visible: puede('agenda.view'), render: subRecordatorios },
-      { id: 'reactivacion', texto: 'Reactivación', render: subReactivacion },
+      { id: 'reactivacion', texto: 'Pacientes que no volvieron', render: subReactivacion },
       { id: 'cumpleanos', texto: 'Cumpleaños', render: subCumpleanos },
       { id: 'tareas', texto: 'Tareas', visible: puede('tareas.manage'), render: subTareas },
       { id: 'biopsias', texto: 'Biopsias', visible: puede('especialidades.edit', 'pacientes.clinical.view'), render: subBiopsiasPend },
-      { id: 'comunicaciones', texto: 'Comunicaciones', render: subComunicaciones },
+      { id: 'comunicaciones', texto: 'Llamadas y mensajes', render: subComunicaciones },
     ];
     X.subPestanas(subs, pest, { inicial: subInicial });
     root.querySelectorAll('[data-ir-sub]').forEach((b) => b.addEventListener('click', () => {
@@ -67,7 +67,7 @@ const DovaSecciones = (() => {
       <div><label>Próximos días</label><input type="number" name="dias" value="30" min="1" max="365"/></div>
       <div><label>Tipo</label><select name="tipoId"><option value="">Todos</option>${tipos.map((t) => `<option value="${t.id}">${esc(t.nombre)}</option>`).join('')}</select></div>
       <div><label>Odontólogo</label><select name="odontologoId"><option value="">Todos</option>${ods.map(([i, n]) => `<option value="${i}">${esc(n)}</option>`).join('')}</select></div>
-      <button class="dova-btn-secundario">Filtrar</button><button type="button" class="dova-btn-link" data-csv>Exportar CSV</button></form><div data-l></div>`;
+      <button class="dova-btn-secundario">Filtrar</button><button type="button" class="dova-btn-link" data-csv>Descargar lista (Excel)</button></form><div data-l></div>`;
     const f = c.querySelector('[data-f]'); const l = c.querySelector('[data-l]');
     let filas = [];
     const cols = [
@@ -88,7 +88,7 @@ const DovaSecciones = (() => {
       l.querySelectorAll('[data-contacto]').forEach((b) => b.addEventListener('click', () => DovaFicha.modalContactoRecall(filas[Number(b.dataset.contacto)], cargar)));
     };
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
-    c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`recalls-${X.hoy()}.csv`, filas, cols));
+    c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`controles-periodicos-${X.hoy()}.csv`, filas, cols));
     await cargar();
   }
 
@@ -177,7 +177,7 @@ const DovaSecciones = (() => {
   async function subTareas(c) {
     const usuarios = await X.catalogo('usuarios', '/seguimiento/equipo').catch(() => []);
     c.innerHTML = `<form class="dova-ext-filtros" data-f><div><label>Estado</label><select name="estado"><option value="pendiente">Pendientes</option><option value="en_curso">En curso</option><option value="hecha">Hechas</option><option value="">Todas</option></select></div>
-      <div><label>Asignadas a</label><select name="asignadoA"><option value="">Cualquiera</option><option value="${DOVA.usuarioActual().id}">Mí</option>${usuarios.map((u) => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div><button class="dova-btn-secundario">Filtrar</button></form><div data-l></div>`;
+      <div><label>Asignadas a</label><select name="asignadoA"><option value="">Cualquiera</option><option value="${DOVA.usuarioActual().id}">A mí</option>${usuarios.map((u) => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div><button class="dova-btn-secundario">Filtrar</button></form><div data-l></div>`;
     const f = c.querySelector('[data-f]');
     const cargar = () => X.tablaCrud({
       root: c.querySelector('[data-l]'), endpoint: '/seguimiento/tareas', query: new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v))).toString(),
@@ -209,14 +209,14 @@ const DovaSecciones = (() => {
   // ================================ OPERACIONES ================================
   async function operaciones(root, nav) {
     montar(root, nav);
-    root.innerHTML = `<h2 class="dova-view-title">Operaciones de la clínica</h2><div data-subs></div>`;
+    root.innerHTML = `<h2 class="dova-view-title">La clínica, día a día</h2><div data-subs></div>`;
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'sala', texto: 'Sala de espera', visible: puede('agenda.view'), render: subSala },
-      { id: 'fichaje', texto: 'Fichaje', visible: puede('fichaje.use', 'fichaje.view_all'), render: subFichaje },
+      { id: 'fichaje', texto: 'Asistencia del personal', visible: puede('fichaje.use', 'fichaje.view_all'), render: subFichaje },
       { id: 'lab', texto: 'Laboratorio', visible: puede('laboratorio.manage'), render: subLab },
       { id: 'ester', texto: 'Esterilización', visible: puede('esterilizacion.manage'), render: subEsterilizacion },
       { id: 'equipos', texto: 'Equipos', visible: puede('equipos.manage'), render: subEquipos },
-      { id: 'agendacfg', texto: 'Sillones y bloqueos', visible: puede('agenda.config'), render: subAgendaCfg },
+      { id: 'agendacfg', texto: 'Sillones y días bloqueados', visible: puede('agenda.config'), render: subAgendaCfg },
       { id: 'alertas', texto: 'Alertas', visible: puede('equipos.manage', 'esterilizacion.manage', 'inventario.view', 'laboratorio.manage'), render: subAlertasOp },
     ]);
   }
@@ -342,7 +342,7 @@ const DovaSecciones = (() => {
       campos: [{ k: 'nombre', label: 'Nombre', req: true }, { k: 'ubicacion', label: 'Ubicación' }],
     });
     X.tablaCrud({
-      root: c.querySelector('[data-blq]'), titulo: 'Bloqueos de agenda', endpoint: '/operaciones/bloqueos', query: `desde=${X.sumarDias(X.hoy(), -30)}`, puedeCrear: true, puedeEditar: true, puedeBorrar: true,
+      root: c.querySelector('[data-blq]'), titulo: 'Horarios bloqueados (feriados, vacaciones, almuerzo…)', endpoint: '/operaciones/bloqueos', query: `desde=${X.sumarDias(X.hoy(), -30)}`, puedeCrear: true, puedeEditar: true, puedeBorrar: true,
       descripcion: 'Feriados, vacaciones, almuerzo, capacitaciones… Un turno dentro de un bloqueo se rechaza salvo que se fuerce. Sin odontólogo = afecta a toda la clínica. Sin horas = día completo.',
       columnas: [{ t: 'Fecha', v: (r) => `${fmtFecha(r.fecha)}${r.fecha_hasta && r.fecha_hasta !== r.fecha ? ` → ${fmtFecha(r.fecha_hasta)}` : ''}` }, { t: 'Horario', v: (r) => (r.hora_desde ? `${String(r.hora_desde).slice(0, 5)}–${String(r.hora_hasta).slice(0, 5)}` : 'Todo el día') }, { t: 'Tipo', v: (r) => esc(etiqueta(r.tipo)) }, { t: 'Afecta a', v: (r) => esc(r.odontologo_nombre || r.sillon_nombre || 'Toda la clínica') }, { t: 'Motivo', v: (r) => esc(r.motivo || '-') }],
       campos: [{ k: 'fecha', label: 'Desde', tipo: 'fecha', req: true }, { k: 'fechaHasta', label: 'Hasta (opcional)', tipo: 'fecha' }, { k: 'horaDesde', label: 'Hora inicio', tipo: 'hora' }, { k: 'horaHasta', label: 'Hora fin', tipo: 'hora' }, { k: 'tipo', label: 'Tipo', tipo: 'select', opciones: OPC(['feriado', 'vacaciones', 'almuerzo', 'reunion', 'capacitacion', 'urgencias', 'mantenimiento', 'otro']) }, { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', opciones: ods }, { k: 'sillonId', label: 'Sillón', tipo: 'select', opciones: (sil || []).map((s) => [s.id, s.nombre]) }, { k: 'motivo', label: 'Motivo' }],
@@ -355,7 +355,7 @@ const DovaSecciones = (() => {
     c.innerHTML = `<div class="dova-ext-dos-col"><div>
       ${lista('Mantenimientos vencidos o próximos (15 días)', a.mantenimientos, (e) => `<li>${esc(e.nombre)} — ${badgeFecha(e.proximo_mantenimiento)}</li>`)}
       ${lista('Garantías por vencer (30 días)', a.garantiasPorVencer, (e) => `<li>${esc(e.nombre)} — ${fmtFecha(e.garantia_hasta)}</li>`)}
-      ${lista('Ciclos en cuarentena (esperan indicador biológico)', a.ciclosEnCuarentena, (e) => `<li>Ciclo ${esc(e.numero)} — ${X.fmtFechaHora(e.fecha)}</li>`)}
+      ${lista('Esterilizaciones esperando el resultado del control biológico', a.ciclosEnCuarentena, (e) => `<li>Ciclo ${esc(e.numero)} — ${X.fmtFechaHora(e.fecha)}</li>`)}
       </div><div>
       ${lista('Insumos por vencer (60 días)', a.insumosPorVencer, (i) => `<li>${esc(i.nombre)}${i.lote ? ` (lote ${esc(i.lote)})` : ''} — ${badgeFecha(i.fecha_vencimiento)} · stock ${esc(i.stock_actual)}</li>`)}
       ${lista('Insumos con stock bajo', a.insumosStockBajo, (i) => `<li>${esc(i.nombre)} — ${esc(i.stock_actual)} / mín. ${esc(i.stock_minimo)}</li>`)}
@@ -368,12 +368,12 @@ const DovaSecciones = (() => {
     montar(root, nav);
     root.innerHTML = `<h2 class="dova-view-title">Finanzas</h2><div data-subs></div>`;
     X.subPestanas(root.querySelector('[data-subs]'), [
-      { id: 'deuda', texto: 'Antigüedad de deuda', visible: puede('cuenta_corriente.view', 'reportes.view'), render: subDeuda },
+      { id: 'deuda', texto: 'Quién debe y desde cuándo', visible: puede('cuenta_corriente.view', 'reportes.view'), render: subDeuda },
       { id: 'comisiones', texto: 'Comisiones', visible: puede('comisiones.view', 'comisiones.manage'), render: subComisiones },
       { id: 'metas', texto: 'Metas', visible: puede('metas.manage', 'kpis.view', 'comisiones.view'), render: subMetas },
       { id: 'seguros', texto: 'Seguros y convenios', visible: puede('aseguradoras.manage'), render: subSeguros },
       { id: 'listas', texto: 'Listas de precios', visible: puede('listas_precios.manage'), render: subListas },
-      { id: 'cierre', texto: 'Cierre contable', visible: puede('clinica.config.manage'), render: subCierre },
+      { id: 'cierre', texto: 'Cerrar meses', visible: puede('clinica.config.manage'), render: subCierre },
     ]);
   }
 
@@ -391,7 +391,7 @@ const DovaSecciones = (() => {
       { t: 'Teléfono', v: (f) => esc(f.paciente.whatsapp || f.paciente.telefono || '-'), csv: (f) => f.paciente.whatsapp || f.paciente.telefono || '' },
     ];
     c.innerHTML = `<div class="dova-ext-kpis">${kpi(fmtGs(t.saldo), 'Total a cobrar')}${kpi(fmtGs(t['0_30']), '0–30 días')}${kpi(fmtGs(t['31_60']), '31–60 días')}${kpi(fmtGs(t['61_90']), '61–90 días', { alerta: t['61_90'] > 0 })}${kpi(fmtGs(t['90_mas']), 'Más de 90 días', { alerta: t['90_mas'] > 0 })}</div>
-      <div class="dova-ext-toolbar"><span class="dova-nota">${r.filas.length} paciente(s) con saldo. Pagos imputados primero a las deudas más antiguas.</span><button class="dova-btn-link" data-csv>Exportar CSV</button></div>
+      <div class="dova-ext-toolbar"><span class="dova-nota">${r.filas.length} paciente(s) con saldo. Pagos imputados primero a las deudas más antiguas.</span><button class="dova-btn-link" data-csv>Descargar lista (Excel)</button></div>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr>${cols.map((x) => `<th>${x.t}</th>`).join('')}<th></th></tr></thead><tbody>
       ${r.filas.map((f) => `<tr>${cols.map((x) => `<td>${x.v(f)}</td>`).join('')}<td>${puede('seguimiento.manage', 'whatsapp.send') ? `<button class="dova-btn-link" data-cobrar="${f.paciente.id}" data-monto="${f.saldo}">WhatsApp</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="9">No hay saldos pendientes.</td></tr>'}</tbody></table></div>`;
     c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`deudas-${X.hoy()}.csv`, r.filas, cols));
@@ -418,9 +418,9 @@ const DovaSecciones = (() => {
       const q = new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v))).toString();
       const r = await DOVA.get(`/finanzas/comisiones?${q}`);
       const res = c.querySelector('[data-res]');
-      res.innerHTML = `<table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Sesiones</th><th>Producción</th><th>Comisión bruta</th><th>Laboratorio</th><th>Comisión</th><th></th></tr></thead><tbody>
+      res.innerHTML = `<table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Sesiones</th><th>Trabajos realizados (Gs.)</th><th>Comisión antes de descontar</th><th>Costo de laboratorio</th><th>Comisión a pagar</th><th></th></tr></thead><tbody>
         ${r.odontologos.map((o, i) => `<tr><td><strong>${esc(o.odontologo)}</strong>${o.sinRegla ? ` ${badge(`${o.sinRegla} sin regla`, 'atencion')}` : ''}</td><td>${o.sesiones}</td><td>${fmtGs(o.produccion)}</td><td>${fmtGs(o.comisionBruta)}</td><td>${o.descuentoLaboratorio ? `− ${fmtGs(o.descuentoLaboratorio)}` : '-'}</td><td><strong>${fmtGs(o.comision)}</strong></td>
-          <td class="dova-ext-acciones"><button class="dova-btn-link" data-det="${i}">Detalle</button>${gestiona ? `<button class="dova-btn-link" data-liquidar="${o.odontologoId}">Liquidar</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Sin producción en el período.</td></tr>'}</tbody></table>`;
+          <td class="dova-ext-acciones"><button class="dova-btn-link" data-det="${i}">Detalle</button>${gestiona ? `<button class="dova-btn-link" data-liquidar="${o.odontologoId}">Registrar pago de comisión</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Sin producción en el período.</td></tr>'}</tbody></table>`;
       res.querySelectorAll('[data-det]').forEach((b) => b.addEventListener('click', () => {
         const o = r.odontologos[Number(b.dataset.det)];
         X.modal(`Detalle — ${o.odontologo}`, `<div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Paciente</th><th>Plan</th><th>Valor</th><th>%</th><th>Comisión</th></tr></thead><tbody>${o.detalle.map((d) => `<tr><td>${fmtFecha(d.fecha)}</td><td>${esc(d.paciente)}</td><td>${esc(d.plan)}</td><td>${fmtGs(d.valor)}</td><td>${d.porcentaje}%</td><td>${fmtGs(d.comision)}</td></tr>`).join('')}</tbody></table></div><div class="dova-modal-actions"><button class="dova-btn-primary" data-cerrar-modal>Cerrar</button></div>`, { ancho: 'ancho' });
@@ -431,7 +431,7 @@ const DovaSecciones = (() => {
     };
     const cargarLiq = () => gestiona && X.tablaCrud({
       root: c.querySelector('[data-liq]'), titulo: 'Liquidaciones', endpoint: '/finanzas/comision-liquidaciones', puedeEditar: true,
-      columnas: [{ t: 'Odontólogo', v: (r) => esc(r.odontologo_nombre) }, { t: 'Período', v: (r) => `${fmtFecha(r.desde)} → ${fmtFecha(r.hasta)}` }, { t: 'Producción', v: (r) => fmtGs(r.produccion) }, { t: 'Comisión', v: (r) => `<strong>${fmtGs(r.comision)}</strong>` }, { t: 'Estado', v: (r) => badge(etiqueta(r.estado), r.estado === 'pagada' ? 'ok' : r.estado === 'anulada' ? 'critica' : 'atencion') }],
+      columnas: [{ t: 'Odontólogo', v: (r) => esc(r.odontologo_nombre) }, { t: 'Período', v: (r) => `${fmtFecha(r.desde)} → ${fmtFecha(r.hasta)}` }, { t: 'Trabajos realizados', v: (r) => fmtGs(r.produccion) }, { t: 'Comisión', v: (r) => `<strong>${fmtGs(r.comision)}</strong>` }, { t: 'Estado', v: (r) => badge(etiqueta(r.estado), r.estado === 'pagada' ? 'ok' : r.estado === 'anulada' ? 'critica' : 'atencion') }],
       campos: [{ k: 'estado', label: 'Estado', tipo: 'select', opciones: OPC(['borrador', 'aprobada', 'pagada', 'anulada']) }],
     });
     f.addEventListener('submit', (e) => { e.preventDefault(); calcular(); });
@@ -508,7 +508,7 @@ const DovaSecciones = (() => {
 
   async function subCierre(c) {
     const r = await DOVA.get('/finanzas/bloqueo-contable');
-    c.innerHTML = `<div class="dova-ext-caja"><h4>Cierre contable</h4><p>Hasta la fecha de cierre (inclusive) nadie puede registrar ajustes ni anular pagos. Usalo cuando el contador cierra un mes.</p>
+    c.innerHTML = `<div class="dova-ext-caja"><h4>Cerrar meses ya revisados por el contador</h4><p>Hasta la fecha de cierre (inclusive) nadie puede registrar ajustes ni anular pagos. Usalo cuando el contador cierra un mes.</p>
       <p>Cierre actual: <strong>${r.fechaBloqueo ? fmtFecha(r.fechaBloqueo) : 'sin cierre'}</strong></p>
       <form class="dova-ext-filtros" data-f><div><label>Cerrar hasta</label><input type="date" name="f" max="${X.hoy()}" value="${r.fechaBloqueo || ''}"/></div><button class="dova-btn-primary">Guardar</button><button type="button" class="dova-btn-secundario" data-quitar>Quitar cierre</button></form></div>`;
     const guardar = async (v) => { try { await DOVA.put('/finanzas/bloqueo-contable', { fechaBloqueo: v }); X.toast('Cierre actualizado', 'ok'); subCierre(c); } catch (e) { X.toast(e.message, 'error'); } };
@@ -520,7 +520,7 @@ const DovaSecciones = (() => {
   async function indicadores(root, nav) {
     montar(root, nav);
     const hoy = X.hoy();
-    root.innerHTML = `<h2 class="dova-view-title">Indicadores de gestión</h2>
+    root.innerHTML = `<h2 class="dova-view-title">Estadísticas de la clínica</h2>
       <form class="dova-ext-filtros" data-f><div><label>Desde</label><input type="date" name="desde" value="${hoy.slice(0, 7)}-01"/></div><div><label>Hasta</label><input type="date" name="hasta" value="${hoy}"/></div>
       <div><label>Período rápido</label><select name="rapido"><option value="">—</option><option value="mes">Este mes</option><option value="3m">Últimos 3 meses</option><option value="anio">Este año</option><option value="12m">Últimos 12 meses</option></select></div><button class="dova-btn-primary">Ver</button></form>
       <div data-k></div><h3 class="dova-section-title">Tendencia mensual (últimos 12 meses)</h3><div class="dova-ext-graficos" data-g></div>`;
@@ -535,16 +535,16 @@ const DovaSecciones = (() => {
       const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
       root.querySelector('[data-k]').innerHTML = `
         <h3 class="dova-section-title">Dinero</h3><div class="dova-ext-kpis">
-          ${kpi(fmtGs(k.produccion.total), 'Producción (trabajo realizado)')}${kpi(fmtGs(k.cobranza.total), 'Cobranza', { sub: `${k.cobranza.pagos} pagos` })}
-          ${kpi(pct(k.cobranza.tasaCobranza), 'Cobranza / producción')}${kpi(k.cobranza.ticketPromedio ? fmtGs(k.cobranza.ticketPromedio) : '—', 'Cobro promedio por paciente')}
-          ${kpi(k.agenda.produccionPorHora ? fmtGs(k.agenda.produccionPorHora) : '—', 'Producción por hora de sillón')}</div>
+          ${kpi(fmtGs(k.produccion.total), 'Trabajos realizados (Gs.)')}${kpi(fmtGs(k.cobranza.total), 'Cobrado', { sub: `${k.cobranza.pagos} pagos` })}
+          ${kpi(pct(k.cobranza.tasaCobranza), 'Cobrado sobre lo realizado')}${kpi(k.cobranza.ticketPromedio ? fmtGs(k.cobranza.ticketPromedio) : '—', 'Cobro promedio por paciente')}
+          ${kpi(k.agenda.produccionPorHora ? fmtGs(k.agenda.produccionPorHora) : '—', 'Ingreso por hora de atención')}</div>
         <h3 class="dova-section-title">Presupuestos</h3><div class="dova-ext-kpis">
-          ${kpi(pct(k.presupuestos.tasaAceptacion), 'Tasa de aceptación', { sub: `${k.presupuestos.aceptados} de ${k.presupuestos.presentados}` })}
-          ${kpi(pct(k.presupuestos.tasaAceptacionMonto), 'Aceptación en Gs.', { sub: `${fmtGs(k.presupuestos.montoAceptado)} de ${fmtGs(k.presupuestos.montoPresentado)}` })}</div>
+          ${kpi(pct(k.presupuestos.tasaAceptacion), 'Presupuestos aceptados', { sub: `${k.presupuestos.aceptados} de ${k.presupuestos.presentados}` })}
+          ${kpi(pct(k.presupuestos.tasaAceptacionMonto), 'Presupuestos aceptados (en Gs.)', { sub: `${fmtGs(k.presupuestos.montoAceptado)} de ${fmtGs(k.presupuestos.montoPresentado)}` })}</div>
         <h3 class="dova-section-title">Agenda</h3><div class="dova-ext-kpis">
           ${kpi(k.agenda.atendidos, 'Turnos atendidos', { sub: `de ${k.agenda.turnos} agendados` })}
-          ${kpi(pct(k.agenda.tasaInasistencia), 'Inasistencia', { alerta: k.agenda.tasaInasistencia > 10, sub: `${k.agenda.noAsistio} no vinieron` })}
-          ${kpi(pct(k.agenda.tasaCancelacion), 'Cancelación', { sub: k.agenda.cancelacionesTardias !== null ? `${k.agenda.cancelacionesTardias} con < 24 h de aviso` : '' })}
+          ${kpi(pct(k.agenda.tasaInasistencia), 'Pacientes que faltaron', { alerta: k.agenda.tasaInasistencia > 10, sub: `${k.agenda.noAsistio} no vinieron` })}
+          ${kpi(pct(k.agenda.tasaCancelacion), 'Turnos cancelados', { sub: k.agenda.cancelacionesTardias !== null ? `${k.agenda.cancelacionesTardias} con < 24 h de aviso` : '' })}
           ${kpi(pct(k.agenda.tasaConfirmacion), 'Turnos confirmados')}
           ${kpi(k.agenda.sinCerrar, 'Turnos pasados sin cerrar', { alerta: k.agenda.sinCerrar > 0, sub: 'marcar atendido o no asistió' })}
           ${kpi(k.agenda.horasAtendidas, 'Horas de atención')}
@@ -552,11 +552,11 @@ const DovaSecciones = (() => {
           ${kpi(k.agenda.atencionPromedioMin !== null ? `${k.agenda.atencionPromedioMin} min` : '—', 'Duración real promedio')}</div>
         <h3 class="dova-section-title">Pacientes</h3><div class="dova-ext-kpis">
           ${kpi(k.pacientes.nuevos, 'Pacientes nuevos', { sub: `${k.pacientes.primerasVisitas} primeras visitas atendidas` })}
-          ${kpi(k.pacientes.activos, 'Activos (vinieron en 18 meses)')}${kpi(k.pacientes.inactivos, 'Inactivos')}
-          ${kpi(pct(k.recalls.tasaAlDia), 'Recalls al día', { sub: `${k.recalls.vencidos} vencidos de ${k.recalls.activos}` })}
-          ${k.satisfaccion ? kpi(k.satisfaccion.nps, 'NPS', { sub: `${k.satisfaccion.encuestas} encuestas` }) : ''}</div>
+          ${kpi(k.pacientes.activos, 'Pacientes activos (vinieron en los últimos 18 meses)')}${kpi(k.pacientes.inactivos, 'Pacientes inactivos')}
+          ${kpi(pct(k.recalls.tasaAlDia), 'Controles periódicos al día', { sub: `${k.recalls.vencidos} vencidos de ${k.recalls.activos}` })}
+          ${k.satisfaccion ? kpi(k.satisfaccion.nps, 'Satisfacción de pacientes', { sub: `${k.satisfaccion.encuestas} encuestas` }) : ''}</div>
         <div class="dova-ext-dos-col">
-          <div><h3 class="dova-section-title">Por odontólogo</h3><table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Producción</th><th>Atendidos</th><th>Inasistencia</th></tr></thead><tbody>
+          <div><h3 class="dova-section-title">Por odontólogo</h3><table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Trabajos realizados</th><th>Atendidos</th><th>Faltaron</th></tr></thead><tbody>
             ${k.agenda.porOdontologo.map((o) => { const p = k.produccion.porOdontologo.find((x) => x.odontologo === o.nombre); return `<tr><td>${esc(o.nombre)}</td><td>${p ? fmtGs(p.produccion) : '-'}</td><td>${o.atendidos}</td><td>${pct(o.tasaInasistencia)}</td></tr>`; }).join('') || '<tr><td colspan="4">Sin datos.</td></tr>'}</tbody></table></div>
           <div><h3 class="dova-section-title">¿Cómo nos conocieron? (nuevos)</h3><table class="dova-tabla"><thead><tr><th>Fuente</th><th>Pacientes</th></tr></thead><tbody>
             ${k.pacientes.porFuente.map((x) => `<tr><td>${esc(etiqueta(x.fuente))}</td><td>${x.cantidad}</td></tr>`).join('') || '<tr><td colspan="2">Sin datos.</td></tr>'}</tbody></table>
@@ -571,7 +571,7 @@ const DovaSecciones = (() => {
     const et = serie.map((s) => `${MES[Number(s.periodo.slice(5)) - 1]} ${s.periodo.slice(2, 4)}`);
     const series = [
       { titulo: 'Cobranza', etiquetas: et, valores: serie.map((s) => s.cobranza), formato: 'gs' },
-      { titulo: 'Producción', etiquetas: et, valores: serie.map((s) => s.produccion), formato: 'gs' },
+      { titulo: 'Trabajos realizados (Gs.)', etiquetas: et, valores: serie.map((s) => s.produccion), formato: 'gs' },
       { titulo: 'Turnos atendidos', etiquetas: et, valores: serie.map((s) => s.turnosAtendidos) },
       { titulo: 'Pacientes nuevos', etiquetas: et, valores: serie.map((s) => s.pacientesNuevos) },
       { titulo: 'Inasistencias', etiquetas: et, valores: serie.map((s) => s.inasistencias) },
@@ -585,7 +585,7 @@ const DovaSecciones = (() => {
   async function auditoria(root, nav) {
     montar(root, nav);
     const usuarios = await X.catalogo('usuarios', '/seguimiento/equipo').catch(() => []);
-    root.innerHTML = `<h2 class="dova-view-title">Auditoría</h2><p class="dova-subtitulo">Quién hizo qué y cuándo. Cada creación, edición, borrado, exportación y cambio de estado queda registrado.</p>
+    root.innerHTML = `<h2 class="dova-view-title">Historial de cambios</h2><p class="dova-subtitulo">Quién hizo qué y cuándo. Cada creación, edición, borrado, exportación y cambio de estado queda registrado.</p>
       <form class="dova-ext-filtros" data-f><div><label>Desde</label><input type="date" name="desde" value="${X.sumarDias(X.hoy(), -7)}"/></div><div><label>Hasta</label><input type="date" name="hasta" value="${X.hoy()}"/></div>
       <div><label>Usuario</label><select name="usuarioId"><option value="">Todos</option>${usuarios.map((u) => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div>
       <div><label>Módulo</label><select name="modulo"><option value="">Todos</option></select></div><div><label>ID de paciente</label><input type="number" name="pacienteId"/></div><div><label>Buscar</label><input name="q"/></div><button class="dova-btn-primary">Buscar</button></form><div data-l></div>`;
@@ -612,8 +612,8 @@ const DovaSecciones = (() => {
     const titulo = elMain.querySelector('.dova-view-title');
     const cont = document.createElement('div');
     cont.innerHTML = `<h3 class="dova-section-title">Seguimiento de pacientes</h3><div class="dova-ext-kpis">
-      ${kpi(p.recallsVencidos, 'Recalls vencidos', { alerta: p.recallsVencidos > 0, ir: 'recalls' })}
-      ${kpi(p.controlesVencidos + p.controlesSemana, 'Controles vencidos o esta semana', { alerta: p.controlesVencidos > 0, ir: 'controles' })}
+      ${kpi(p.recallsVencidos, 'Controles periódicos atrasados', { alerta: p.recallsVencidos > 0, ir: 'recalls' })}
+      ${kpi(p.controlesVencidos + p.controlesSemana, 'Controles después de un tratamiento (atrasados o esta semana)', { alerta: p.controlesVencidos > 0, ir: 'controles' })}
       ${kpi(p.tratamientosSinTurno, 'Tratamientos sin turno', { alerta: p.tratamientosSinTurno > 0, ir: 'sinturno' })}
       ${kpi(p.turnosSinConfirmar, 'Turnos sin confirmar', { alerta: p.turnosSinConfirmar > 0, ir: 'recordatorios' })}
       ${p.cumpleanosHoy ? kpi(p.cumpleanosHoy, 'Cumpleaños hoy', { ir: 'cumpleanos' }) : ''}</div>`;
@@ -625,7 +625,7 @@ const DovaSecciones = (() => {
   async function extenderConfiguracion(elMain) {
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
-    cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos (recalls)</h2><div data-tipos></div><div data-trat></div>';
+    cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';
     elMain.appendChild(cont);
     if (puede('recalls.manage', 'clinica.config.manage')) {
       await X.tablaCrud({

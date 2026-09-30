@@ -8,21 +8,21 @@ const DovaApp = (() => {
   let elMain, elMenu, elMarca;
 
   const MENU = [
-    { ruta: 'dashboard', label: 'Panel', permiso: null },
+    { ruta: 'dashboard', label: 'Inicio', permiso: null },
     { ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
     { ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view' },
     { ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
     { ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view' },
     { ruta: 'reportes', label: 'Reportes', permiso: 'reportes.view' },
-    { ruta: 'helpdesk', label: 'Soporte', permiso: 'helpdesk.view' },
+    { ruta: 'helpdesk', label: 'Ayuda técnica', permiso: 'helpdesk.view' },
     // Seguimiento integral (ver shared/ext/). "permiso" puede ser una lista:
     // alcanza con tener cualquiera de esos permisos.
     { ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'] },
-    { ruta: 'operaciones', label: 'Operaciones', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
+    { ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
     { ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'] },
-    { ruta: 'indicadores', label: 'Indicadores', permiso: ['kpis.view'] },
-    { ruta: 'auditoria', label: 'Auditoría', permiso: 'auditoria.view' },
-    { ruta: 'catalogo', label: 'Catálogo', permiso: ['tratamientos.manage', 'usuarios.manage'] },
+    { ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
+    { ruta: 'auditoria', label: 'Historial de cambios', permiso: 'auditoria.view' },
+    { ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'] },
     { ruta: 'usuarios', label: 'Usuarios', permiso: 'usuarios.manage' },
     // Self-service: cualquier usuario logueado puede cambiar su propia
     // preferencia de diseño acá, sin permiso especial (permiso: null).
@@ -280,12 +280,12 @@ const DovaApp = (() => {
       <table class="dova-tabla">
         <thead><tr><th>Método</th><th>Cantidad</th><th>Total</th></tr></thead>
         <tbody>
-          ${financiero.porMetodo.map((m) => `<tr><td>${Vistas.esc(m.metodo)}</td><td>${m.cantidad}</td><td>${Vistas.fmtGs(m.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos en el período.</td></tr>'}
+          ${financiero.porMetodo.map((m) => `<tr><td>${Vistas.esc(({ efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', qr: 'QR' })[m.metodo] || m.metodo)}</td><td>${m.cantidad}</td><td>${Vistas.fmtGs(m.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos en el período.</td></tr>'}
         </tbody>
       </table>
 
       ${inventario ? `
-      <h3 class="dova-section-title">Consumo de insumos (Inventario ↔ Procedimientos)</h3>
+      <h3 class="dova-section-title">Insumos usados en tratamientos</h3>
       <table class="dova-tabla">
         <thead><tr><th>Insumo</th><th>Categoría</th><th>Cantidad consumida</th><th>Costo estimado</th></tr></thead>
         <tbody>
