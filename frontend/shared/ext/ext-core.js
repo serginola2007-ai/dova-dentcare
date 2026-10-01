@@ -28,6 +28,7 @@ const DovaExt = (() => {
     kpis: 'Estadísticas', seguimiento: 'Seguimiento', operaciones: 'Clínica', en_proceso: 'En curso', en_curso: 'En curso', en_cuarentena: 'Esperando control biológico',
     sin_confirmar: 'Sin confirmar', recordatorio_enviado: 'Recordatorio enviado', no_responde: 'No responde', pide_reprogramar: 'Pide reprogramar',
     inicio_pausa: 'Inicio de pausa', fin_pausa: 'Fin de pausa', nota_credito: 'Nota de crédito', bonificacion: 'Bonificación', cortesia: 'Cortesía',
+    tarjeta_debito: 'Tarjeta de débito', tarjeta_credito: 'Tarjeta de crédito', qr: 'QR', pagada: 'Pagada', anulada: 'Anulada', emitida: 'Emitida', credito: 'Crédito', contado: 'Contado',
     diagnostico: 'Diagnóstico', estetica: 'Estética', periodoncia: 'Periodoncia', ortodoncia: 'Ortodoncia', endodoncia: 'Endodoncia', implantologia: 'Implantología',
     odontopediatria: 'Odontopediatría', radiologia: 'Radiología', panoramica: 'Panorámica', tomografia: 'Tomografía', electronico: 'Electrónico',
   };

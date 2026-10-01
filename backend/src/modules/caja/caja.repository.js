@@ -56,7 +56,8 @@ async function calcularTotales(cajaAperturaId) {
     `SELECT
        COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo='efectivo' THEN monto ELSE 0 END),0) AS efectivo,
        COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo='transferencia' THEN monto ELSE 0 END),0) AS transferencias,
-       COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo='tarjeta' THEN monto ELSE 0 END),0) AS tarjetas,
+       COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo LIKE 'tarjeta%' THEN monto ELSE 0 END),0) AS tarjetas,
+       COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo NOT IN ('efectivo','transferencia','qr') AND metodo NOT LIKE 'tarjeta%' THEN monto ELSE 0 END),0) AS otros,
        COALESCE(SUM(CASE WHEN tipo='ingreso' AND metodo='qr' THEN monto ELSE 0 END),0) AS qr,
        COALESCE(SUM(CASE WHEN tipo='ingreso' THEN monto ELSE 0 END),0) AS total_ingresos,
        COALESCE(SUM(CASE WHEN tipo='egreso' THEN monto ELSE 0 END),0) AS total_egresos,

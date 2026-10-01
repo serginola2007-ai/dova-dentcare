@@ -244,7 +244,7 @@ Las correcciones hechas después de la simulación de un año de uso están en [
 
 ## Qué queda para una siguiente sesión
 - Vistas de frontend para: odontograma visual, consentimientos con firma en canvas, recetas, laboratorio, lista de espera, gestión de usuarios/roles desde la UI (el backend ya soporta todo esto).
-- Facturación electrónica de Paraguay: fuera de alcance de esta fase por decisión explícita (evitar fingir integración fiscal real); las tablas y flujos de comprobantes internos ya están listos para conectarse a un proveedor de timbrado cuando se decida encarar esa integración.
+- Facturación electrónica de Paraguay (SIFEN/SET): DOVA ya tiene el módulo **Facturación** de comprobantes internos (ver CORRECCIONES.md → Facturación). Falta solo conectar un proveedor de timbrado/factura electrónica cuando se decida.
 - Inconsistencia preexistente (no introducida en esta sesión, mencionada
   para que quede documentada): el toggle de modo claro/oscuro
   (`#theme-toggle-btn`) solo está conectado en `moderno/index.html`, no en

@@ -9,7 +9,16 @@ async function listarPorPaciente(clinicaId, pacienteId) { return repo.listarPorP
 async function listar(clinicaId, filtros) { return repo.listar(clinicaId, filtros); }
 async function resumenPaciente(clinicaId, pacienteId) { return repo.resumenPaciente(clinicaId, pacienteId); }
 
-const METODOS_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'qr', 'otro'];
+// Métodos de pago: los configura la clínica en Facturación → Configuración.
+// Si todavía no hay configuración, se usan estos.
+const METODOS_VALIDOS = ['efectivo', 'tarjeta', 'tarjeta_debito', 'tarjeta_credito', 'transferencia', 'qr', 'otro'];
+async function metodosValidos(clinicaId) {
+  try {
+    const { metodosPago } = require('../facturacion/facturacion.service');
+    const l = await metodosPago(clinicaId, { incluirInactivos: false });
+    return l.length ? l.map((m) => m.codigo) : METODOS_VALIDOS;
+  } catch (_e) { return METODOS_VALIDOS; }
+}
 
 /* Registrar un pago:
    1) Si viene ligado a una cuota, la marca pagada. El índice único parcial
@@ -25,16 +34,32 @@ async function crear(clinicaId, datos, usuario) {
   const paciente = await pacientesRepo.obtenerPorId(clinicaId, datos.pacienteId);
   if (!paciente) throw new ApiError(404, 'Paciente no encontrado en esta clínica');
   if (!(Number(datos.monto) > 0)) throw new ApiError(400, 'El monto debe ser mayor a cero');
-  if (datos.metodo && !METODOS_VALIDOS.includes(datos.metodo)) {
-    throw new ApiError(400, `Método de pago inválido: ${METODOS_VALIDOS.join(', ')}`);
+  const metodos = await metodosValidos(clinicaId);
+  if (datos.metodo && !metodos.includes(datos.metodo)) {
+    throw new ApiError(400, `Método de pago inválido: ${metodos.join(', ')}`);
+  }
+  // Presupuesto al que corresponde el cobro (opcional; en cuotas se toma del plan).
+  const { query, conCandado } = require('../../config/db');
+  if (datos.presupuestoId) {
+    const pr = await query('SELECT id FROM presupuestos WHERE clinica_id=$1 AND id=$2 AND paciente_id=$3', [clinicaId, Number(datos.presupuestoId), Number(datos.pacienteId)]);
+    if (!pr.rowCount) throw new ApiError(400, 'El presupuesto indicado no es de este paciente');
+    datos.presupuestoId = Number(datos.presupuestoId);
   }
 
   if (datos.cuotaId) {
     const cuota = await planesPagoRepo.obtenerCuota(clinicaId, datos.cuotaId);
     if (!cuota) throw new ApiError(404, 'Cuota no encontrada');
     if (cuota.estado === 'pagada') throw new ApiError(409, 'Esta cuota ya fue pagada anteriormente');
+    const pl = await query('SELECT presupuesto_id FROM planes_pago WHERE id=$1', [cuota.plan_pago_id]);
+    if (pl.rows[0] && pl.rows[0].presupuesto_id && !datos.presupuestoId) datos.presupuestoId = pl.rows[0].presupuesto_id;
   }
 
+  // Todo el cobro (pago + cuota + caja + auditoría) en una sola transacción:
+  // si algo falla, no queda un pago a medias.
+  return conCandado(datos.cuotaId ? `cuota:${datos.cuotaId}` : null, () => crearEnTransaccion(clinicaId, datos, usuario));
+}
+
+async function crearEnTransaccion(clinicaId, datos, usuario) {
   let pago;
   try {
     pago = await repo.crear(clinicaId, datos, usuario.id);
@@ -83,6 +108,12 @@ async function anular(clinicaId, id, usuario) {
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
     accion: 'anular_pago', modulo: 'pagos', entidadId: id,
   });
+  // Si el pago estaba en una factura, la factura vuelve a quedar pendiente
+  // (la factura NO se anula sola: eso lo decide una persona).
+  try {
+    const fact = require('../facturacion/facturacion.service');
+    await fact.alAnularPago(clinicaId, Number(id), usuario);
+  } catch (e) { console.error('[facturacion] no se pudo actualizar la factura del pago anulado:', e.message); }
   return pago;
 }
 

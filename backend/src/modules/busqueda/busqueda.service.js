@@ -15,7 +15,7 @@ const CATEGORIAS = [
   { key: 'usuarios', permiso: 'usuarios.manage', fn: repo.usuarios },
 ];
 
-async function buscar(clinicaId, q, permisos) {
+async function buscar(clinicaId, q, permisos, usuario) {
   if (!q || q.trim().length < 2) {
     throw new ApiError(400, 'La búsqueda requiere al menos 2 caracteres');
   }
@@ -28,7 +28,13 @@ async function buscar(clinicaId, q, permisos) {
 
   const respuesta = {};
   categoriasPermitidas.forEach((c, i) => { respuesta[c.key] = resultados[i]; });
-  respuesta.total = resultados.reduce((acc, r) => acc + r.length, 0);
+  // Facturas: por número, paciente, documento, RUC o concepto, respetando
+  // si el usuario ve todas o solo las de sus pacientes.
+  if (usuario && (permisos.includes('facturacion.ver') || permisos.includes('facturacion.ver_propias'))) {
+    const fact = require('../facturacion/facturacion.service');
+    respuesta.facturas = await fact.buscarGlobal(clinicaId, q.trim(), usuario);
+  }
+  respuesta.total = Object.values(respuesta).reduce((acc, r) => acc + (Array.isArray(r) ? r.length : 0), 0);
   return respuesta;
 }
 

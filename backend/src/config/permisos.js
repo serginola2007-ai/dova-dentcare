@@ -105,6 +105,16 @@ const PERMISOS = [
   { codigo: 'comisiones.manage', modulo: 'finanzas', descripcion: 'Configurar reglas y liquidar comisiones' },
   { codigo: 'metas.manage', modulo: 'finanzas', descripcion: 'Configurar metas de producción' },
   { codigo: 'kpis.view', modulo: 'reportes', descripcion: 'Ver estadísticas de la clínica' },
+  // Facturación (comprobantes internos; ver backend/src/modules/facturacion)
+  { codigo: 'facturacion.ver', modulo: 'facturacion', descripcion: 'Ver todas las facturas' },
+  { codigo: 'facturacion.ver_propias', modulo: 'facturacion', descripcion: 'Ver solo las facturas de sus propios pacientes (odontólogos)' },
+  { codigo: 'facturacion.crear', modulo: 'facturacion', descripcion: 'Emitir facturas' },
+  { codigo: 'facturacion.editar', modulo: 'facturacion', descripcion: 'Corregir datos del cliente y observaciones de una factura' },
+  { codigo: 'facturacion.anular', modulo: 'facturacion', descripcion: 'Anular facturas y emitir notas de crédito' },
+  { codigo: 'facturacion.descargar', modulo: 'facturacion', descripcion: 'Descargar facturas en PDF' },
+  { codigo: 'facturacion.imprimir', modulo: 'facturacion', descripcion: 'Imprimir facturas' },
+  { codigo: 'facturacion.configurar', modulo: 'facturacion', descripcion: 'Configurar datos de facturación, numeración y métodos de pago' },
+  { codigo: 'facturacion.ver_reportes', modulo: 'facturacion', descripcion: 'Ver reportes de facturación' },
   { codigo: 'pacientes.export', modulo: 'pacientes', descripcion: 'Exportar el expediente completo de un paciente' },
 ];
 
@@ -120,6 +130,7 @@ const PERMISOS_POR_ROL = {
     'odontograma.view', 'odontograma.edit',
     // El odontólogo presupuesta lo que diagnostica y puede financiarlo.
     'presupuestos.view', 'presupuestos.manage', 'planes_pago.manage',
+    'facturacion.ver_propias', 'facturacion.descargar', 'facturacion.imprimir',
     'reportes.view',
     'historia_clinica.view', 'historia_clinica.edit',
     'fotos_clinicas.manage', 'estudios.manage', 'consentimientos.manage',
@@ -136,6 +147,8 @@ const PERMISOS_POR_ROL = {
     // Recepción cierra presupuestos con el paciente y arma los planes de pago;
     // para eso (y para dar turnos) necesita ver el catálogo de tratamientos.
     'presupuestos.view', 'presupuestos.manage', 'planes_pago.manage', 'tratamientos.view',
+    // Facturación: emitir, ver y descargar/imprimir; NO anular ni configurar.
+    'facturacion.ver', 'facturacion.crear', 'facturacion.descargar', 'facturacion.imprimir',
     'pagos.view', 'pagos.create',
     'caja.view', 'caja.manage',
     'whatsapp.send',

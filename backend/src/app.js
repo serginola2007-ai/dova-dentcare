@@ -40,6 +40,7 @@ const seguimientoRoutes = require('./modules/seguimiento/seguimiento.routes');
 const operacionesRoutes = require('./modules/operaciones/operaciones.routes');
 const finanzasExtRoutes = require('./modules/finanzas-ext/finanzas.routes');
 const kpisRoutes = require('./modules/kpis/kpis.routes');
+const facturacionRoutes = require('./modules/facturacion/facturacion.routes');
 
 const app = express();
 
@@ -122,6 +123,7 @@ app.use('/api/seguimiento', seguimientoRoutes);
 app.use('/api/operaciones', operacionesRoutes);
 app.use('/api/finanzas', finanzasExtRoutes);
 app.use('/api/kpis', kpisRoutes);
+app.use('/api/facturacion', facturacionRoutes);
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en
    Render, una sola dirección, sin CORS). Si la carpeta frontend/ no está

@@ -9,7 +9,8 @@ const { query, conCandado } = require('../../config/db');
    nunca cuadraba con el conteo. */
 function calcularEsperado(caja, t) {
   const efectivo = Number(caja.monto_inicial) + Number(t.efectivo) - Number(t.egresos_efectivo);
-  const otrosMedios = Number(t.transferencias) + Number(t.tarjetas) + Number(t.qr);
+  // Todo lo cobrado que no es efectivo (tarjetas, transferencias, QR, otros).
+  const otrosMedios = Number(t.total_ingresos) - Number(t.efectivo);
   return {
     efectivoEsperado: Math.round(efectivo * 100) / 100,
     otrosMedios,

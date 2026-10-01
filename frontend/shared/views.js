@@ -665,7 +665,7 @@ const Vistas = (() => {
   }
 
   async function vistaFichaPaciente(id) {
-    const puedeFinanzas = DOVA.tieneAlguno('pagos.view', 'presupuestos.view');
+    const puedeFinanzas = DOVA.tieneAlguno('pagos.view', 'presupuestos.view', 'facturacion.ver', 'facturacion.ver_propias');
     const puedeHistorial = DOVA.tienePermiso('historia_clinica.view');
     const puedeOdontograma = DOVA.tienePermiso('odontograma.view');
     const puedePlanes = DOVA.tienePermiso('planes_tratamiento.view');
@@ -1791,13 +1791,13 @@ const Vistas = (() => {
   const LABELS_BUSQUEDA = {
     pacientes: 'Pacientes', citas: 'Citas', tratamientos: 'Tratamientos',
     presupuestos: 'Presupuestos', pagos: 'Pagos', evoluciones: 'Evoluciones clínicas',
-    tickets: 'Pedidos de ayuda técnica', usuarios: 'Usuarios',
+    tickets: 'Pedidos de ayuda técnica', usuarios: 'Usuarios', facturas: 'Facturas',
   };
 
   function vistaBuscadorGlobal() {
     return `
       <div class="dova-buscador-global">
-        <input type="text" id="buscador-global-input" placeholder="Buscar pacientes, citas, tratamientos…" autocomplete="off" />
+        <input type="text" id="buscador-global-input" placeholder="Buscar pacientes, citas, facturas…" autocomplete="off" />
         <div id="buscador-global-resultados" class="dova-buscador-resultados" style="display:none;"></div>
       </div>`;
   }
@@ -1832,6 +1832,8 @@ const Vistas = (() => {
         return `<button class="dova-buscador-item" data-ir-paciente="${item.paciente_id}">${nombrePac} — ${esc(item.procedimiento || item.diagnostico || 'Evolución')} <span class="dova-nota">${fmtFecha(item.fecha)}</span></button>`;
       case 'tickets':
         return `<button class="dova-buscador-item" data-ir-helpdesk="${item.id}">${esc(item.titulo)} <span class="dova-nota">${esc(item.estado)}</span></button>`;
+      case 'facturas':
+        return `<button class="dova-buscador-item" data-ir-factura="${item.id}">${esc(item.numero_completo)} — ${esc(item.cliente_nombre)} <span class="dova-nota">${fmtGs(item.total)} · ${esc(item.estado)}</span></button>`;
       case 'usuarios':
         return `<button class="dova-buscador-item" data-ir-usuarios="${item.id}">${esc(item.nombre)} <span class="dova-nota">@${esc(item.username)}</span></button>`;
       default:
@@ -1869,6 +1871,9 @@ const Vistas = (() => {
       });
       resultados.querySelectorAll('[data-ir-helpdesk]').forEach((b) => {
         b.addEventListener('click', () => { resultados.style.display = 'none'; input.value = ''; navegar('helpdesk'); });
+      });
+      resultados.querySelectorAll('[data-ir-factura]').forEach((b) => {
+        b.addEventListener('click', () => { resultados.style.display = 'none'; input.value = ''; navegar('facturacion', `factura/${b.dataset.irFactura}`); });
       });
       resultados.querySelectorAll('[data-ir-usuarios]').forEach((b) => {
         b.addEventListener('click', () => { resultados.style.display = 'none'; input.value = ''; navegar('usuarios'); });

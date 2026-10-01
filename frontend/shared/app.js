@@ -12,6 +12,7 @@ const DovaApp = (() => {
     { ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
     { ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view' },
     { ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
+    { ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'] },
     { ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view' },
     { ruta: 'reportes', label: 'Reportes', permiso: 'reportes.view' },
     { ruta: 'helpdesk', label: 'Ayuda técnica', permiso: 'helpdesk.view' },
@@ -182,6 +183,10 @@ const DovaApp = (() => {
         case 'caja':
           elMain.innerHTML = '<div></div>';
           await DovaOperativo.caja(elMain.firstElementChild);
+          break;
+        case 'facturacion':
+          elMain.innerHTML = '<div></div>';
+          await DovaFacturacion.seccion(elMain.firstElementChild, navegar, params);
           break;
         case 'inventario':
           elMain.innerHTML = '<div></div>';

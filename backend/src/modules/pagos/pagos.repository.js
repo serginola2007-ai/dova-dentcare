@@ -2,8 +2,12 @@ const { query } = require('../../config/db');
 
 async function listarPorPaciente(clinicaId, pacienteId) {
   const res = await query(
-    `SELECT pg.*, u.nombre AS usuario_nombre FROM pagos pg
-     LEFT JOIN usuarios u ON u.id = pg.usuario_id
+    `SELECT pg.*, u.nombre AS usuario_nombre,
+            f.id AS factura_id, f.numero_completo AS factura_numero
+       FROM pagos pg
+       LEFT JOIN usuarios u ON u.id = pg.usuario_id
+       LEFT JOIN factura_pagos fp ON fp.pago_id = pg.id AND fp.activo
+       LEFT JOIN facturas f ON f.id = fp.factura_id
      WHERE pg.clinica_id = $1 AND pg.paciente_id = $2 ORDER BY pg.fecha DESC`,
     [clinicaId, pacienteId]
   );
@@ -26,9 +30,9 @@ async function listar(clinicaId, { desde, hasta } = {}) {
 
 async function crear(clinicaId, d, usuarioId) {
   const res = await query(
-    `INSERT INTO pagos (clinica_id, paciente_id, cuota_id, concepto, monto, metodo, usuario_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [clinicaId, d.pacienteId, d.cuotaId || null, d.concepto || null, d.monto, d.metodo || 'efectivo', usuarioId]
+    `INSERT INTO pagos (clinica_id, paciente_id, cuota_id, concepto, monto, metodo, usuario_id, presupuesto_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [clinicaId, d.pacienteId, d.cuotaId || null, d.concepto || null, d.monto, d.metodo || 'efectivo', usuarioId, d.presupuestoId || null]
   );
   return res.rows[0];
 }

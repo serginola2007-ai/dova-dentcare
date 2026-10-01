@@ -123,3 +123,43 @@ Para que cualquier persona de la clínica entienda el sistema sin haber particip
 | Rol "Helpdesk" | Soporte técnico |
 
 También se corrigieron palabras que aparecían sin tilde (No asistio, Odontologos, Esterilizacion…). Los términos clínicos que usa el odontólogo (periodontograma, endodoncia, BOP…) se mantienen.
+
+## Facturación (migración 0023)
+
+Módulo nuevo en el menú **Facturación** y en la ficha del paciente (pestaña *Pagos y presupuestos* → *Facturas*).
+
+- **Qué emite:** un *comprobante interno* (no fiscal). Lo dice en pantalla, en el PDF y en Configuración. El timbrado se guarda para una futura integración con la SET, pero no se imprime.
+- **Pago, factura y caja son cosas distintas:**
+  - Un **cobro** mueve la caja una sola vez.
+  - La **factura** documenta uno o varios cobros. Vincular un cobro no vuelve a sumar plata a la caja.
+  - "Cobrar ahora" registra un único cobro.
+- **Número:** lo asigna el servidor, con bloqueo para que nunca se repita (probado con 12 emisiones simultáneas). El formato es 001-001-0000001 y se configura en Configuración.
+- **Totales:** el servidor calcula subtotal, descuentos, exentas, gravadas e IVA 5/10 incluido. Ignora cualquier total que mande el navegador.
+- **Estados:** *Pagada* (cobrado ≥ total), *Pendiente* o *Anulada*.
+  - **Anular:** pide motivo y guarda usuario y fecha. Nunca se borra. Libera los cobros para refacturarlos y no toca la caja.
+  - **Notas de crédito internas:** reducen el saldo.
+- **Generar factura:**
+  - Desde un **cobro**, en la ficha: si ya tiene factura, muestra "Factura generada N.º".
+  - Desde un **presupuesto** aceptado: muestra pagado, pendiente, facturado y sus facturas.
+  - Desde un **paciente**: hereda los datos, el tratamiento, el método de pago y el odontólogo.
+- **PDF:** Ver, Descargar e Imprimir, con logo, datos de la clínica, el monto en letras, la marca "ANULADA" y el número de página.
+- **Permisos** (servidor y pantalla), que se pueden asignar a roles personalizados:
+  - facturacion.ver
+  - facturacion.ver_propias (el odontólogo ve solo sus pacientes)
+  - facturacion.crear
+  - facturacion.editar (solo los datos del cliente)
+  - facturacion.anular
+  - facturacion.descargar
+  - facturacion.imprimir
+  - facturacion.configurar
+  - facturacion.ver_reportes
+- **Reportes:**
+  - Períodos: Hoy, Ayer, Últimos 7 días, Este mes, Mes anterior, Este año y Personalizado.
+  - Agrupado por día, mes, odontólogo, tratamiento, paciente, método o estado.
+  - Exporta a CSV/Excel y PDF.
+- **Métodos de pago configurables:** los usan también Cobros y Caja.
+- **Búsqueda global** encuentra facturas por número, paciente, C.I. o RUC.
+- **En el celular:** tarjetas en vez de tabla, filtros plegables y el formulario de conceptos en tarjetas.
+- **Pruebas:**
+  - 63 de API (`fact-api.js`): numeración concurrente, caja sin duplicar, permisos, PDF y reportes.
+  - 56 de pantalla (`ui-facturacion.js`): admin en la compu, recepción en el celular, odontólogo y asistente.

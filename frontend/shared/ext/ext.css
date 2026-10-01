@@ -201,3 +201,88 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-cal-vistas { width: 100%; }
   .dova-cal-vistas button { flex: 1; }
 }
+
+/* ---------------- Facturación (ext-facturacion.js) ---------------- */
+.dova-fac-aviso { font-size: 12px; margin: 0 0 6px; }
+.dova-fac-aviso-box { border: 1px solid var(--terracotta); background: var(--dova-ext-atencion-bg); border-radius: var(--radius-m); padding: 10px 14px; margin: 8px 0 14px; font-size: 14px; color: var(--ink); }
+.dova-fac-vacio { text-align: center; padding: 32px 16px; border: 1px dashed var(--border); border-radius: var(--radius-m); background: var(--white); margin: 12px 0; }
+.dova-fac-vacio-icono { font-size: 36px; }
+.dova-fac-vacio h3 { margin: 8px 0 4px; color: var(--ink); }
+.dova-fac-filtros { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 8px 12px; margin: 8px 0 12px; }
+.dova-fac-filtros summary { cursor: pointer; font-weight: 600; color: var(--ink); padding: 4px 0; }
+.dova-fac-filtros-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; align-items: end; margin: 8px 0; }
+.dova-fac-filtros-form label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
+.dova-fac-filtros-form input, .dova-fac-filtros-form select { width: 100%; box-sizing: border-box; }
+.dova-fac-f-q { grid-column: span 2; }
+.dova-fac-f-botones { display: flex; gap: 8px; align-items: center; }
+.dova-fac-orden { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; white-space: nowrap; }
+.dova-fac-orden.activo { color: var(--terracotta); }
+.dova-fac-concepto { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dova-fac-cards { display: none; }
+.dova-fac-cards-siempre { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.dova-fac-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dova-fac-card.anulada { opacity: .7; }
+.dova-fac-card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dova-fac-card-cliente { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.dova-fac-card-concepto { font-size: 13px; color: var(--ink-soft); overflow-wrap: anywhere; }
+.dova-fac-card-pie { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dova-fac-card-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.dova-fac-card-acciones button { flex: 1 1 auto; min-height: 40px; }
+.dova-fac-paginas { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
+.dova-fac-det-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+.dova-fac-num { margin: 0; color: var(--ink); }
+.dova-fac-det-estado { text-align: right; }
+.dova-fac-total { font-size: 26px; font-weight: 700; color: var(--ink); margin-top: 4px; }
+.dova-fac-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+.dova-fac-anulada { border: 1px solid var(--rust); background: var(--dova-ext-critica-bg); color: var(--ink); border-radius: var(--radius-m); padding: 10px 14px; margin-bottom: 12px; }
+.dova-fac-det-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.dova-fac-dl { margin: 0; display: grid; gap: 6px; }
+.dova-fac-dl > div { display: grid; grid-template-columns: 130px 1fr; gap: 8px; }
+.dova-fac-dl dt { color: var(--ink-soft); font-size: 13px; }
+.dova-fac-dl dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.dova-fac-totales { margin: 12px 0 0 auto; max-width: 340px; display: grid; gap: 4px; }
+.dova-fac-totales > div { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); }
+.dova-fac-total-final { border-top: 2px solid var(--ink); padding-top: 6px; font-weight: 700; font-size: 18px; }
+.dova-fac-historial { list-style: none; margin: 0; padding: 0; }
+.dova-fac-historial li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--border); }
+.dova-fac-h-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--sage-dark, #6b7f6b); margin-top: 6px; flex: none; }
+.dova-fac-h-punto.anulada, .dova-fac-h-punto.pago_anulado { background: var(--rust); }
+.dova-fac-h-punto.creada { background: var(--terracotta); }
+.dova-fac-form fieldset { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px 14px; margin: 0 0 14px; background: var(--white); min-width: 0; }
+.dova-fac-form legend { font-weight: 600; color: var(--ink); padding: 0 6px; }
+.dova-fac-form-cab h3 { margin: 8px 0 4px; }
+.dova-fac-form-pie { display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: var(--cream, var(--white)); padding: 10px 0; }
+.dova-fac-items-form input, .dova-fac-items-form select { width: 100%; min-width: 60px; box-sizing: border-box; }
+.dova-fac-items-form td:first-child { min-width: 220px; }
+.dova-fac-items-form td:first-child select { margin-bottom: 4px; }
+.dova-fac-pagos { list-style: none; padding: 0; margin: 6px 0; }
+.dova-fac-mets { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+.dova-fac-mets li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.dova-fac-mets code { font-size: 12px; color: var(--ink-soft); }
+.dova-fac-mets .dova-ext-check { margin: 0; }
+.dova-fac-logo img { max-height: 70px; max-width: 220px; display: block; margin-bottom: 8px; }
+.dova-fac-peligro { background: var(--rust) !important; border-color: var(--rust) !important; }
+.dova-nota-alerta { color: var(--rust); }
+
+@media (max-width: 700px) {
+  .dova-fac-tabla { display: none; }
+  .dova-fac-cards { display: grid; gap: 10px; }
+  .dova-fac-f-q { grid-column: 1 / -1; }
+  .dova-fac-filtros-form { grid-template-columns: 1fr 1fr; }
+  .dova-fac-det-estado { text-align: left; }
+  .dova-fac-acciones > button { flex: 1 1 45%; min-height: 42px; }
+  .dova-fac-dl > div { grid-template-columns: 1fr; gap: 0; }
+  .dova-fac-totales { max-width: none; }
+  /* Conceptos: cada fila se ve como una tarjeta */
+  .dova-fac-items-form thead { display: none; }
+  .dova-fac-items-form, .dova-fac-items-form tbody, .dova-fac-items-form tr, .dova-fac-items-form td { display: block; width: 100%; box-sizing: border-box; }
+  .dova-fac-items-form tr { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .dova-fac-items-form td { border: 0; padding: 0; }
+  .dova-fac-items-form td:first-child { grid-column: 1 / -1; min-width: 0; }
+  .dova-fac-items-form td[data-sub] { font-weight: 700; align-self: center; }
+}
+@media (max-width: 700px) {
+  .dova-fac-items-form td[data-l]::before { content: attr(data-l); display: block; font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+}
+.dova-fac-form [data-cobros] .dova-ext-check { display: block; line-height: 1.5; }
+.dova-fac-form [data-cobros] .dova-ext-check input { margin-right: 6px; vertical-align: middle; }
