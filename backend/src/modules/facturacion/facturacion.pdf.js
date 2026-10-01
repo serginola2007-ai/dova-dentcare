@@ -188,6 +188,69 @@ function generar(res, { factura: f, config: cfg, logo, metodos, disposicion = 'i
   doc.end();
 }
 
+/* Ticket de 80 mm (impresoras térmicas de mostrador). Mismo contenido
+   esencial que el A4, en una sola tira; el alto se calcula antes de dibujar. */
+function ticket(res, { factura: f, config: cfg, logo, metodos, disposicion = 'inline' }) {
+  const W = 226.77; const M = 10; const ancho = W - M * 2;
+  const nombreMetodo = (c) => (metodos.find((m) => m.codigo === c) || {}).nombre || c || '-';
+  const dibujar = (doc) => {
+    let y = M;
+    const linea = () => { doc.moveTo(M, y).lineTo(W - M, y).dash(2, { space: 2 }).lineWidth(0.5).strokeColor('#000').stroke().undash(); y += 5; };
+    const txt = (t, { b, s = 8, a = 'center' } = {}) => { doc.font(b ? 'Helvetica-Bold' : 'Helvetica').fontSize(s).fillColor('#000').text(t, M, y, { width: ancho, align: a }); y = doc.y + 1; };
+    const par = (izq, der, { b, s = 8 } = {}) => {
+      doc.font(b ? 'Helvetica-Bold' : 'Helvetica').fontSize(s).fillColor('#000');
+      const h = Math.max(doc.heightOfString(izq, { width: ancho - 80 }), doc.heightOfString(der, { width: 80 }));
+      doc.text(izq, M, y, { width: ancho - 80 }); doc.text(der, M + ancho - 80, y, { width: 80, align: 'right' }); y += h + 2;
+    };
+    if (logo && logo.logo) { try { doc.image(logo.logo, (W - 90) / 2, y, { fit: [90, 45], align: 'center' }); y += 49; } catch (_e) { /* se omite */ } }
+    txt(cfg.nombre_comercial || 'Consultorio', { b: true, s: 11 });
+    [cfg.razon_social, cfg.ruc ? `RUC: ${cfg.ruc}` : null, cfg.direccion, cfg.telefono ? `Tel.: ${cfg.telefono}` : null].filter(Boolean).forEach((l) => txt(l, { s: 7.5 }));
+    y += 3; linea();
+    txt('COMPROBANTE INTERNO', { b: true, s: 9 });
+    txt('Documento no fiscal', { s: 7 });
+    txt(`N.º ${f.numero_completo}`, { b: true, s: 10 });
+    txt(`Fecha: ${fmtDia(f.fecha)}   ·   ${f.condicion === 'credito' ? 'Crédito' : 'Contado'}`, { s: 7.5 });
+    linea();
+    txt(`Cliente: ${f.cliente_nombre}`, { a: 'left', s: 8 });
+    const doc2 = [f.cliente_ruc ? `RUC: ${f.cliente_ruc}` : null, f.cliente_documento ? `C.I.: ${f.cliente_documento}` : null].filter(Boolean).join('   ');
+    if (doc2) txt(doc2, { a: 'left', s: 7.5 });
+    linea();
+    f.items.forEach((it) => {
+      txt(`${it.descripcion}${it.pieza ? ` (pieza ${it.pieza})` : ''}`, { a: 'left', s: 8 });
+      par(`  ${Number(it.cantidad).toLocaleString('es-PY')} x ${num(it.precio_unitario)}${Number(it.descuento) ? ` - desc. ${num(it.descuento)}` : ''}  ${it.tasa_iva ? `IVA ${it.tasa_iva}%` : 'Exenta'}`, num(it.subtotal), { s: 7.5 });
+    });
+    linea();
+    if (Number(f.descuento_total)) par('Descuentos', `- ${num(f.descuento_total)}`);
+    if (Number(f.exento)) par('Exentas', num(f.exento));
+    if (Number(f.iva_5)) par('IVA 5% (incluido)', num(f.iva_5));
+    if (Number(f.iva_10)) par('IVA 10% (incluido)', num(f.iva_10));
+    par('TOTAL Gs.', num(f.total), { b: true, s: 11 });
+    const l = enLetras(f.total);
+    txt(`Son guaraníes ${l}.`, { a: 'left', s: 7 });
+    linea();
+    const metodosUsados = [...new Set([f.metodo_pago, ...(f.pagos || []).filter((p) => p.activo && p.estado === 'pagado').map((p) => p.metodo)].filter(Boolean))].map(nombreMetodo);
+    par('Forma de pago', metodosUsados.join(', ') || (f.condicion === 'credito' ? 'Crédito' : '-'), { s: 7.5 });
+    par('Cobrado', num(f.cobrado), { s: 7.5 });
+    if (Number(f.saldo)) par('Saldo', num(f.saldo), { b: true, s: 8 });
+    if (f.estado === 'anulada') { y += 2; txt(`*** ANULADA *** ${f.motivo_anulacion || ''}`, { b: true, s: 9 }); }
+    linea();
+    if (cfg.pie_texto) txt(cfg.pie_texto, { s: 7.5 });
+    txt('No reemplaza a la factura fiscal exigida por la SET.', { s: 6.5 });
+    txt(`Atendió: ${f.creado_por_nombre || '-'} · ${fmtFechaHora(f.creado_en)}`, { s: 6.5 });
+    return y + M;
+  };
+  // 1) medir  2) dibujar en una página del alto justo
+  const medidor = new PDFDocument({ size: [W, 10000], margin: 0 });
+  const alto = Math.ceil(dibujar(medidor)); medidor.end();
+  const doc = new PDFDocument({ size: [W, Math.max(alto, 200)], margin: 0, info: { Title: `Ticket ${f.numero_completo}`, Author: cfg.nombre_comercial || 'DOVA', Creator: 'DOVA' } });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `${disposicion}; filename="ticket-${f.numero_completo}.pdf"`);
+  res.setHeader('Cache-Control', 'no-store');
+  doc.pipe(res);
+  dibujar(doc);
+  doc.end();
+}
+
 // Reporte de facturación (exportación a PDF).
 function reporte(res, { config: cfg, rep, titulo }) {
   const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
@@ -226,4 +289,4 @@ function reporte(res, { config: cfg, rep, titulo }) {
   doc.end();
 }
 
-module.exports = { generar, reporte, enLetras };
+module.exports = { generar, ticket, reporte, enLetras };

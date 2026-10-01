@@ -61,8 +61,11 @@ app.use(helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'"],
-      frameAncestors: ["'none'"],
-      objectSrc: ["'none'"],
+      // Imprimir/ver PDF: el comprobante se carga como blob en un iframe oculto
+      // o en una pestaña; el visor de PDF del navegador necesita estos permisos.
+      frameSrc: ["'self'", 'blob:'],
+      frameAncestors: ["'self'"],
+      objectSrc: ["'self'", 'blob:'],
       baseUri: ["'self'"],
       formAction: ["'self'"],
       // Sin forzar https: DOVA también puede usarse dentro de la red local

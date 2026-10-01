@@ -22,6 +22,52 @@ const DovaFacturacion = (() => {
     if (!metodosCache) metodosCache = DOVA.get('/facturacion/metodos-pago').catch(() => [{ codigo: 'efectivo', nombre: 'Efectivo' }]);
     return metodosCache;
   }
+  // Preferencias de "facturar al cobrar" (Configuración) + métodos de pago.
+  let opcionesCache = null;
+  async function opcionesCobro() {
+    if (!opcionesCache) opcionesCache = DOVA.get('/facturacion/opciones-cobro').catch(() => ({ metodos: [{ codigo: 'efectivo', nombre: 'Efectivo' }], facturarAlCobrar: false, imprimirAlFacturar: false, formatoImpresion: 'a4' }));
+    return opcionesCache;
+  }
+  /* Casillas "Generar factura" e "Imprimir" + datos opcionales del cliente,
+     para agregar a cualquier formulario de ingreso (cobro o ingreso de caja). */
+  function bloqueFacturaHtml(op, { sinPaciente } = {}) {
+    if (!puede('facturacion.crear')) return '';
+    return `<fieldset class="dova-fac-al-cobrar" data-fac-bloque>
+      <label class="dova-ext-check"><input type="checkbox" name="facGenerar" ${op.facturarAlCobrar ? 'checked' : ''}/> Generar factura</label>
+      <div data-fac-extra ${op.facturarAlCobrar ? '' : 'hidden'}>
+        ${puede('facturacion.imprimir') ? `<label class="dova-ext-check"><input type="checkbox" name="facImprimir" ${op.imprimirAlFacturar ? 'checked' : ''}/> Imprimir al terminar (${op.formatoImpresion === 'ticket' ? 'ticket' : 'hoja A4'})</label>` : ''}
+        <div class="dova-ext-form-grid">
+          <div class="dova-ext-campo"><label for="fac-ruc">RUC (opcional)</label><input id="fac-ruc" name="facRuc" maxlength="40" placeholder="ej. 4567890-1"/></div>
+          <div class="dova-ext-campo"><label for="fac-nom">Nombre o razón social</label><input id="fac-nom" name="facNombre" maxlength="200" placeholder="${sinPaciente ? 'Consumidor final' : 'El del paciente'}"/></div>
+        </div>
+        ${sinPaciente ? '' : '<p class="dova-ext-ayuda">Si cargás RUC o razón social, quedan guardados en la ficha del paciente.</p>'}
+      </div></fieldset>`;
+  }
+  function activarBloqueFactura(form) {
+    const g = form.querySelector('[name="facGenerar"]'); if (!g) return;
+    g.addEventListener('change', () => { form.querySelector('[data-fac-extra]').hidden = !g.checked; });
+  }
+  function leerBloqueFactura(form) {
+    const g = form.querySelector('[name="facGenerar"]');
+    if (!g || !g.checked) return null;
+    const imp = form.querySelector('[name="facImprimir"]');
+    return { imprimir: !!(imp && imp.checked), clienteRuc: form.querySelector('[name="facRuc"]').value.trim() || undefined, clienteNombre: form.querySelector('[name="facNombre"]').value.trim() || undefined };
+  }
+  // Factura de un cobro o de un ingreso de caja ya registrado. Nunca hace fallar el cobro.
+  async function facturarIngreso({ pagoId, movimientoId }, opc) {
+    try {
+      const url = pagoId ? `/facturacion/cobro/${pagoId}` : `/facturacion/movimiento/${movimientoId}`;
+      const r = await DOVA.post(url, { clienteRuc: opc.clienteRuc, clienteNombre: opc.clienteNombre });
+      const f = r.factura;
+      toast(r.yaExistia ? `Ya tenía la factura ${f.numero_completo}` : `Factura ${f.numero_completo} generada`, 'ok');
+      // Después de que se cierre el formulario del cobro (si no, el cartel de imprimir se cerraría con él).
+      if (opc.imprimir) setTimeout(() => imprimirPdf(f.id, f.numero_completo), 350);
+      return f;
+    } catch (e) {
+      toast(`El ingreso quedó registrado, pero no se pudo generar la factura: ${e.message}`, 'error');
+      return null;
+    }
+  }
   const nombreMetodo = (lista, c) => (lista.find((m) => m.codigo === c) || {}).nombre || c || '-';
   const puedeVer = () => puede('facturacion.ver', 'facturacion.ver_propias');
 
@@ -47,11 +93,20 @@ const DovaFacturacion = (() => {
       toast('PDF descargado', 'ok');
     } catch (e) { toast(e.message, 'error'); }
   }
-  async function imprimirPdf(id) {
+  const esCelular = () => window.matchMedia('(max-width: 700px), (pointer: coarse)').matches;
+  /* Imprimir directo: en la compu abre el cuadro de impresión sin salir de la
+     pantalla. En el celular el navegador solo deja abrir el PDF tras un toque,
+     así que se muestra un botón "Imprimir" (el visor del PDF tiene su propio
+     botón de imprimir/compartir). */
+  async function imprimirPdf(id, numero) {
     try {
       const url = URL.createObjectURL(await blobPdf(id, 'imprimir'));
-      // En celulares el visor de PDF del navegador tiene su propio botón de imprimir.
-      if (window.matchMedia('(max-width: 700px)').matches) { window.open(url, '_blank'); return; }
+      if (esCelular()) {
+        X.modal(`Factura ${numero || ''} lista`, `<p>Tocá <strong>Imprimir</strong> para abrir el comprobante y mandarlo a la impresora.</p>
+          <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cerrar</button><button class="dova-btn-primary" data-imp-ya>Imprimir</button></div>`);
+        document.querySelector('.dova-modal-box [data-imp-ya]').addEventListener('click', () => { window.open(url, '_blank'); X.cerrarModal(); });
+        return;
+      }
       const fr = document.createElement('iframe');
       fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
       fr.src = url;
@@ -63,13 +118,13 @@ const DovaFacturacion = (() => {
     const b = [];
     if (puede('facturacion.descargar')) b.push(`<button type="button" class="${compacto ? 'dova-btn-link' : 'dova-btn-secundario'}" data-pdf-ver="${f.id}">Ver PDF</button>`);
     if (puede('facturacion.descargar')) b.push(`<button type="button" class="${compacto ? 'dova-btn-link' : 'dova-btn-secundario'}" data-pdf-bajar="${f.id}" data-num="${esc(f.numero_completo)}">Descargar PDF</button>`);
-    if (puede('facturacion.imprimir')) b.push(`<button type="button" class="${compacto ? 'dova-btn-link' : 'dova-btn-secundario'}" data-pdf-imprimir="${f.id}">Imprimir</button>`);
+    if (puede('facturacion.imprimir')) b.push(`<button type="button" class="${compacto ? 'dova-btn-link' : 'dova-btn-secundario'}" data-pdf-imprimir="${f.id}" data-num="${esc(f.numero_completo)}">Imprimir</button>`);
     return b.join('');
   }
   function enlazarPdf(scope) {
     scope.querySelectorAll('[data-pdf-ver]').forEach((x) => x.addEventListener('click', () => verPdf(x.dataset.pdfVer)));
     scope.querySelectorAll('[data-pdf-bajar]').forEach((x) => x.addEventListener('click', () => descargarPdf(x.dataset.pdfBajar, x.dataset.num)));
-    scope.querySelectorAll('[data-pdf-imprimir]').forEach((x) => x.addEventListener('click', () => imprimirPdf(x.dataset.pdfImprimir)));
+    scope.querySelectorAll('[data-pdf-imprimir]').forEach((x) => x.addEventListener('click', () => imprimirPdf(x.dataset.pdfImprimir, x.dataset.num)));
   }
 
   function confirmar(titulo, html, textoOk, { peligro, campoMotivo } = {}) {
@@ -186,7 +241,7 @@ const DovaFacturacion = (() => {
         <thead><tr>${th('numero', 'Número')}${th('fecha', 'Fecha')}${th('paciente', 'Paciente')}<th>Documento / RUC</th><th>Concepto</th>${th('total', 'Total')}<th>Forma de pago</th>${th('estado', 'Estado')}<th>Usuario</th><th></th></tr></thead>
         <tbody>${data.items.map((f) => `<tr class="${f.estado === 'anulada' ? 'dova-op-fila-apagada' : ''}">
           <td><button class="dova-btn-link" data-ver="${f.id}"><strong>${esc(f.numero_completo)}</strong></button></td><td>${fmtFecha(f.fecha)}</td>
-          <td><button class="dova-btn-link" data-pac="${f.paciente_id}">${esc(f.cliente_nombre)}</button></td>
+          <td>${f.paciente_id ? `<button class="dova-btn-link" data-pac="${f.paciente_id}">${esc(f.cliente_nombre)}</button>` : esc(f.cliente_nombre)}</td>
           <td>${esc(f.cliente_ruc ? `RUC ${f.cliente_ruc}` : f.cliente_documento ? `C.I. ${f.cliente_documento}` : '-')}</td>
           <td class="dova-fac-concepto" title="${esc(f.concepto || '')}">${esc(f.concepto || '-')}</td>
           <td><strong>${fmtGs(f.total)}</strong>${f.estado === 'pendiente' ? `<br><span class="dova-nota">debe ${fmtGs(num(f.total) - num(f.cobrado))}</span>` : ''}</td>
@@ -223,7 +278,7 @@ const DovaFacturacion = (() => {
     const vig = f.estado !== 'anulada';
     const acciones = [
       botonesPdf(f),
-      vig && puede('facturacion.crear') && f.saldo > 0 ? '<button class="dova-btn-secundario" data-asociar>Asociar un cobro</button>' : '',
+      vig && puede('facturacion.crear') && f.saldo > 0 && f.paciente_id ? '<button class="dova-btn-secundario" data-asociar>Asociar un cobro</button>' : '',
       vig && puede('facturacion.editar') ? '<button class="dova-btn-secundario" data-editar>Corregir datos del cliente</button>' : '',
       vig && puede('facturacion.anular') && f.saldo > 0 ? '<button class="dova-btn-secundario" data-nc>Nota de crédito</button>' : '',
       vig && puede('facturacion.anular') ? '<button class="dova-btn-secundario dova-ext-peligro" data-anular>Anular factura</button>' : '',
@@ -240,7 +295,7 @@ const DovaFacturacion = (() => {
       ${f.estado === 'anulada' ? `<div class="dova-fac-anulada">Anulada el ${X.fmtFechaHora(f.anulada_en)} por ${esc(f.anulada_por_nombre || '-')}. <strong>Motivo:</strong> ${esc(f.motivo_anulacion || '-')}</div>` : ''}
       <div class="dova-fac-det-grid">
         <section class="dova-ext-caja"><h4>Cliente</h4><dl class="dova-fac-dl">
-          ${filaDato('Nombre', `<button class="dova-btn-link" data-pac="${f.paciente_id}">${esc(f.cliente_nombre)}</button>`)}${filaDato('C.I.', esc(f.cliente_documento || ''))}${filaDato('RUC', esc(f.cliente_ruc || ''))}
+          ${filaDato('Nombre', f.paciente_id ? `<button class="dova-btn-link" data-pac="${f.paciente_id}">${esc(f.cliente_nombre)}</button>` : `${esc(f.cliente_nombre)} <span class="dova-nota">(ingreso de caja, sin paciente)</span>`)}${filaDato('C.I.', esc(f.cliente_documento || ''))}${filaDato('RUC', esc(f.cliente_ruc || ''))}
           ${filaDato('Dirección', esc(f.cliente_direccion || ''))}${filaDato('Teléfono', esc(f.cliente_telefono || ''))}${filaDato('Email', esc(f.cliente_email || ''))}</dl></section>
         <section class="dova-ext-caja"><h4>Resumen</h4><dl class="dova-fac-dl">
           ${filaDato('Forma de pago', esc(f.metodo_pago ? nombreMetodo(mets, f.metodo_pago) : f.condicion === 'credito' ? 'A crédito' : '-'))}
@@ -262,10 +317,11 @@ const DovaFacturacion = (() => {
         </div></section>
       <div class="dova-fac-det-grid">
         <section class="dova-ext-caja"><h4>Cobros asociados</h4>
+          ${f.movimiento ? `<p><strong>${fmtGs(f.movimiento.monto)}</strong> · ${esc(nombreMetodo(mets, f.movimiento.metodo))} · ingreso de caja "${esc(f.movimiento.concepto)}" · ${esc(f.movimiento.usuario_nombre || '-')}<br><span class="dova-nota">Caja del ${fmtFecha(f.movimiento.caja_fecha)} (${esc(f.movimiento.caja_estado)}) · movimiento #${f.movimiento.id}</span></p>` : ''}
           ${f.pagos.length ? `<ul class="dova-lista-simple">${f.pagos.map((p) => `<li class="${p.activo && p.estado === 'pagado' ? '' : 'dova-op-fila-apagada'}"><strong>${fmtGs(p.monto)}</strong> · ${esc(nombreMetodo(mets, p.metodo))} · ${fmtFecha(p.fecha)} · cobró ${esc(p.usuario_nombre || '-')}
             ${p.estado !== 'pagado' ? badge('cobro anulado', 'critica') : !p.activo ? badge('liberado al anular', 'info') : ''}
             <br><span class="dova-nota">${p.caja_movimiento_id ? `Caja del ${fmtFecha(p.caja_fecha)} (${esc(p.caja_estado)}) · movimiento #${p.caja_movimiento_id}` : 'No entró a la caja (se cobró con la caja cerrada o por otro medio)'}</span></li>`).join('')}</ul>`
-            : '<p class="dova-nota">Sin cobros asociados.</p>'}</section>
+            : f.movimiento ? '' : '<p class="dova-nota">Sin cobros asociados.</p>'}</section>
         <section class="dova-ext-caja"><h4>Presupuesto asociado</h4>
           ${f.presupuesto ? `<dl class="dova-fac-dl">${filaDato('Presupuesto', `N.º ${f.presupuesto.id} (${esc(f.presupuesto.estado)})`)}${filaDato('Total', fmtGs(f.presupuesto.total))}${filaDato('Pagado', fmtGs(f.presupuesto.pagado))}${filaDato('Pendiente', fmtGs(f.presupuesto.pendiente))}${filaDato('Facturado', fmtGs(f.presupuesto.facturado))}</dl>
             <p class="dova-nota">Facturas de este presupuesto: ${f.presupuesto.facturas.map((x) => `<button class="dova-btn-link" data-ir-fac="${x.id}">${esc(x.numero_completo)}</button>${x.estado === 'anulada' ? ' (anulada)' : ''}`).join(', ')}</p>` : '<p class="dova-nota">No está asociada a un presupuesto.</p>'}</section>
@@ -313,7 +369,7 @@ const DovaFacturacion = (() => {
   // ---------------- Nueva factura ----------------
   async function formulario(c, navegar, prefijo) {
     c.innerHTML = cargando;
-    const [mets, trats, odos] = await Promise.all([metodos(), X.catalogo('tratamientos', '/tratamientos').catch(() => []), X.opcionesOdontologos()]);
+    const [mets, trats, odos, opc] = await Promise.all([metodos(), X.catalogo('tratamientos', '/tratamientos').catch(() => []), X.opcionesOdontologos(), opcionesCobro()]);
     let b = { items: [], pagoIds: [], pagosDisponibles: [], presupuestos: [], advertencias: [], config: {} };
     try { b = await DOVA.get(`/facturacion/borrador?${new URLSearchParams(Object.entries(prefijo).filter(([, v]) => v))}`); } catch (e) { toast(e.message, 'error'); }
     if (b.facturaExistente) {
@@ -359,6 +415,7 @@ const DovaFacturacion = (() => {
         <fieldset><legend>Cobro</legend><div data-cobros></div></fieldset>
         <div class="dova-ext-campo dova-ext-campo-completo"><label for="fc-obs">Observaciones</label><textarea id="fc-obs" name="observaciones" rows="2" maxlength="1000"></textarea></div>
         <p class="dova-error-text" data-error style="display:none" role="alert"></p>
+        ${puede('facturacion.imprimir') ? `<label class="dova-ext-check"><input type="checkbox" name="imprimirAlEmitir" ${opc.imprimirAlFacturar ? 'checked' : ''}/> Imprimir al emitir (${opc.formatoImpresion === 'ticket' ? 'ticket' : 'hoja A4'})</label>` : ''}
         <div class="dova-fac-form-pie"><button type="button" class="dova-btn-secundario" data-cancelar>Cancelar</button><button class="dova-btn-primary" data-emitir>Emitir factura</button></div>
       </form>`;
     const form = c.querySelector('[data-form]');
@@ -495,7 +552,9 @@ const DovaFacturacion = (() => {
       try {
         const f = await DOVA.post('/facturacion', datos);
         toast(`Factura ${f.numero_completo} creada correctamente.`, 'ok');
+        const imp = form.querySelector('[name="imprimirAlEmitir"]');
         navegar('facturacion', `factura/${f.id}`);
+        if (imp && imp.checked) imprimirPdf(f.id, f.numero_completo);
       } catch (e) {
         mostrar(e.status === 403 ? 'No tenés permisos para emitir facturas.' : e.message);
         enviando = false; btn.disabled = false; btn.textContent = 'Emitir factura';
@@ -577,6 +636,13 @@ const DovaFacturacion = (() => {
         <div><label>Próximo número</label><input name="siguienteNumero" type="number" min="${(cfg.serie.ultimo_usado || 0) + 1}" value="${cfg.serie.siguiente_numero}"/></div>
         <div class="dova-fac-f-botones"><button class="dova-btn-secundario">Guardar numeración</button></div></div>
         <p class="dova-nota">Próxima factura: <strong data-prox>${esc(cfg.proximo_numero)}</strong></p></form>
+      <form data-cobrar class="dova-ext-caja"><h4>Al registrar un cobro o ingreso</h4>
+        <label class="dova-ext-check"><input type="checkbox" name="facturarAlCobrar" ${cfg.facturar_al_cobrar ? 'checked' : ''}/> Marcar "Generar factura" por defecto</label>
+        <label class="dova-ext-check"><input type="checkbox" name="imprimirAlFacturar" ${cfg.imprimir_al_facturar ? 'checked' : ''}/> Imprimir automáticamente al generar la factura</label>
+        <div class="dova-fac-filtros-form"><div><label for="fac-formato">Formato de impresión</label><select id="fac-formato" name="formatoImpresion">
+          <option value="a4" ${cfg.formato_impresion === 'a4' ? 'selected' : ''}>Hoja A4</option><option value="ticket" ${cfg.formato_impresion === 'ticket' ? 'selected' : ''}>Ticket 80 mm (impresora térmica)</option></select></div>
+          <div class="dova-fac-f-botones"><button class="dova-btn-secundario">Guardar</button></div></div>
+        <p class="dova-nota">Para que imprima sin mostrar el cuadro de impresión en la compu de recepción, abrí Chrome con la opción <code>--kiosk-printing</code> (usa la impresora predeterminada).</p></form>
       <div class="dova-ext-caja"><h4>Métodos de pago</h4><p class="dova-nota">Los que se ofrecen al cobrar y al facturar. "Efectivo" no se puede quitar porque la caja lo usa (sí desactivar).</p>
         <div data-mets></div><button type="button" class="dova-btn-link" data-agregar-met>+ Agregar método</button><br><button type="button" class="dova-btn-secundario" data-guardar-mets>Guardar métodos de pago</button></div>`;
     if (cfg.tiene_logo) {
@@ -588,6 +654,14 @@ const DovaFacturacion = (() => {
       const d = X.leerForm(fd, [{ k: 'nombreComercial' }, { k: 'razonSocial' }, { k: 'ruc' }, { k: 'telefono' }, { k: 'email' }, { k: 'direccion' }, { k: 'ivaPorDefecto', tipo: 'numero' }, { k: 'pieTexto' }, { k: 'timbrado' }, { k: 'timbradoVence' }], true);
       const btn = fd.querySelector('button'); btn.disabled = true;
       try { await DOVA.put('/facturacion/config', d); toast('Datos de facturación guardados', 'ok'); } catch (e) { toast(e.message, 'error'); } finally { btn.disabled = false; }
+    });
+    const fcob = c.querySelector('[data-cobrar]');
+    fcob.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      try {
+        await DOVA.put('/facturacion/config', { facturarAlCobrar: fcob.facturarAlCobrar.checked, imprimirAlFacturar: fcob.imprimirAlFacturar.checked, formatoImpresion: fcob.formatoImpresion.value });
+        opcionesCache = null; toast('Preferencias de cobro guardadas', 'ok');
+      } catch (e) { toast(e.message, 'error'); }
     });
     const fl = c.querySelector('[data-logo-form]');
     fl.addEventListener('submit', async (ev) => {
@@ -619,7 +693,7 @@ const DovaFacturacion = (() => {
       mets.push({ codigo, nombre: d.nombre, activo: true, nuevo: true }); pintarMets();
     }));
     c.querySelector('[data-guardar-mets]').addEventListener('click', async () => {
-      try { const r = await DOVA.put('/facturacion/config', { metodosPago: mets.map(({ codigo, nombre, activo }) => ({ codigo, nombre, activo })) }); mets = r.metodos_pago.map((m) => ({ ...m })); metodosCache = null; pintarMets(); toast('Métodos de pago guardados', 'ok'); } catch (e) { toast(e.message, 'error'); }
+      try { const r = await DOVA.put('/facturacion/config', { metodosPago: mets.map(({ codigo, nombre, activo }) => ({ codigo, nombre, activo })) }); mets = r.metodos_pago.map((m) => ({ ...m })); metodosCache = null; opcionesCache = null; pintarMets(); toast('Métodos de pago guardados', 'ok'); } catch (e) { toast(e.message, 'error'); }
     });
   }
 
@@ -643,6 +717,9 @@ const DovaFacturacion = (() => {
     enlazarPdf(c);
   }
 
-  return { seccion, panelPaciente, metodos, verPdf, descargarPdf, imprimirPdf, AVISO_INTERNO, olvidarMetodos: () => { metodosCache = null; } };
+  return {
+    seccion, panelPaciente, metodos, verPdf, descargarPdf, imprimirPdf, AVISO_INTERNO, olvidarMetodos: () => { metodosCache = null; opcionesCache = null; },
+    opcionesCobro, bloqueFacturaHtml, activarBloqueFactura, leerBloqueFactura, facturarIngreso,
+  };
 })();
 window.DovaFacturacion = DovaFacturacion;

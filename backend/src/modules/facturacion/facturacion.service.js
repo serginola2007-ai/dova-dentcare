@@ -68,6 +68,7 @@ async function obtenerConfig(clinicaId) {
     `SELECT c.clinica_id, c.nombre_comercial, c.razon_social, c.ruc, c.direccion, c.telefono, c.email,
             (c.logo IS NOT NULL) AS tiene_logo, c.logo_mime, c.timbrado, c.timbrado_vence, c.establecimiento,
             c.punto_expedicion, c.iva_por_defecto, c.metodos_pago, c.pie_texto, c.actualizado_en,
+            c.facturar_al_cobrar, c.imprimir_al_facturar, c.formato_impresion,
             u.nombre AS actualizado_por_nombre
        FROM facturacion_config c LEFT JOIN usuarios u ON u.id = c.actualizado_por
       WHERE c.clinica_id=$1`, [clinicaId]);
@@ -132,6 +133,17 @@ async function guardarConfig(clinicaId, datos, usuario) {
     if (![0, 5, 10].includes(v)) throw new ApiError(400, 'IVA por defecto: 10, 5 o 0 (exento)');
     if (v !== previo.iva_por_defecto) cambios.iva_por_defecto = { antes: previo.iva_por_defecto, despues: v };
     params.push(v); sets.push(`iva_por_defecto=$${params.length}`);
+  }
+  for (const [k, col] of [['facturarAlCobrar', 'facturar_al_cobrar'], ['imprimirAlFacturar', 'imprimir_al_facturar']]) {
+    if (datos[k] === undefined) continue;
+    const v = datos[k] === true || datos[k] === 'true';
+    if (v !== previo[col]) cambios[col] = { antes: previo[col], despues: v };
+    params.push(v); sets.push(`${col}=$${params.length}`);
+  }
+  if (datos.formatoImpresion !== undefined) {
+    if (!['a4', 'ticket'].includes(datos.formatoImpresion)) throw new ApiError(400, 'Formato de impresión: a4 o ticket');
+    if (datos.formatoImpresion !== previo.formato_impresion) cambios.formato_impresion = { antes: previo.formato_impresion, despues: datos.formatoImpresion };
+    params.push(datos.formatoImpresion); sets.push(`formato_impresion=$${params.length}`);
   }
   if (datos.metodosPago !== undefined) {
     const v = validarMetodos(datos.metodosPago);
@@ -248,12 +260,16 @@ async function calcularItems(clinicaId, items, ivaDefecto) {
 }
 
 // ------------------------------------------------------------------- estado
+// Lo cobrado de una factura: cobros de pacientes + el ingreso de caja que la originó (si lo hay).
+const SQL_COBRADO = `((SELECT COALESCE(SUM(fp.monto),0) FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=f.id AND fp.activo AND p.estado='pagado')
+  + COALESCE((SELECT cm.monto FROM caja_movimientos cm WHERE cm.id=f.caja_movimiento_id),0))`;
 async function recalcularEstado(facturaId, usuario, motivo) {
   const f = (await query('SELECT id, estado, total FROM facturas WHERE id=$1', [facturaId])).rows[0];
   if (!f || f.estado === 'anulada') return f;
   const s = (await query(
-    `SELECT (SELECT COALESCE(SUM(fp.monto),0) FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=$1 AND fp.activo AND p.estado='pagado') AS cobrado,
-            (SELECT COALESCE(SUM(monto),0) FROM notas_credito WHERE factura_id=$1 AND estado='emitida') AS acreditado`, [facturaId])).rows[0];
+    `SELECT ${SQL_COBRADO} AS cobrado,
+            (SELECT COALESCE(SUM(monto),0) FROM notas_credito WHERE factura_id=$1 AND estado='emitida') AS acreditado
+       FROM facturas f WHERE f.id=$1`, [facturaId])).rows[0];
   const nuevo = Number(s.cobrado) + Number(s.acreditado) >= Number(f.total) ? 'pagada' : 'pendiente';
   if (nuevo !== f.estado) {
     await query('UPDATE facturas SET estado=$2, actualizado_en=now() WHERE id=$1', [facturaId, nuevo]);
@@ -298,10 +314,11 @@ async function notificarResponsables(clinicaId, excluirUsuarioId, datos) {
 }
 
 // ------------------------------------------------------------------- crear
-async function crear(clinicaId, datos, usuario) {
-  const pacienteId = Number(datos.pacienteId);
-  const pac = (await query('SELECT * FROM pacientes WHERE clinica_id=$1 AND id=$2', [clinicaId, pacienteId])).rows[0];
-  if (!pac) throw new ApiError(404, 'Paciente no encontrado');
+async function crear(clinicaId, datos, usuario, { movimiento = null } = {}) {
+  // movimiento: ingreso manual de caja (puede no tener paciente). Solo lo usa facturarMovimiento().
+  const pacienteId = datos.pacienteId ? Number(datos.pacienteId) : null;
+  const pac = pacienteId ? (await query('SELECT * FROM pacientes WHERE clinica_id=$1 AND id=$2', [clinicaId, pacienteId])).rows[0] : null;
+  if (!pac && !movimiento) throw new ApiError(404, 'Paciente no encontrado');
   const cfg = await obtenerConfig(clinicaId);
   const metodos = (cfg.metodos_pago || METODOS_DEFECTO).filter((m) => m.activo !== false).map((m) => m.codigo);
 
@@ -313,7 +330,7 @@ async function crear(clinicaId, datos, usuario) {
 
   const condicion = datos.condicion === 'credito' ? 'credito' : 'contado';
   const metodo = txt(datos.metodoPago, 30);
-  if (metodo && !metodos.includes(metodo)) throw new ApiError(400, 'Método de pago inválido');
+  if (metodo && !metodos.includes(metodo) && !(movimiento && metodo === movimiento.metodo)) throw new ApiError(400, 'Método de pago inválido');
   if (condicion === 'contado' && !metodo) throw new ApiError(400, 'Indicá el método de pago');
 
   let odontologoId = datos.odontologoId ? Number(datos.odontologoId) : null;
@@ -333,26 +350,28 @@ async function crear(clinicaId, datos, usuario) {
   }
 
   // Cliente: lo que se imprime. Por defecto, los datos de la ficha.
+  const P = pac || {};
   const cliente = {
-    nombre: txt(datos.clienteNombre, 200) || txt(pac.razon_social, 200) || `${pac.nombre} ${pac.apellido}`,
-    documento: txt(datos.clienteDocumento, 40) ?? pac.ci,
-    ruc: txt(datos.clienteRuc, 40) ?? pac.ruc,
-    direccion: txt(datos.clienteDireccion, 300) ?? pac.direccion,
-    telefono: txt(datos.clienteTelefono, 60) ?? pac.telefono,
-    email: txt(datos.clienteEmail, 150) ?? pac.email,
+    nombre: txt(datos.clienteNombre, 200) || txt(P.razon_social, 200) || (pac ? `${pac.nombre} ${pac.apellido}` : 'Consumidor final'),
+    documento: txt(datos.clienteDocumento, 40) ?? P.ci ?? null,
+    ruc: txt(datos.clienteRuc, 40) ?? P.ruc ?? null,
+    direccion: txt(datos.clienteDireccion, 300) ?? P.direccion ?? null,
+    telefono: txt(datos.clienteTelefono, 60) ?? P.telefono ?? null,
+    email: txt(datos.clienteEmail, 150) ?? P.email ?? null,
   };
   if (cliente.ruc && !/^[0-9A-Za-z.\-]{3,20}$/.test(cliente.ruc)) throw new ApiError(400, 'El RUC del cliente no es válido (ej.: 4567890-1)');
   if (cliente.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.email)) throw new ApiError(400, 'El email del cliente no es válido');
 
-  const pagoIds = Array.isArray(datos.pagoIds) ? datos.pagoIds : [];
-  const registrarCobro = datos.registrarCobro && Number(datos.registrarCobro.monto) > 0 ? datos.registrarCobro : null;
+  const pagoIds = !movimiento && Array.isArray(datos.pagoIds) ? datos.pagoIds : [];
+  const registrarCobro = !movimiento && datos.registrarCobro && Number(datos.registrarCobro.monto) > 0 ? datos.registrarCobro : null;
   if (registrarCobro && !metodos.includes(registrarCobro.metodo || metodo)) throw new ApiError(400, 'Método del cobro inválido');
 
   const serie = await serieActiva(clinicaId, 'comprobante_interno');
-  const claves = [`factura:serie:${clinicaId}`, ...pagoIds.map((id) => `factura:pago:${Number(id)}`)];
+  const claves = [`factura:serie:${clinicaId}`, ...pagoIds.map((id) => `factura:pago:${Number(id)}`), ...(movimiento ? [`factura:mov:${movimiento.id}`] : [])];
 
   const factura = await conCandado(claves, async () => {
     const pagos = await validarPagos(clinicaId, pacienteId, pagoIds);
+    if (movimiento && (await query("SELECT 1 FROM facturas WHERE caja_movimiento_id=$1 AND estado<>'anulada'", [movimiento.id])).rowCount) throw new ApiError(409, 'Este ingreso ya tiene factura.');
     // Cobro en el momento: UN pago por el módulo de pagos (refleja la caja una sola vez).
     if (registrarCobro) {
       const pagosService = require('../pagos/pagos.service');
@@ -362,7 +381,7 @@ async function crear(clinicaId, datos, usuario) {
       }, usuario);
       pagos.push(nuevo);
     }
-    const cobrado = pagos.reduce((a, p) => a + Number(p.monto), 0);
+    const cobrado = pagos.reduce((a, p) => a + Number(p.monto), 0) + (movimiento ? Number(movimiento.monto) : 0);
     if (cobrado > calc.totales.total) throw new ApiError(400, `Los cobros asociados (Gs. ${cobrado.toLocaleString('es-PY')}) superan el total de la factura (Gs. ${calc.totales.total.toLocaleString('es-PY')}). Revisá los conceptos o los cobros elegidos.`);
     const num = await tomarNumero(serie.id);
     const numeroCompleto = formatearNumero(num, num.numero);
@@ -372,12 +391,12 @@ async function crear(clinicaId, datos, usuario) {
       `INSERT INTO facturas (clinica_id, serie_id, tipo, es_fiscal, numero, numero_completo, fecha, condicion, paciente_id,
          cliente_nombre, cliente_documento, cliente_ruc, cliente_direccion, cliente_telefono, cliente_email,
          odontologo_id, presupuesto_id, metodo_pago, subtotal, descuento_total, exento, gravado_5, gravado_10, iva_5, iva_10, total,
-         estado, observaciones, creado_por)
-       VALUES ($1,$2,'comprobante_interno',false,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+         estado, observaciones, creado_por, caja_movimiento_id)
+       VALUES ($1,$2,'comprobante_interno',false,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
        RETURNING *`,
       [clinicaId, serie.id, num.numero, numeroCompleto, fecha, condicion, pacienteId, cliente.nombre, cliente.documento, cliente.ruc, cliente.direccion,
         cliente.telefono, cliente.email, odontologoId, presupuestoId, metodo || (pagos[0] && pagos[0].metodo) || null,
-        t.subtotal, t.descuentoTotal, t.exento, t.gravado5, t.gravado10, t.iva5, t.iva10, t.total, estado, txt(datos.observaciones, 1000), usuario.id])).rows[0];
+        t.subtotal, t.descuentoTotal, t.exento, t.gravado5, t.gravado10, t.iva5, t.iva10, t.total, estado, txt(datos.observaciones, 1000), usuario.id, movimiento ? movimiento.id : null])).rows[0];
     for (const it of calc.items) {
       await query(
         `INSERT INTO factura_items (factura_id, orden, tratamiento_id, presupuesto_item_id, descripcion, pieza, cantidad, precio_unitario, descuento, tasa_iva, subtotal, iva)
@@ -387,10 +406,10 @@ async function crear(clinicaId, datos, usuario) {
     for (const p of pagos) {
       await query('INSERT INTO factura_pagos (factura_id, pago_id, monto, creado_por) VALUES ($1,$2,$3,$4)', [f.id, p.id, p.monto, usuario.id]);
     }
-    await evento(f.id, 'creada', { numero: numeroCompleto, total: t.total, estado, pagos: pagos.map((p) => p.id), cobroRegistrado: !!registrarCobro }, usuario);
+    await evento(f.id, 'creada', { numero: numeroCompleto, total: t.total, estado, pagos: pagos.map((p) => p.id), cobroRegistrado: !!registrarCobro, ingresoCaja: movimiento ? movimiento.id : undefined }, usuario);
     for (const p of pagos) await evento(f.id, 'pago_asociado', { pagoId: p.id, monto: Number(p.monto), metodo: p.metodo }, usuario);
     // Guardar RUC / razón social en la ficha si se pidió.
-    if (datos.guardarEnFicha) {
+    if (datos.guardarEnFicha && pac) {
       await query('UPDATE pacientes SET ruc=$3, razon_social=$4, actualizado_en=now() WHERE clinica_id=$1 AND id=$2',
         [clinicaId, pacienteId, cliente.ruc, cliente.nombre !== `${pac.nombre} ${pac.apellido}` ? cliente.nombre : pac.razon_social]);
     }
@@ -398,7 +417,7 @@ async function crear(clinicaId, datos, usuario) {
   });
 
   await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'emitir_factura', modulo: 'facturacion', entidadId: factura.id,
-    detalle: { numero: factura.numero_completo, pacienteId, total: Number(factura.total), estado: factura.estado, pagos: pagoIds } });
+    detalle: { numero: factura.numero_completo, pacienteId, ingresoCaja: movimiento ? movimiento.id : undefined, total: Number(factura.total), estado: factura.estado, pagos: pagoIds } });
   if (factura.estado === 'pendiente') {
     await notificarResponsables(clinicaId, usuario.id, { tipo: 'factura_pendiente', titulo: `Factura ${factura.numero_completo} pendiente de cobro`, mensaje: `${factura.cliente_nombre} — Gs. ${Number(factura.total).toLocaleString('es-PY')}`, entidad: 'factura', entidadId: factura.id, ruta: `facturacion/factura/${factura.id}` });
   }
@@ -409,6 +428,7 @@ async function crear(clinicaId, datos, usuario) {
 async function asociarPago(clinicaId, facturaId, pagoId, usuario, a) {
   const f = await obtenerBase(clinicaId, facturaId, a);
   if (f.estado === 'anulada') throw new ApiError(409, 'La factura está anulada');
+  if (!f.paciente_id) throw new ApiError(400, 'Esta factura es de un ingreso de caja sin paciente: no se le pueden asociar cobros.');
   await conCandado([`factura:pago:${Number(pagoId)}`, `factura:${facturaId}`], async () => {
     const [p] = await validarPagos(clinicaId, f.paciente_id, [pagoId]);
     const ya = (await query(`SELECT COALESCE(SUM(fp.monto),0) s FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=$1 AND fp.activo AND p.estado='pagado'`, [facturaId])).rows[0].s;
@@ -513,7 +533,7 @@ async function obtenerBase(clinicaId, id, a) {
 
 async function obtener(clinicaId, id, a) {
   const f = await obtenerBase(clinicaId, id, a);
-  const [items, pagos, eventos, notas, extra] = await Promise.all([
+  const [items, pagos, eventos, notas, mov, extra] = await Promise.all([
     query(`SELECT fi.*, t.nombre AS tratamiento_nombre FROM factura_items fi LEFT JOIN tratamientos t ON t.id=fi.tratamiento_id WHERE fi.factura_id=$1 ORDER BY fi.orden, fi.id`, [f.id]),
     query(`SELECT fp.monto AS monto_aplicado, fp.activo, p.id, p.fecha, p.monto, p.metodo, p.estado, p.concepto, u.nombre AS usuario_nombre,
                   cm.id AS caja_movimiento_id, ca.id AS caja_id, ca.fecha AS caja_fecha, ca.estado AS caja_estado
@@ -524,17 +544,20 @@ async function obtener(clinicaId, id, a) {
             WHERE fp.factura_id=$1 ORDER BY p.fecha`, [f.id]),
     query('SELECT * FROM factura_eventos WHERE factura_id=$1 ORDER BY creado_en, id', [f.id]),
     query('SELECT nc.*, u.nombre AS usuario_nombre FROM notas_credito nc LEFT JOIN usuarios u ON u.id=nc.creado_por WHERE nc.factura_id=$1 ORDER BY nc.id', [f.id]),
+    f.caja_movimiento_id ? query(`SELECT cm.id, cm.monto, cm.metodo, cm.concepto, cm.creado_en, u.nombre AS usuario_nombre, ca.fecha AS caja_fecha, ca.estado AS caja_estado
+             FROM caja_movimientos cm JOIN caja_aperturas ca ON ca.id=cm.caja_apertura_id LEFT JOIN usuarios u ON u.id=cm.usuario_id WHERE cm.id=$1`, [f.caja_movimiento_id]) : { rows: [] },
     query(`SELECT uc.nombre AS creado_por_nombre, ua.nombre AS anulada_por_nombre, o.nombre AS odontologo_nombre,
                   pr.id AS presupuesto_id, pr.total AS presupuesto_total, pr.estado AS presupuesto_estado, pr.fecha AS presupuesto_fecha
              FROM facturas f LEFT JOIN usuarios uc ON uc.id=f.creado_por LEFT JOIN usuarios ua ON ua.id=f.anulada_por
              LEFT JOIN odontologos o ON o.id=f.odontologo_id LEFT JOIN presupuestos pr ON pr.id=f.presupuesto_id WHERE f.id=$1`, [f.id]),
   ]);
-  const cobrado = pagos.rows.filter((p) => p.activo && p.estado === 'pagado').reduce((s, p) => s + Number(p.monto_aplicado), 0);
+  const movimiento = mov.rows[0] || null;
+  const cobrado = pagos.rows.filter((p) => p.activo && p.estado === 'pagado').reduce((s, p) => s + Number(p.monto_aplicado), 0) + (movimiento ? Number(movimiento.monto) : 0);
   const acreditado = notas.rows.filter((n) => n.estado === 'emitida').reduce((s, n) => s + Number(n.monto), 0);
   return {
     ...f, ...extra.rows[0],
     tipo_nombre: TIPOS[f.tipo] || f.tipo,
-    items: items.rows, pagos: pagos.rows, eventos: eventos.rows, notas_credito: notas.rows,
+    items: items.rows, pagos: pagos.rows, movimiento, eventos: eventos.rows, notas_credito: notas.rows,
     cobrado, acreditado, saldo: f.estado === 'anulada' ? 0 : Math.max(Number(f.total) - cobrado - acreditado, 0),
     presupuesto: f.presupuesto_id ? await resumenPresupuesto(clinicaId, f.presupuesto_id) : null,
   };
@@ -576,7 +599,7 @@ async function listar(clinicaId, fl, a) {
     `SELECT f.id, f.numero_completo, f.fecha, f.paciente_id, f.cliente_nombre, f.cliente_documento, f.cliente_ruc, f.total, f.metodo_pago,
             f.estado, f.condicion, f.creado_en, f.odontologo_id, u.nombre AS usuario_nombre, o.nombre AS odontologo_nombre,
             (SELECT string_agg(fi.descripcion, ' · ' ORDER BY fi.orden) FROM factura_items fi WHERE fi.factura_id=f.id) AS concepto,
-            (SELECT COALESCE(SUM(fp.monto),0) FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=f.id AND fp.activo AND p.estado='pagado') AS cobrado
+            ${SQL_COBRADO} AS cobrado
        FROM facturas f LEFT JOIN usuarios u ON u.id=f.creado_por LEFT JOIN odontologos o ON o.id=f.odontologo_id
       WHERE ${where} ORDER BY ${orden} ${dir}, f.id ${dir} LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`, params);
   return { items: r.rows, total, page, pageSize, paginas: Math.max(Math.ceil(total / pageSize), 1) };
@@ -602,7 +625,8 @@ async function estadisticas(clinicaId, a) {
      FROM facturas f WHERE f.clinica_id=$1${alc}`, params)).rows[0];
   const p2 = [clinicaId]; const alc2 = condAlcance(a, p2);
   const cob = (await query(
-    `SELECT COALESCE(SUM(fp.monto) FILTER (WHERE p.estado='pagado'),0) AS cobrado,
+    `SELECT COALESCE(SUM(fp.monto) FILTER (WHERE p.estado='pagado'),0)
+              + (SELECT COALESCE(SUM(cm.monto),0) FROM facturas f JOIN caja_movimientos cm ON cm.id=f.caja_movimiento_id WHERE f.clinica_id=$1 AND f.estado<>'anulada'${alc2}) AS cobrado,
             (SELECT COALESCE(SUM(nc.monto),0) FROM notas_credito nc JOIN facturas f ON f.id=nc.factura_id WHERE nc.estado='emitida' AND f.clinica_id=$1 AND f.estado<>'anulada'${alc2}) AS acreditado
        FROM factura_pagos fp JOIN facturas f ON f.id=fp.factura_id JOIN pagos p ON p.id=fp.pago_id
       WHERE fp.activo AND f.estado<>'anulada' AND f.clinica_id=$1${alc2}`, p2)).rows[0];
@@ -643,7 +667,7 @@ async function reporte(clinicaId, fl, a) {
     const soloVigentes = agrupar === 'estado' ? '' : " AND f.estado<>'anulada'";
     filas = (await query(
       `SELECT ${g.sel} AS clave, ${g.etiqueta} AS etiqueta, count(*) AS facturas, SUM(f.total) AS total,
-              SUM((SELECT COALESCE(SUM(fp.monto),0) FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=f.id AND fp.activo AND p.estado='pagado')) AS cobrado
+              SUM(${SQL_COBRADO}) AS cobrado
          FROM facturas f LEFT JOIN odontologos o ON o.id=f.odontologo_id
         WHERE ${base.where}${soloVigentes} GROUP BY 1,2 ORDER BY ${g.orden}`, base.params)).rows;
   }
@@ -651,7 +675,7 @@ async function reporte(clinicaId, fl, a) {
     `SELECT count(*) FILTER (WHERE f.estado<>'anulada') AS emitidas, COALESCE(SUM(f.total) FILTER (WHERE f.estado<>'anulada'),0) AS facturado,
             count(*) FILTER (WHERE f.estado='pendiente') AS pendientes, count(*) FILTER (WHERE f.estado='anulada') AS anuladas,
             COALESCE(SUM(f.total) FILTER (WHERE f.estado='anulada'),0) AS total_anulado,
-            COALESCE(SUM((SELECT COALESCE(SUM(fp.monto),0) FROM factura_pagos fp JOIN pagos p ON p.id=fp.pago_id WHERE fp.factura_id=f.id AND fp.activo AND p.estado='pagado')) FILTER (WHERE f.estado<>'anulada'),0) AS cobrado,
+            COALESCE(SUM(${SQL_COBRADO}) FILTER (WHERE f.estado<>'anulada'),0) AS cobrado,
             COALESCE(SUM((SELECT COALESCE(SUM(nc.monto),0) FROM notas_credito nc WHERE nc.factura_id=f.id AND nc.estado='emitida')) FILTER (WHERE f.estado<>'anulada'),0) AS acreditado
        FROM facturas f WHERE ${base.where}`, base.params)).rows[0];
   const n = (x) => Number(x);
@@ -751,6 +775,46 @@ async function borrador(clinicaId, { pagoId, presupuestoId, pacienteId }) {
   return out;
 }
 
+/* Facturar un cobro ya registrado en un paso (botón "Generar factura" o
+   casilla al cobrar). Si ya tenía factura, la devuelve (no duplica). */
+async function facturarCobro(clinicaId, pagoId, datos, usuario) {
+  const b = await borrador(clinicaId, { pagoId });
+  if (b.facturaExistente) return { yaExistia: true, factura: await obtener(clinicaId, b.facturaExistente.id, { todas: true }) };
+  if (!b.pagoIds.length) throw new ApiError(409, 'Este cobro está anulado: no se puede facturar.');
+  const cl = b.cliente || {};
+  const ruc = txt(datos.clienteRuc, 40); const nombre = txt(datos.clienteNombre, 200);
+  const factura = await crear(clinicaId, {
+    pacienteId: b.paciente.id, presupuestoId: b.presupuestoId || undefined, odontologoId: b.odontologoId || undefined,
+    fecha: b.fecha, condicion: 'contado', metodoPago: b.metodoPago, items: b.items, pagoIds: b.pagoIds,
+    clienteNombre: nombre || cl.nombre, clienteDocumento: cl.documento, clienteRuc: ruc || cl.ruc,
+    clienteDireccion: cl.direccion, clienteTelefono: cl.telefono, clienteEmail: cl.email,
+    guardarEnFicha: !!(ruc || nombre),
+  }, usuario);
+  return { yaExistia: false, factura };
+}
+
+/* Facturar un ingreso manual de caja (con o sin paciente). Si el ingreso
+   vino de un cobro de paciente, se factura ese cobro. */
+async function facturarMovimiento(clinicaId, movimientoId, datos, usuario) {
+  const m = (await query(
+    `SELECT cm.*, ca.clinica_id FROM caja_movimientos cm JOIN caja_aperturas ca ON ca.id=cm.caja_apertura_id
+      WHERE cm.id=$1 AND ca.clinica_id=$2`, [Number(movimientoId), clinicaId])).rows[0];
+  if (!m) throw new ApiError(404, 'Movimiento de caja no encontrado');
+  if (m.tipo !== 'ingreso') throw new ApiError(400, 'Solo los ingresos llevan factura');
+  if (m.pago_id) return facturarCobro(clinicaId, m.pago_id, datos, usuario);
+  const ya = (await query("SELECT id FROM facturas WHERE caja_movimiento_id=$1 AND estado<>'anulada'", [m.id])).rows[0];
+  if (ya) return { yaExistia: true, factura: await obtener(clinicaId, ya.id, { todas: true }) };
+  const cfg = await obtenerConfig(clinicaId);
+  const tasa = [0, 5, 10].includes(Number(datos.tasaIva)) ? Number(datos.tasaIva) : cfg.iva_por_defecto;
+  const fecha = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date(m.creado_en));
+  const factura = await crear(clinicaId, {
+    pacienteId: datos.pacienteId || undefined, fecha, condicion: 'contado', metodoPago: m.metodo || 'efectivo',
+    items: [{ descripcion: txt(datos.descripcion, 250) || m.concepto, cantidad: 1, precioUnitario: Number(m.monto), descuento: 0, tasaIva: tasa }],
+    clienteNombre: txt(datos.clienteNombre, 200) || undefined, clienteRuc: txt(datos.clienteRuc, 40), clienteDocumento: txt(datos.clienteDocumento, 40),
+  }, usuario, { movimiento: m });
+  return { yaExistia: false, factura };
+}
+
 async function buscarGlobal(clinicaId, termino, usuario) {
   let a;
   try { a = alcance(usuario); } catch (_e) { return []; }
@@ -761,5 +825,5 @@ async function buscarGlobal(clinicaId, termino, usuario) {
 module.exports = {
   alcance, obtenerConfig, guardarConfig, guardarLogo, quitarLogo, obtenerLogo, cambiarNumeracion, metodosPago,
   crear, obtener, listar, estadisticas, reporte, editar, anular, asociarPago, alAnularPago, crearNotaCredito,
-  resumenPresupuesto, resumenPaciente, borrador, buscarGlobal, evento, formatearNumero, TIPOS,
+  resumenPresupuesto, resumenPaciente, borrador, buscarGlobal, facturarCobro, facturarMovimiento, SQL_COBRADO, evento, formatearNumero, TIPOS,
 };

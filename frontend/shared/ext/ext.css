@@ -286,3 +286,6 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 }
 .dova-fac-form [data-cobros] .dova-ext-check { display: block; line-height: 1.5; }
 .dova-fac-form [data-cobros] .dova-ext-check input { margin-right: 6px; vertical-align: middle; }
+.dova-fac-al-cobrar { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 8px 12px; margin: 4px 0 10px; }
+.dova-fac-al-cobrar .dova-ext-check { margin: 4px 0; }
+.dova-fac-al-cobrar [hidden] { display: none; }

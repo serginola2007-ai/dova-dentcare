@@ -163,3 +163,24 @@ Módulo nuevo en el menú **Facturación** y en la ficha del paciente (pestaña 
 - **Pruebas:**
   - 63 de API (`fact-api.js`): numeración concurrente, caja sin duplicar, permisos, PDF y reportes.
   - 56 de pantalla (`ui-facturacion.js`): admin en la compu, recepción en el celular, odontólogo y asistente.
+
+## Factura al registrar cualquier ingreso + impresión directa (migración 0024)
+
+- **Registrar cobro** (en la ficha, también al cobrar cuotas): trae las casillas **"Generar factura"** e **"Imprimir al terminar"**, y los campos opcionales RUC y razón social, que se guardan en la ficha. Se cobra y se factura en un solo paso.
+- **Caja → + Ingreso:** lo mismo para ingresos sin paciente (por ejemplo, una venta de mostrador). El cliente queda como "Consumidor final" o con el nombre y RUC que se carguen.
+- **Caja del día:** cada ingreso muestra su factura con un botón **Imprimir**, o **Generar factura** si todavía no tiene.
+- **Ficha → Cobros:** "Generar factura" ahora la emite en un paso (heredando el cobro) y la imprime. Cada cobro facturado tiene su botón **Imprimir**.
+- **Nueva factura:** casilla "Imprimir al emitir".
+- **Imprimir directo:**
+  - En la compu se abre el cuadro de impresión sin salir de la pantalla.
+  - En el celular aparece un botón "Imprimir", porque el navegador exige un toque para abrir el PDF.
+  - Para imprimir sin el cuadro de diálogo, abrir Chrome de recepción con `--kiosk-printing`.
+- **Configuración → Facturación → "Al registrar un cobro o ingreso":**
+  - Generar factura por defecto (sí/no).
+  - Imprimir automáticamente (sí/no).
+  - Formato: **hoja A4** o **ticket de 80 mm** para impresora térmica.
+- **Nunca duplica:** un cobro o ingreso con factura vigente devuelve la misma factura. Facturar no mueve la caja. Si se anula, el ingreso queda libre para volver a facturarse.
+- **Corrección de seguridad (CSP):** permite el PDF en un marco oculto. Antes, "Imprimir" quedaba bloqueado por la política de seguridad del sitio.
+- **Pruebas:**
+  - API: 21 de ingresos y 63 de facturación.
+  - Pantalla: 68 de facturación, más operativo, calendario, PWA y la simulación de un año, todo OK.

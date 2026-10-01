@@ -43,8 +43,14 @@ async function registrarMovimiento(cajaAperturaId, { tipo, concepto, monto, meto
 
 async function listarMovimientos(cajaAperturaId) {
   const res = await query(
-    `SELECT m.*, u.nombre AS usuario_nombre FROM caja_movimientos m
-     LEFT JOIN usuarios u ON u.id = m.usuario_id
+    `SELECT m.*, u.nombre AS usuario_nombre, fa.id AS factura_id, fa.numero_completo AS factura_numero
+       FROM caja_movimientos m
+       LEFT JOIN usuarios u ON u.id = m.usuario_id
+       LEFT JOIN LATERAL (
+         SELECT f.id, f.numero_completo FROM facturas f
+          WHERE f.estado <> 'anulada' AND (f.caja_movimiento_id = m.id
+             OR (m.pago_id IS NOT NULL AND EXISTS (SELECT 1 FROM factura_pagos fp WHERE fp.factura_id = f.id AND fp.pago_id = m.pago_id AND fp.activo)))
+          ORDER BY f.id DESC LIMIT 1) fa ON true
      WHERE caja_apertura_id = $1 ORDER BY creado_en`,
     [cajaAperturaId]
   );

@@ -38,6 +38,12 @@ router.get('/config/logo', requirePermiso(...VER, 'facturacion.crear', 'facturac
 // Métodos de pago (los usa también la pantalla de cobros).
 router.get('/metodos-pago', requirePermiso(...VER, 'facturacion.crear', 'facturacion.configurar', 'pagos.create', 'pagos.view', 'caja.manage'), h((req) => s.metodosPago(req.clinicaId)));
 
+// Lo que necesita la pantalla de cobro / ingreso de caja para ofrecer "Generar factura" e "Imprimir".
+router.get('/opciones-cobro', requirePermiso(...VER, 'facturacion.crear', 'pagos.create', 'caja.manage'), h(async (req) => {
+  const c = await s.obtenerConfig(req.clinicaId);
+  return { metodos: await s.metodosPago(req.clinicaId), facturarAlCobrar: c.facturar_al_cobrar, imprimirAlFacturar: c.imprimir_al_facturar, formatoImpresion: c.formato_impresion };
+}));
+
 // ---------------- Tablero y reportes ----------------
 router.get('/estadisticas', requirePermiso(...VER), h((req) => s.estadisticas(req.clinicaId, s.alcance(req.usuario))));
 router.get('/reporte', requirePermiso('facturacion.ver_reportes'), h((req) => s.reporte(req.clinicaId, req.query, alcanceReportes(req))));
@@ -86,7 +92,9 @@ router.get('/:id/pdf', requirePermiso('facturacion.descargar', 'facturacion.impr
     const [config, logo, metodos] = await Promise.all([s.obtenerConfig(req.clinicaId), s.obtenerLogo(req.clinicaId), s.metodosPago(req.clinicaId, { incluirInactivos: true })]);
     await s.evento(factura.id, modo === 'descargar' ? 'pdf_descargado' : modo === 'imprimir' ? 'pdf_impreso' : 'pdf_generado', null, req.usuario);
     await auditoria.registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: `factura_pdf_${modo}`, modulo: 'facturacion', entidadId: factura.id, detalle: { numero: factura.numero_completo } });
-    pdf.generar(res, { factura, config, logo, metodos, disposicion: modo === 'descargar' ? 'attachment' : 'inline' });
+    // Formato: el pedido (?formato=a4|ticket); si no, para imprimir el de la configuración y A4 para ver/descargar.
+    const formato = ['a4', 'ticket'].includes(req.query.formato) ? req.query.formato : modo === 'imprimir' ? config.formato_impresion : 'a4';
+    (formato === 'ticket' ? pdf.ticket : pdf.generar)(res, { factura, config, logo, metodos, disposicion: modo === 'descargar' ? 'attachment' : 'inline' });
   } catch (e) { next(e); }
 });
 
@@ -98,6 +106,13 @@ router.put('/:id', requirePermiso('facturacion.editar'), h((req) => s.editar(req
 router.post('/:id/anular', requirePermiso('facturacion.anular'), h((req) => s.anular(req.clinicaId, req.params.id, (req.body || {}).motivo, req.usuario, { todas: true })));
 router.post('/:id/pagos', requirePermiso('facturacion.crear'), h((req) => s.asociarPago(req.clinicaId, req.params.id, Number((req.body || {}).pagoId), req.usuario, { todas: true })));
 router.post('/:id/notas-credito', requirePermiso('facturacion.anular'), h((req) => s.crearNotaCredito(req.clinicaId, req.params.id, req.body || {}, req.usuario, { todas: true })));
+// Facturar en un paso un cobro o un ingreso de caja ya registrado (no duplica: si ya tenía, la devuelve).
+router.post('/cobro/:pagoId', requirePermiso('facturacion.crear'), async (req, res, next) => {
+  try { const r = await s.facturarCobro(req.clinicaId, Number(req.params.pagoId), req.body || {}, req.usuario); res.status(r.yaExistia ? 200 : 201).json(r); } catch (e) { next(e); }
+});
+router.post('/movimiento/:movimientoId', requirePermiso('facturacion.crear'), async (req, res, next) => {
+  try { const r = await s.facturarMovimiento(req.clinicaId, Number(req.params.movimientoId), req.body || {}, req.usuario); res.status(r.yaExistia ? 200 : 201).json(r); } catch (e) { next(e); }
+});
 // Una factura emitida nunca se borra: se anula.
 router.delete('/:id', (req, res, next) => next(new ApiError(405, 'No se puede eliminar una factura emitida. Debe anularse.')));
 

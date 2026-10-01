@@ -182,7 +182,7 @@ const DovaApp = (() => {
           break;
         case 'caja':
           elMain.innerHTML = '<div></div>';
-          await DovaOperativo.caja(elMain.firstElementChild);
+          await DovaOperativo.caja(elMain.firstElementChild, navegar);
           break;
         case 'facturacion':
           elMain.innerHTML = '<div></div>';
