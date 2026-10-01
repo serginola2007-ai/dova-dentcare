@@ -126,7 +126,8 @@ async function refresh(refreshTokenRaw) {
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );
-  return { accessToken };
+  // Permisos actuales: la pantalla los actualiza sin tener que volver a iniciar sesión.
+  return { accessToken, permisos };
 }
 
 async function logout(refreshTokenRaw) {

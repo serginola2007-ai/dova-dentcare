@@ -300,7 +300,10 @@ const DovaApp = (() => {
     `;
   }
 
-  function entrarADova(elLogin, elShell) {
+  async function entrarADova(elLogin, elShell) {
+    // Permisos al día (p. ej. un módulo nuevo como Facturación) sin pedir que se vuelva a iniciar sesión.
+    if (DOVA.actualizarSesion) await DOVA.actualizarSesion();
+    if (!DOVA.estaAutenticado()) { location.reload(); return; }
     elLogin.style.display = 'none';
     elShell.style.display = '';
     renderMenu();

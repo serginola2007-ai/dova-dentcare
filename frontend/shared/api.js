@@ -28,6 +28,7 @@ const DOVA = (() => {
     if (!res.ok) { clearSession(); throw new Error('Sesión expirada'); }
     const data = await res.json();
     sesion.accessToken = data.accessToken;
+    if (Array.isArray(data.permisos) && sesion.usuario) sesion.usuario.permisos = data.permisos;
     setSession(sesion);
     return sesion.accessToken;
   }
@@ -158,6 +159,8 @@ const DOVA = (() => {
 
   return {
     setApiBase: (b) => { apiBase = b; },
+    // Al abrir DOVA: trae los permisos vigentes (módulos nuevos o cambios de rol) sin cerrar sesión.
+    actualizarSesion: () => refrescarToken().then(() => true).catch(() => false),
     request, login, logout, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
