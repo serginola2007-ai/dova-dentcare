@@ -1074,13 +1074,13 @@ const DovaOperativo = (() => {
       descripcion: 'Para que un odontólogo entre a DOVA con su usuario, crealo acá y después vinculalo en Usuarios.',
       claseFila: (r) => (r.activo === false ? 'dova-op-fila-apagada' : ''),
       columnas: [
-        { t: 'Nombre', v: (r) => esc(r.nombre) }, { t: 'Especialidad', v: (r) => esc(r.especialidad || '-') }, { t: 'Matrícula', v: (r) => esc(r.matricula || '-') },
+        { t: 'Nombre', v: (r) => `<span class="dova-ext-punto-color" style="background:${colorOdo(r)}"></span>${esc(r.nombre)}` }, { t: 'Especialidad', v: (r) => esc(r.especialidad || '-') }, { t: 'Matrícula', v: (r) => esc(r.matricula || '-') },
         { t: 'Contacto', v: (r) => esc([r.telefono, r.email].filter(Boolean).join(' · ') || '-') },
         { t: 'Estado', v: (r) => (r.activo === false ? badge('Inactivo', 'critica') : badge('Activo', 'ok')) },
       ],
       campos: [
         { k: 'nombre', label: 'Nombre completo', req: true, max: 150 }, { k: 'especialidad', label: 'Especialidad', max: 100 }, { k: 'matricula', label: 'Matrícula', max: 50 },
-        { k: 'telefono', label: 'Teléfono', max: 40 }, { k: 'email', label: 'Email', max: 150 }, { k: 'colorAgenda', label: 'Color en la agenda (ej. #2E7D32)', max: 20 },
+        { k: 'telefono', label: 'Teléfono', max: 40 }, { k: 'email', label: 'Email', max: 150 }, { k: 'colorAgenda', label: 'Color en la agenda', tipo: 'color', ancho: 'completo', ayuda: 'Tocá un color. Así se distinguen sus turnos en el calendario.' },
         { k: 'activo', label: 'Activo', tipo: 'bool', soloEditar: true },
       ],
       valoresEditar: (r) => ({ nombre: r.nombre, especialidad: r.especialidad, matricula: r.matricula, telefono: r.telefono, email: r.email, colorAgenda: r.color_agenda, activo: r.activo !== false }),

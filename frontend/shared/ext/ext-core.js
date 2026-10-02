@@ -50,14 +50,33 @@ const DovaExt = (() => {
       case 'fecha': return `<input type="date" id="${id}" name="${c.k}" value="${esc(String(val).slice(0, 10))}" ${req}/>`;
       case 'fechahora': return `<input type="datetime-local" id="${id}" name="${c.k}" value="${esc(val ? new Date(val).toISOString().slice(0, 16) : '')}" ${req}/>`;
       case 'hora': return `<input type="time" id="${id}" name="${c.k}" value="${esc(String(val).slice(0, 5))}" ${req}/>`;
+      case 'color': {
+        const v = /^#[0-9a-f]{6}$/i.test(val) ? val.toUpperCase() : '';
+        const muestras = COLORES.map(([hex, nom]) => `<label class="dova-ext-color" title="${nom}"><input type="radio" name="${c.k}" value="${hex}" ${v === hex ? 'checked' : ''}/><span style="background:${hex}"></span><em>${nom}</em></label>`).join('');
+        const propio = v && !COLORES.some(([h]) => h === v);
+        return `<div class="dova-ext-colores" role="radiogroup" aria-label="${esc(c.label)}">
+          <label class="dova-ext-color" title="Automático"><input type="radio" name="${c.k}" value="" ${!v ? 'checked' : ''}/><span class="auto">A</span><em>Automático</em></label>
+          ${muestras}
+          <label class="dova-ext-color" title="Otro color"><input type="radio" name="${c.k}" value="${propio ? v : '#888888'}" data-color-propio ${propio ? 'checked' : ''}/><input type="color" value="${propio ? v : '#888888'}" data-color-input aria-label="Otro color"/><em>Otro</em></label>
+        </div>`;
+      }
       case 'pieza': return `<input id="${id}" name="${c.k}" value="${esc(val)}" placeholder="FDI, ej. 16" inputmode="numeric" maxlength="2" ${req}/>`;
       default: return `<input id="${id}" name="${c.k}" value="${esc(val)}" ${c.max ? `maxlength="${c.max}"` : ''} ${req}/>`;
     }
   }
+  // Colores para elegir con un toque (agenda de odontólogos, etc.).
+  const COLORES = [['#2E7D32', 'Verde'], ['#1565C0', 'Azul'], ['#00838F', 'Turquesa'], ['#6A1B9A', 'Violeta'], ['#AD1457', 'Fucsia'],
+    ['#C62828', 'Rojo'], ['#EF6C00', 'Naranja'], ['#F9A825', 'Amarillo'], ['#5D4037', 'Marrón'], ['#455A64', 'Gris azulado']];
+  // El selector "Otro" copia el color elegido a su opción.
+  document.addEventListener('input', (e) => {
+    if (!e.target.matches || !e.target.matches('[data-color-input]')) return;
+    const r = e.target.parentElement.querySelector('[data-color-propio]');
+    r.value = e.target.value.toUpperCase(); r.checked = true;
+  });
   function formHtml(campos, valores = {}) {
     return `<div class="dova-ext-form-grid">${campos.map((c) => `
       <div class="dova-ext-campo ${c.ancho === 'completo' || c.tipo === 'textarea' ? 'dova-ext-campo-completo' : ''}">
-        ${c.tipo === 'bool' ? `<label>${esc(c.label)}</label>` : `<label for="f-${c.k}">${esc(c.label)}${c.req ? ' *' : ''}</label>`}
+        ${c.tipo === 'bool' || c.tipo === 'color' ? `<label>${esc(c.label)}</label>` : `<label for="f-${c.k}">${esc(c.label)}${c.req ? ' *' : ''}</label>`}
         ${inputCampo(c, valores[c.k] !== undefined ? valores[c.k] : valores[snake(c.k)])}
         ${c.ayuda ? `<p class="dova-ext-ayuda">${esc(c.ayuda)}</p>` : ''}
       </div>`).join('')}</div>`;
@@ -67,6 +86,11 @@ const DovaExt = (() => {
   function leerForm(form, campos, editando) {
     const out = {};
     for (const c of campos) {
+      if (c.tipo === 'color') {
+        const r = form.querySelector(`[name="${c.k}"]:checked`);
+        if (r) { if (r.value) out[c.k] = r.value; else if (editando) out[c.k] = null; }
+        continue;
+      }
       const el = form.querySelector(`[name="${c.k}"]`);
       if (!el) continue;
       if (c.tipo === 'bool') { out[c.k] = el.checked; continue; }

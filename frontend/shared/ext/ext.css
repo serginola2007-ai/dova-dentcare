@@ -289,3 +289,17 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-fac-al-cobrar { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 8px 12px; margin: 4px 0 10px; }
 .dova-fac-al-cobrar .dova-ext-check { margin: 4px 0; }
 .dova-fac-al-cobrar [hidden] { display: none; }
+
+/* Selector de color con muestras */
+.dova-ext-colores { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.dova-ext-color { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-size: 11px; color: var(--ink-soft); margin: 0; }
+.dova-ext-color em { font-style: normal; }
+.dova-ext-color input[type=radio] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.dova-ext-color span, .dova-ext-color input[type=color] { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; box-shadow: 0 0 0 1px var(--border); box-sizing: border-box; padding: 0; }
+.dova-ext-color span.auto { background: var(--white); display: grid; place-items: center; font-weight: 700; color: var(--ink-soft); font-size: 13px; }
+.dova-ext-color input[type=color] { cursor: pointer; background: none; }
+.dova-ext-color input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.dova-ext-color input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.dova-ext-color input[type=radio]:checked + span, .dova-ext-color input[type=radio]:checked + input[type=color] { border-color: var(--white); box-shadow: 0 0 0 2px var(--ink); }
+.dova-ext-color input[type=radio]:focus-visible + span { outline: 2px solid var(--terracotta); outline-offset: 2px; }
+.dova-ext-punto-color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
