@@ -70,9 +70,9 @@ async function contarProgreso(planId) {
 async function actualizarEtapa(id, d) {
   const res = await query(
     `UPDATE etapas_tratamiento SET
-       estado = $2, completada = ($2 = 'completado'),
-       fecha_inicio = CASE WHEN $2 IN ('en_progreso','completado') THEN COALESCE(fecha_inicio, $3::date, CURRENT_DATE) ELSE fecha_inicio END,
-       fecha = CASE WHEN $2 = 'completado' THEN COALESCE($4::date, fecha, CURRENT_DATE) ELSE $4::date END,
+       estado = $2::varchar, completada = ($2::varchar = 'completado'),
+       fecha_inicio = CASE WHEN $2::varchar IN ('en_progreso','completado') THEN COALESCE(fecha_inicio, $3::date, CURRENT_DATE) ELSE fecha_inicio END,
+       fecha = CASE WHEN $2::varchar = 'completado' THEN COALESCE($4::date, fecha, CURRENT_DATE) ELSE $4::date END,
        odontologo_id = $5, observaciones = $6, piezas = $7, actualizado_en = now()
      WHERE id = $1 RETURNING *`,
     [id, d.estado, d.fechaInicio || null, d.fecha || null, d.odontologoId || null, d.observaciones || null, d.piezas || null]

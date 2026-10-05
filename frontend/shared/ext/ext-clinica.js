@@ -289,6 +289,7 @@ const DovaClinica = (() => {
         if (a === 'foto') return formFoto(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; } });
         if (a === 'estudio') return formEstudio(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; } });
         if (a === 'presupuesto') { pn.innerHTML = '<div></div>'; return DovaOperativo.presupuestos(pn.firstElementChild, pid); }
+        if (a === 'receta') return formReceta(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; }, medicacionSugerida: form && form.elements.medicacion.value.trim() });
         if (a === 'historial') return historialCompacto(pn, pid);
         pn.innerHTML = await Vistas.renderPanelConsulta(a, pid);
         Vistas.initPanelConsulta(a, pid);
@@ -319,12 +320,12 @@ const DovaClinica = (() => {
   // =================================================================
   // FOTOS Y ESTUDIOS
   // =================================================================
-  function formFoto(c, pid, { hcId, asegurar, alGuardar } = {}) {
+  function formFoto(c, pid, { hcId, asegurar, alGuardar, extra = {} } = {}) {
     c.innerHTML = `<div class="dova-etapas-box"><h4>Agregar fotografía</h4>
       <form data-f class="dova-cli-form">
         <label><span>Foto</span><input type="file" name="archivo" accept="image/jpeg,image/png,image/webp" capture="environment" required /></label>
         <label><span>Categoría</span><select name="categoria">${CATEGORIAS.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('')}</select></label>
-        <label><span>Pieza (opcional)</span><input name="pieza" inputmode="numeric" maxlength="2" placeholder="36" /></label>
+        <label><span>Pieza (opcional)</span><input name="pieza" inputmode="numeric" maxlength="2" placeholder="36" value="${esc(extra.pieza || '')}" /></label>
         <label><span>Fecha</span><input type="date" name="fecha" value="${X.hoy()}" /></label>
         <label class="dova-cli-ancho"><span>Observación</span><input name="observacion" maxlength="500" /></label>
         ${asegurar ? '<label class="dova-ext-check dova-cli-ancho"><input type="checkbox" name="vincular" checked /> Vincular a esta consulta</label>' : ''}
@@ -344,6 +345,8 @@ const DovaClinica = (() => {
         if (f.pieza.value.trim()) fd.append('pieza', f.pieza.value.trim());
         if (f.observacion.value.trim()) fd.append('observacion', f.observacion.value.trim());
         if (f.vincular && f.vincular.checked) { const id = (hcId && hcId()) || (asegurar && await asegurar()); if (id) fd.append('historiaClinicaId', id); }
+        if (extra.planId) fd.append('planId', extra.planId);
+        if (extra.etapaId) fd.append('etapaId', extra.etapaId);
         fd.append('archivo', a);
         await DOVA.postForm('/clinico/fotos', fd);
         toast('Foto guardada', 'ok'); f.reset(); f.fecha.value = X.hoy();
@@ -353,7 +356,7 @@ const DovaClinica = (() => {
     });
   }
 
-  function formEstudio(c, pid, { hcId, asegurar, alGuardar } = {}) {
+  function formEstudio(c, pid, { hcId, asegurar, alGuardar, extra = {} } = {}) {
     c.innerHTML = `<div class="dova-etapas-box"><h4>Agregar estudio</h4>
       <form data-f class="dova-cli-form">
         <label><span>Tipo</span><select name="tipo">${TIPOS_ESTUDIO.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('')}</select></label>
@@ -377,6 +380,8 @@ const DovaClinica = (() => {
         fd.append('pacienteId', pid); fd.append('tipo', f.tipo.value); fd.append('fecha', f.fecha.value);
         for (const k of ['pieza', 'descripcion', 'observaciones']) if (f[k].value.trim()) fd.append(k, f[k].value.trim());
         if (f.vincular && f.vincular.checked) { const id = (hcId && hcId()) || (asegurar && await asegurar()); if (id) fd.append('historiaClinicaId', id); }
+        if (extra.planId) fd.append('planId', extra.planId);
+        if (extra.etapaId) fd.append('etapaId', extra.etapaId);
         if (a) fd.append('archivo', a);
         await DOVA.postForm('/clinico/estudios', fd);
         toast('Estudio guardado', 'ok'); f.reset(); f.fecha.value = X.hoy();
@@ -515,25 +520,258 @@ const DovaClinica = (() => {
     mover(); poner();
   }
 
+
+  // =================================================================
+  // RECETAS (Fase 2): varios medicamentos, verificación de alergias, PDF
+  // =================================================================
+  const PRESENTACIONES = ['comprimidos', 'cápsulas', 'jarabe', 'suspensión', 'gotas', 'ampolla', 'gel', 'crema', 'enjuague bucal', 'spray'];
+  const VIAS = ['oral', 'sublingual', 'tópica', 'enjuague bucal', 'intramuscular', 'endovenosa', 'inhalatoria'];
+  const filaMed = (i) => `<fieldset class="dova-cli-med" data-med>
+      <legend>Medicamento ${i}</legend>
+      <label class="dova-cli-ancho"><span>Medicamento</span><input name="medicamento" required maxlength="200" placeholder="Ej.: Amoxicilina" /></label>
+      <label><span>Concentración</span><input name="concentracion" maxlength="60" placeholder="500 mg" /></label>
+      <label><span>Presentación</span><input name="presentacion" maxlength="100" list="dova-presentaciones" placeholder="comprimidos" /></label>
+      <label><span>Dosis</span><input name="dosis" maxlength="100" placeholder="1 comprimido" /></label>
+      <label><span>Frecuencia</span><input name="frecuencia" maxlength="100" placeholder="cada 8 horas" /></label>
+      <label><span>Duración</span><input name="duracion" maxlength="100" placeholder="7 días" /></label>
+      <label><span>Vía</span><input name="via" maxlength="60" list="dova-vias" placeholder="oral" /></label>
+      <label class="dova-cli-ancho"><span>Indicaciones de este medicamento</span><input name="indicaciones" maxlength="500" placeholder="Ej.: tomar con comida" /></label>
+      ${i > 1 ? '<button type="button" class="dova-btn-link dova-ext-peligro" data-quitar-med>Quitar</button>' : ''}
+    </fieldset>`;
+
+  function formReceta(c, pid, { hcId, asegurar, alGuardar, medicacionSugerida } = {}) {
+    c.innerHTML = `<div class="dova-etapas-box"><h4>Nueva receta</h4>
+      <datalist id="dova-presentaciones">${PRESENTACIONES.map((x) => `<option value="${x}">`).join('')}</datalist>
+      <datalist id="dova-vias">${VIAS.map((x) => `<option value="${x}">`).join('')}</datalist>
+      <form data-f novalidate>
+        <div data-meds>${filaMed(1)}</div>
+        <button type="button" class="dova-btn-secundario" data-mas>+ Otro medicamento</button>
+        <div class="dova-cli-form" style="margin-top:12px">
+          <label class="dova-cli-ancho"><span>Indicaciones generales</span><textarea name="indicacionesGen" rows="2" maxlength="2000"></textarea></label>
+          ${asegurar ? '<label class="dova-ext-check dova-cli-ancho"><input type="checkbox" name="vincular" checked /> Vincular a esta consulta</label>' : ''}
+        </div>
+        <div data-adv></div>
+        <p class="dova-error-text" data-err hidden></p>
+        <button class="dova-btn-primary" data-emitir>Emitir receta</button>
+      </form></div>`;
+    const f = c.querySelector('[data-f]'); const meds = f.querySelector('[data-meds]');
+    if (medicacionSugerida) meds.querySelector('[name="medicamento"]').value = medicacionSugerida.slice(0, 200);
+    const renumerar = () => meds.querySelectorAll('[data-med] legend').forEach((l, i) => { l.textContent = `Medicamento ${i + 1}`; });
+    f.querySelector('[data-mas]').addEventListener('click', () => {
+      if (meds.children.length >= 20) return;
+      meds.insertAdjacentHTML('beforeend', filaMed(meds.children.length + 1));
+      meds.lastElementChild.querySelector('input').focus();
+    });
+    meds.addEventListener('click', (e) => { const q = e.target.closest('[data-quitar-med]'); if (q) { q.closest('[data-med]').remove(); renumerar(); } });
+    let confirmado = false;
+    f.addEventListener('input', (e) => { if (e.target.name === 'medicamento') { confirmado = false; f.querySelector('[data-adv]').innerHTML = ''; } });
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const err = f.querySelector('[data-err]'); err.hidden = true;
+      const items = [...meds.querySelectorAll('[data-med]')].map((fs) => Object.fromEntries([...fs.querySelectorAll('input')].map((i) => [i.name, i.value.trim()])))
+        .filter((it) => it.medicamento);
+      if (!items.length) { err.textContent = 'Escribí al menos un medicamento'; err.hidden = false; return; }
+      const b = f.querySelector('[data-emitir]'); b.disabled = true;
+      try {
+        // Verificación de alergias, reacciones cruzadas y medicación actual.
+        if (!confirmado && puede('salud.view', 'salud.edit', 'recetas.manage')) {
+          const v = await DOVA.post('/salud/verificar-medicamentos', { pacienteId: pid, medicamentos: items.map((i) => i.medicamento) }).catch(() => null);
+          const imp = v ? (v.advertencias || []).filter((a) => a.nivel !== 'info') : [];
+          if (imp.length) {
+            f.querySelector('[data-adv]').innerHTML = `<div class="dova-ext-alertas-medicas" role="alert"><strong>Revisá antes de emitir:</strong>
+              <ul class="dova-ext-alertas-lista">${imp.map((a) => `<li><strong>${a.nivel === 'critica' ? 'Crítica' : 'Atención'}:</strong> ${esc(a.mensaje)}</li>`).join('')}</ul>
+              <p class="dova-nota">${esc(v.aviso || '')}</p></div>`;
+            b.textContent = 'Emitir igual'; confirmado = true; b.disabled = false; return;
+          }
+        }
+        let historiaClinicaId;
+        if (f.vincular && f.vincular.checked) historiaClinicaId = (hcId && hcId()) || (asegurar && await asegurar()) || undefined;
+        const r = await DOVA.post('/clinico/recetas', { pacienteId: pid, items, indicaciones: f.indicacionesGen.value.trim() || undefined, historiaClinicaId });
+        toast('Receta emitida', 'ok');
+        c.innerHTML = `<div class="dova-etapas-box"><h4>Receta emitida</h4><p>${esc(items.map((i) => i.medicamento).join(', '))}</p>
+          <div class="dova-cli-siguiente"><button class="dova-btn-primary" data-pdf>Ver e imprimir</button><button class="dova-btn-secundario" data-otra>Hacer otra receta</button></div></div>`;
+        c.querySelector('[data-pdf]').addEventListener('click', () => verPdf(`/comprobantes/receta/${r.id}`, `Receta N.º ${r.id}`));
+        c.querySelector('[data-otra]').addEventListener('click', () => formReceta(c, pid, { hcId, asegurar, alGuardar }));
+        if (alGuardar) alGuardar(r);
+      } catch (e) { err.textContent = e.message; err.hidden = false; b.disabled = false; }
+    });
+  }
+
+  // PDF protegido en una ventana del sistema, con botón Imprimir.
+  async function verPdf(ruta, titulo) {
+    X.modal(titulo, `<div class="dova-cli-visor" data-v>${cargando}</div>
+      <div class="dova-modal-actions"><button class="dova-btn-secundario" data-bajar>Descargar</button><button class="dova-btn-primary" data-imprimir>Imprimir</button></div>`, { ancho: 'ancho' });
+    const box = document.querySelector('.dova-modal-box'); const v = box.querySelector('[data-v]');
+    try {
+      const r = await DOVA.request(ruta, { raw: true });
+      if (!r.ok) { let m = 'No se pudo generar el documento'; try { m = (await r.json()).error.message; } catch (_e) { /* */ } throw new Error(m); }
+      const u = URL.createObjectURL(await r.blob());
+      v.innerHTML = `<iframe src="${u}" title="${esc(titulo)}" class="dova-cli-pdf"></iframe>`;
+      box.querySelector('[data-imprimir]').addEventListener('click', () => { const fr = v.querySelector('iframe'); try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (_e) { window.open(u, '_blank'); } });
+      box.querySelector('[data-bajar]').addEventListener('click', () => { const a = document.createElement('a'); a.href = u; a.download = `${titulo.replace(/[^\w.-]+/g, '-')}.pdf`; document.body.appendChild(a); a.click(); a.remove(); });
+    } catch (e) { v.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; }
+  }
+
+  // =================================================================
+  // PLAN DE TRATAMIENTO POR ETAPAS (Fase 2)
+  // =================================================================
+  const ESTADOS_ETAPA = [['pendiente', 'Pendiente', 'info'], ['en_progreso', 'En progreso', 'atencion'], ['completado', 'Completado', 'ok'], ['cancelado', 'Cancelado', 'critica']];
+  const EST_ETAPA = Object.fromEntries(ESTADOS_ETAPA.map(([v, t, n]) => [v, [t, n]]));
+  const PROTOCOLOS = {
+    'Endodoncia': ['Diagnóstico', 'Apertura', 'Instrumentación', 'Obturación', 'Reconstrucción', 'Control'],
+    'Restauración': ['Diagnóstico', 'Anestesia y aislamiento', 'Remoción de caries', 'Restauración', 'Pulido y control oclusal'],
+    'Implante': ['Diagnóstico e imágenes', 'Cirugía de colocación', 'Control de oseointegración', 'Toma de impresión', 'Colocación de corona', 'Control'],
+    'Prótesis fija': ['Diagnóstico', 'Tallado', 'Impresión', 'Prueba', 'Cementado', 'Control'],
+    'Exodoncia': ['Diagnóstico', 'Extracción', 'Control postoperatorio'],
+  };
+
+  async function planDetalle(root, planId) {
+    root.innerHTML = cargando;
+    const plan = await DOVA.get(`/planes-tratamiento/${planId}`);
+    const ed = puede('planes_tratamiento.manage') && !['finalizado', 'cancelado'].includes(plan.estado);
+    const [odos, fotos, estudios] = await Promise.all([
+      X.opcionesOdontologos().catch(() => []),
+      puede('fotos_clinicas.manage', 'pacientes.clinical.view', 'historia_clinica.view') ? DOVA.get(`/clinico/fotos/paciente/${plan.paciente_id}`).catch(() => []) : [],
+      puede('estudios.manage', 'pacientes.clinical.view', 'historia_clinica.view') ? DOVA.get(`/clinico/estudios/paciente/${plan.paciente_id}`).catch(() => []) : [],
+    ]);
+    const etapas = (plan.etapas || []).slice().sort((a, b) => a.orden - b.orden || a.id - b.id);
+    const activas = etapas.filter((e) => e.estado !== 'cancelado');
+    const hechas = activas.filter((e) => e.estado === 'completado').length;
+    const pct = activas.length ? Math.round((hechas / activas.length) * 100) : 0;
+    const recargar = () => planDetalle(root, planId);
+    root.innerHTML = `<div class="dova-etapas-box dova-cli-plan">
+      <div class="dova-toolbar dova-cli-toolbar">
+        <div><h4 style="margin:0">${esc(plan.nombre)}${plan.pieza ? ` · pieza ${esc(plan.pieza)}` : ''}</h4>
+          <p class="dova-nota" style="margin:2px 0">${badge(X.etiqueta(plan.estado), plan.estado === 'finalizado' ? 'ok' : plan.estado === 'cancelado' ? 'critica' : 'info')} ${hechas}/${activas.length} etapas · ${pct}%${plan.diagnostico ? ` · Dx: ${esc(plan.diagnostico)}` : ''}</p></div>
+        <div class="dova-cli-filtros">
+          <button class="dova-btn-secundario" data-pdf-plan>Plan en PDF</button>
+          ${puede('presupuestos.manage') ? (plan.presupuesto_id ? `<span class="dova-badge dova-badge-ok">Presupuesto #${plan.presupuesto_id}</span>` : '<button class="dova-btn-primary" data-presupuesto>Generar presupuesto</button>') : ''}
+        </div>
+      </div>
+      <div class="dova-cli-progreso" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>
+      ${etapas.length ? `<ol class="dova-cli-etapas">${etapas.map((e) => {
+        const fe = fotos.filter((x) => x.etapa_id === e.id); const ee = estudios.filter((x) => x.etapa_id === e.id);
+        return `<li class="dova-cli-etapa est-${e.estado}" data-etapa="${e.id}">
+          <div class="dova-cli-etapa-cab"><strong>${esc(e.nombre)}</strong> ${badge(EST_ETAPA[e.estado][0], EST_ETAPA[e.estado][1])}
+            <span class="dova-nota">${[e.fecha_inicio ? `inicio ${fmtFecha(e.fecha_inicio)}` : '', e.fecha && e.estado === 'completado' ? `terminó ${fmtFecha(e.fecha)}` : '', e.odontologo_nombre || '', (e.piezas || []).length ? `piezas ${e.piezas.join(', ')}` : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
+          ${e.observaciones ? `<p class="dova-cli-etapa-obs">${esc(e.observaciones)}</p>` : ''}
+          ${(e.materiales || []).length ? `<p class="dova-nota">Materiales: ${e.materiales.map((m) => `${Number(m.cantidad)} × ${esc(m.insumo_nombre)}`).join(', ')}</p>` : ''}
+          ${fe.length || ee.length ? `<div class="dova-cli-etapa-media">${fe.map((x) => `<button type="button" class="dova-cli-mini" data-ver-foto="${x.id}"><img data-src="/clinico/fotos/${x.id}/archivo" alt="Foto de la etapa" /></button>`).join('')}${ee.map((x) => `<button type="button" class="dova-btn-link" data-ver-est="${x.id}">${esc(TIPO_NOMBRE[x.tipo] || x.tipo)}</button>`).join('')}</div>` : ''}
+          ${ed ? `<div class="dova-cli-etapa-acc">
+            ${e.estado === 'pendiente' ? '<button class="dova-btn-secundario" data-estado="en_progreso">Iniciar</button>' : ''}
+            ${['pendiente', 'en_progreso'].includes(e.estado) ? '<button class="dova-btn-primary" data-estado="completado">Completar</button>' : ''}
+            ${e.estado === 'completado' ? '<button class="dova-btn-link" data-estado="en_progreso">Reabrir</button>' : ''}
+            <button class="dova-btn-link" data-editar>Detalles</button>
+            ${puede('fotos_clinicas.manage') ? '<button class="dova-btn-link" data-foto-etapa>+ Foto</button>' : ''}
+            ${puede('estudios.manage') ? '<button class="dova-btn-link" data-estudio-etapa>+ Estudio</button>' : ''}
+            <button class="dova-btn-link" data-material>+ Material</button>
+            ${e.estado !== 'cancelado' && e.estado !== 'completado' ? '<button class="dova-btn-link dova-ext-peligro" data-estado="cancelado">Cancelar etapa</button>' : ''}
+            ${e.estado === 'cancelado' ? '<button class="dova-btn-link" data-estado="pendiente">Volver a pendiente</button>' : ''}
+          </div><div data-sub></div>` : ''}
+        </li>`;
+      }).join('')}</ol>` : '<p class="dova-nota">Este tratamiento todavía no tiene etapas.</p>'}
+      ${ed ? `<form class="dova-cli-nueva-etapa" data-nueva>
+        <input name="nombre" placeholder="Nueva etapa (ej.: Control)" maxlength="150" aria-label="Nueva etapa" />
+        <button class="dova-btn-secundario">Agregar etapa</button>
+        ${!etapas.length ? `<select data-protocolo aria-label="Usar un protocolo"><option value="">…o usar un protocolo</option>${Object.keys(PROTOCOLOS).map((k) => `<option>${esc(k)}</option>`).join('')}</select>` : ''}
+      </form>` : ''}
+    </div>`;
+    activarImgs(root);
+    const pdfb = root.querySelector('[data-pdf-plan]'); if (pdfb) pdfb.addEventListener('click', () => verPdf(`/comprobantes/plan-tratamiento/${plan.id}`, `Plan de tratamiento ${plan.nombre}`));
+    const pb = root.querySelector('[data-presupuesto]');
+    if (pb) pb.addEventListener('click', async () => { pb.disabled = true; try { await DOVA.post(`/planes-tratamiento/${plan.id}/generar-presupuesto`, {}); toast('Presupuesto generado a partir del plan', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); pb.disabled = false; } });
+    const nf = root.querySelector('[data-nueva]');
+    if (nf) {
+      nf.addEventListener('submit', async (ev) => {
+        ev.preventDefault(); const n = nf.nombre.value.trim(); if (!n) return;
+        try { await DOVA.post(`/planes-tratamiento/${plan.id}/etapas`, { nombre: n, orden: etapas.length }); recargar(); } catch (e) { toast(e.message, 'error'); }
+      });
+      const pr = nf.querySelector('[data-protocolo]');
+      if (pr) pr.addEventListener('change', async () => {
+        if (!pr.value) return;
+        try { await DOVA.post(`/planes-tratamiento/${plan.id}/etapas/aplicar-plantilla`, { nombres: PROTOCOLOS[pr.value] }); toast(`Protocolo "${pr.value}" aplicado`, 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
+      });
+    }
+    root.querySelectorAll('[data-ver-foto]').forEach((b) => b.addEventListener('click', () => { const f = fotos.find((x) => String(x.id) === b.dataset.verFoto); if (f) visorFoto(f, recargar); }));
+    root.querySelectorAll('[data-ver-est]').forEach((b) => b.addEventListener('click', () => { const e = estudios.find((x) => String(x.id) === b.dataset.verEst); if (e) visorEstudio(e); }));
+    root.querySelectorAll('[data-etapa]').forEach((li) => {
+      const etapa = etapas.find((x) => String(x.id) === li.dataset.etapa);
+      const sub = li.querySelector('[data-sub]');
+      const patch = async (cambios) => {
+        try { await DOVA.patch(`/planes-tratamiento/${plan.id}/etapas/${etapa.id}`, cambios); toast('Etapa actualizada', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
+      };
+      li.querySelectorAll('[data-estado]').forEach((b) => b.addEventListener('click', () => patch({ estado: b.dataset.estado })));
+      const be = li.querySelector('[data-editar]');
+      if (be) be.addEventListener('click', () => {
+        sub.innerHTML = `<form class="dova-cli-form" data-ed>
+          <label><span>Estado</span><select name="estado">${ESTADOS_ETAPA.map(([v, t]) => `<option value="${v}" ${v === etapa.estado ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label><span>Profesional</span><select name="odontologoId"><option value="">—</option>${odos.map(([v, t]) => `<option value="${v}" ${String(v) === String(etapa.odontologo_id || '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+          <label><span>Fecha (de realización)</span><input type="date" name="fecha" value="${etapa.fecha ? String(etapa.fecha).slice(0, 10) : ''}" /></label>
+          <label><span>Piezas</span><input name="piezas" value="${esc((etapa.piezas || []).join(', '))}" placeholder="36, 37" /></label>
+          <label class="dova-cli-ancho"><span>Observaciones</span><textarea name="observaciones" rows="2" maxlength="2000">${esc(etapa.observaciones || '')}</textarea></label>
+          <div class="dova-cli-ancho"><button class="dova-btn-primary">Guardar etapa</button> <button type="button" class="dova-btn-link" data-cerrar-sub>Cerrar</button></div>
+        </form>`;
+        const f = sub.querySelector('[data-ed]');
+        sub.querySelector('[data-cerrar-sub]').addEventListener('click', () => { sub.innerHTML = ''; });
+        f.addEventListener('submit', (ev) => { ev.preventDefault(); patch({ estado: f.estado.value, odontologoId: f.odontologoId.value || null, fecha: f.fecha.value || null, piezas: f.piezas.value, observaciones: f.observaciones.value }); });
+      });
+      const bf = li.querySelector('[data-foto-etapa]');
+      if (bf) bf.addEventListener('click', () => formFotoEtapa(sub, plan, etapa, recargar));
+      const bs = li.querySelector('[data-estudio-etapa]');
+      if (bs) bs.addEventListener('click', () => { formEstudio(sub, plan.paciente_id, { alGuardar: recargar, extra: { planId: plan.id, etapaId: etapa.id } }); });
+      const bm = li.querySelector('[data-material]');
+      if (bm) bm.addEventListener('click', () => formMaterial(sub, plan, etapa, recargar));
+    });
+  }
+
+  function formFotoEtapa(c, plan, etapa, alGuardar) {
+    formFoto(c, plan.paciente_id, { alGuardar, extra: { planId: plan.id, etapaId: etapa.id, pieza: (etapa.piezas || [])[0] || plan.pieza || '' } });
+  }
+
+  async function formMaterial(c, plan, etapa, alGuardar) {
+    let insumos = [];
+    try { insumos = await DOVA.get('/planes-tratamiento/insumos-disponibles'); } catch (e) { toast(e.message, 'error'); return; }
+    if (!insumos.length) { c.innerHTML = '<p class="dova-nota">No hay insumos cargados en el inventario.</p>'; return; }
+    c.innerHTML = `<form class="dova-cli-form" data-m>
+      <label><span>Material</span><select name="insumoId">${insumos.map((i) => `<option value="${i.id}">${esc(i.nombre)} (stock ${Number(i.stock_actual)})</option>`).join('')}</select></label>
+      <label><span>Cantidad</span><input type="number" name="cantidad" min="0.01" step="0.01" value="1" /></label>
+      <div class="dova-cli-ancho"><button class="dova-btn-primary">Registrar y descontar del stock</button></div></form>`;
+    c.querySelector('[data-m]').addEventListener('submit', async (ev) => {
+      ev.preventDefault(); const f = ev.target;
+      try { await DOVA.post(`/planes-tratamiento/${plan.id}/etapas/${etapa.id}/materiales`, { insumoId: Number(f.insumoId.value), cantidad: Number(f.cantidad.value) }); toast('Material registrado', 'ok'); alGuardar(); } catch (e) { toast(e.message, 'error'); }
+    });
+  }
+
   // =================================================================
   // RECETAS Y NOTAS
   // =================================================================
   async function panelRecetas(c, pid) {
     const lista = await DOVA.get(`/clinico/recetas/paciente/${pid}`);
+    const maneja = puede('recetas.manage');
     c.innerHTML = `<div class="dova-toolbar"><h3 class="dova-section-title" style="margin:0">Recetas <span class="dova-nota">(${lista.length})</span></h3>
-        ${puede('recetas.manage', 'historia_clinica.edit') ? '<button class="dova-btn-primary" data-nueva>+ Nueva receta</button>' : ''}</div>
+        ${maneja ? '<button class="dova-btn-primary" data-nueva>+ Nueva receta</button>' : ''}</div>
       <div data-form-receta></div>
-      ${lista.length ? `<div class="dova-cli-recetas">${lista.map((r) => `<article class="dova-cli-receta">
-        <header><strong>${esc(fmtFecha(r.fecha))}</strong> <span class="dova-nota">${esc(r.odontologo_nombre || '')}</span></header>
-        ${(r.items || []).length ? `<ul>${r.items.map((i) => `<li><strong>${esc(i.medicamento)}</strong> ${esc([i.concentracion, i.dosis, i.frecuencia, i.duracion].filter(Boolean).join(' · '))}</li>`).join('')}</ul>` : ''}
+      ${lista.length ? `<div class="dova-cli-recetas">${lista.map((r) => `<article class="dova-cli-receta ${r.estado === 'anulada' ? 'anulada' : ''}">
+        <header><strong>${esc(fmtFecha(r.fecha))}</strong> <span class="dova-nota">N.º ${r.id}${r.odontologo_nombre ? ` · ${esc(r.odontologo_nombre)}` : ''}</span>
+          ${r.estado === 'anulada' ? badge('Anulada', 'critica') : ''}${r.historia_clinica_id ? badge('De una consulta', 'info') : ''}</header>
+        ${(r.items || []).length ? `<ul>${r.items.map((i) => `<li><strong>${esc([i.medicamento, i.concentracion, i.presentacion].filter(Boolean).join(' '))}</strong> ${esc([i.dosis, i.frecuencia, i.duracion, i.via ? `vía ${i.via}` : ''].filter(Boolean).join(' · '))}${i.indicaciones ? `<br><span class="dova-nota">${esc(i.indicaciones)}</span>` : ''}</li>`).join('')}</ul>` : ''}
         ${r.indicaciones ? `<p class="dova-nota">${esc(r.indicaciones)}</p>` : ''}
+        ${r.estado === 'anulada' && r.anulada_motivo ? `<p class="dova-nota">Motivo de anulación: ${esc(r.anulada_motivo)}</p>` : ''}
+        <div class="dova-cli-siguiente"><button class="dova-btn-secundario" data-pdf="${r.id}">Ver e imprimir</button>
+          ${maneja && r.estado !== 'anulada' ? `<button class="dova-btn-link dova-ext-peligro" data-anular="${r.id}">Anular</button>` : ''}</div>
       </article>`).join('')}</div>` : '<p class="dova-nota">Sin recetas.</p>'}`;
     const n = c.querySelector('[data-nueva]');
-    if (n) n.addEventListener('click', async () => {
-      const box = c.querySelector('[data-form-receta]');
-      box.innerHTML = await Vistas.renderPanelConsulta('receta', pid); Vistas.initPanelConsulta('receta', pid);
-      const f = box.querySelector('form'); if (f) f.addEventListener('submit', () => setTimeout(() => panelRecetas(c, pid), 900));
-    });
+    if (n) n.addEventListener('click', () => formReceta(c.querySelector('[data-form-receta]'), pid, { alGuardar: () => setTimeout(() => panelRecetas(c, pid), 50) }));
+    c.querySelectorAll('[data-pdf]').forEach((b) => b.addEventListener('click', () => verPdf(`/comprobantes/receta/${b.dataset.pdf}`, `Receta N.º ${b.dataset.pdf}`)));
+    c.querySelectorAll('[data-anular]').forEach((b) => b.addEventListener('click', () => {
+      X.modal('Anular receta', `<p>La receta no se borra: queda marcada como anulada, con el motivo, quién y cuándo.</p>
+        <label>Motivo<textarea data-motivo rows="2" maxlength="500"></textarea></label>
+        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary dova-btn-peligro-fondo" data-si>Anular</button></div>`);
+      const box = document.querySelector('.dova-modal-box');
+      box.querySelector('[data-si]').addEventListener('click', async () => {
+        try { await DOVA.post(`/clinico/recetas/${b.dataset.anular}/anular`, { motivo: box.querySelector('[data-motivo]').value }); X.cerrarModal(); toast('Receta anulada', 'ok'); panelRecetas(c, pid); } catch (e) { toast(e.message, 'error'); }
+      });
+    }));
   }
 
   async function panelNotas(c, pid) {
@@ -610,6 +848,6 @@ const DovaClinica = (() => {
     resumen360(pid).catch(() => {});
   }
 
-  return { consulta, extenderFicha, panelFotosEstudios, formFoto, formEstudio };
+  return { consulta, extenderFicha, panelFotosEstudios, formFoto, formEstudio, formReceta, verPdf, planDetalle };
 })();
 window.DovaClinica = DovaClinica;

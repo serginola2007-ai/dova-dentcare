@@ -416,3 +416,38 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-cli-galeria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dova-cli-resumen { grid-template-columns: 1fr; }
 }
+
+/* ===== Fase 2: agenda (flujo), recetas, etapas ===== */
+.dova-cal-flujo { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--terracotta) 18%, var(--white)); color: var(--terracotta-dark); }
+.dova-cal-chip.dova-cal-flujo-consulta { box-shadow: inset 0 0 0 2px var(--terracotta); }
+.dova-cli-med { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 12px; margin: 0 0 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; }
+.dova-cli-med legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
+.dova-cli-med label { display: grid; gap: 3px; font-size: 13px; font-weight: 600; margin: 0; }
+.dova-cli-med label > span { color: var(--ink-soft); }
+.dova-cli-med input { margin: 0; width: 100%; }
+.dova-cli-med .dova-btn-link { justify-self: start; }
+.dova-cli-receta.anulada { opacity: .7; }
+.dova-cli-receta.anulada ul { text-decoration: line-through; }
+.dova-cli-progreso { height: 8px; border-radius: 999px; background: var(--cream); border: 1px solid var(--border); overflow: hidden; margin: 8px 0 14px; }
+.dova-cli-progreso span { display: block; height: 100%; background: var(--sage); transition: width .3s; }
+.dova-cli-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: etapa; }
+.dova-cli-etapa { border: 1px solid var(--border); border-left: 4px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--white); counter-increment: etapa; }
+.dova-cli-etapa.est-en_progreso { border-left-color: var(--terracotta); }
+.dova-cli-etapa.est-completado { border-left-color: var(--sage); }
+.dova-cli-etapa.est-cancelado { opacity: .6; }
+.dova-cli-etapa-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.dova-cli-etapa-cab strong::before { content: counter(etapa) ". "; color: var(--ink-soft); }
+.dova-cli-etapa-obs { margin: 6px 0 0; white-space: pre-wrap; font-size: 14px; }
+.dova-cli-etapa-acc { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; }
+.dova-cli-etapa-media { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.dova-cli-mini { padding: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; width: 56px; height: 42px; background: var(--cream); cursor: pointer; }
+.dova-cli-mini img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; }
+.dova-cli-mini img.cargada { opacity: 1; }
+.dova-cli-nueva-etapa { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.dova-cli-nueva-etapa input { flex: 1 1 200px; margin: 0; }
+.dova-cli-nueva-etapa select { width: auto; margin: 0; }
+[data-sub] .dova-cli-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+@media (max-width: 600px) {
+  .dova-cli-med { grid-template-columns: 1fr 1fr; }
+  .dova-cli-med .dova-cli-ancho { grid-column: 1 / -1; }
+}

@@ -190,12 +190,22 @@ const DovaOperativo = (() => {
     return fmtLargo(e.fecha, { weekday: 'long', day: 'numeric', month: 'long' }) + (e.dias ? ' y 6 días más' : '');
   }
 
+  // Estado del paciente en la clínica (llegó / en consulta / terminó).
+  const horaIso = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
+  function flujoTurno(t) {
+    if (['cancelado', 'reprogramado', 'no_asistio'].includes(t.estado)) return null;
+    if (t.finalizado_en) return ['fin', `Finalizado ${horaIso(t.finalizado_en)}`];
+    if (t.en_sillon_en) return ['consulta', `En consulta desde ${horaIso(t.en_sillon_en)}`];
+    if (t.llegada_en) return ['espera', `En espera desde ${horaIso(t.llegada_en)}`];
+    return null;
+  }
   function chipTurno(t, i, odo, { corto } = {}) {
-    const clase = `dova-cal-chip dova-cal-${t.estado}`;
+    const fl = flujoTurno(t);
+    const clase = `dova-cal-chip dova-cal-${t.estado}${fl ? ` dova-cal-flujo-${fl[0]}` : ''}`;
     const nombre = `${t.paciente_nombre || ''} ${t.paciente_apellido || ''}`.trim();
-    const titulo = `${hora5(t.hora_inicio)} · ${nombre} · ${t.tratamiento_nombre || t.motivo || ''} · ${t.odontologo_nombre} · ${etiqueta(t.estado)}`;
+    const titulo = `${hora5(t.hora_inicio)} · ${nombre} · ${t.tratamiento_nombre || t.motivo || ''} · ${t.odontologo_nombre} · ${fl ? fl[1] : etiqueta(t.estado)}`;
     return `<button type="button" class="${clase}" data-turno="${i}" style="--c:${colorOdo(odo)}" title="${esc(titulo)}">
-      <strong>${hora5(t.hora_inicio)}</strong>${t.origen === 'web' ? ' <em class="dova-cal-web" title="Reservado desde la página web">web</em>' : ''} ${esc(corto ? (t.paciente_nombre || '') : nombre)}${!corto && (t.tratamiento_nombre || t.motivo) ? `<span>${esc(t.tratamiento_nombre || t.motivo)}</span>` : ''}
+      <strong>${hora5(t.hora_inicio)}</strong>${fl && fl[0] !== 'fin' ? ` <em class="dova-cal-flujo" title="${esc(fl[1])}">${fl[0] === 'espera' ? 'en espera' : 'en consulta'}</em>` : ''}${t.origen === 'web' ? ' <em class="dova-cal-web" title="Reservado desde la página web">web</em>' : ''} ${esc(corto ? (t.paciente_nombre || '') : nombre)}${!corto && (t.tratamiento_nombre || t.motivo) ? `<span>${esc(t.tratamiento_nombre || t.motivo)}</span>` : ''}
     </button>`;
   }
 
@@ -325,7 +335,7 @@ const DovaOperativo = (() => {
     const editable = puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado);
     X.modal(`${hora5(t.hora_inicio)} · ${t.paciente_nombre} ${t.paciente_apellido || ''}`, `
       <div class="dova-cal-detalle">
-        <p>${badge(etiqueta(t.estado), ESTADO_NIVEL[t.estado] || 'info')} ${t.primera_vez ? badge('1ª vez', 'info') : ''} ${t.origen === 'web' ? badge('Reservado desde la página web', 'info') : ''}</p>
+        <p>${badge(etiqueta(t.estado), ESTADO_NIVEL[t.estado] || 'info')} ${flujoTurno(t) ? badge(flujoTurno(t)[1], flujoTurno(t)[0] === 'fin' ? 'ok' : 'atencion') : ''} ${t.primera_vez ? badge('1ª vez', 'info') : ''} ${t.origen === 'web' ? badge('Reservado desde la página web', 'info') : ''}</p>
         <p><strong>${fmtLargo(String(t.fecha).slice(0, 10), { weekday: 'long', day: 'numeric', month: 'long' })}</strong>, ${hora5(t.hora_inicio)} (${t.duracion_minutos} min)</p>
         <p>${esc(t.odontologo_nombre)}${t.sillon_nombre ? ` · ${esc(t.sillon_nombre)}` : ''}</p>
         <p>${esc(t.tratamiento_nombre || t.motivo || 'Sin tratamiento indicado')}</p>
@@ -335,6 +345,7 @@ const DovaOperativo = (() => {
       </div>
       <div class="dova-modal-actions dova-cal-acciones">
         <button class="dova-btn-secundario" data-d="ficha">Ver ficha</button>
+        ${puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado) && !t.llegada_en && String(t.fecha).slice(0, 10) === hoy() ? '<button class="dova-btn-secundario" data-d="llego">Llegó (en espera)</button>' : ''}
         ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? '<button class="dova-btn-primary" data-d="consulta">Iniciar consulta</button>' : ''}
         ${editable ? `
           ${t.estado === 'reservado' ? '<button class="dova-btn-secundario" data-d="confirmado">Confirmar</button>' : ''}
@@ -352,6 +363,7 @@ const DovaOperativo = (() => {
       if (a === 'ficha') return navegar('paciente', t.paciente_id);
       if (a === 'consulta') return navegar('consulta', `${t.paciente_id}/t${t.id}`);
       if (a === 'reprogramar') return modalTurno({ turno: t, alGuardar: alTerminar });
+      if (a === 'llego') return DOVA.post(`/operaciones/flujo/${t.id}/llegada`, {}).then(() => { toast('Paciente en sala de espera', 'ok'); alTerminar(); }).catch((e) => toast(e.message, 'error'));
       return cambiarEstadoTurno(t, a, alTerminar);
     }));
   }

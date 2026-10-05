@@ -338,3 +338,9 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Ficha 360°: pestañas Fotos y estudios (galería, visor, antes/después), Recetas y Notas internas; resumen con última consulta, próxima cita, alergias y notas importantes.
 - Auditoría con IP y resultado: login, login fallido, bloqueo, logout, cambio de clave y accesos denegados (403).
 - Odontólogo: permiso `agenda.create` para dar la próxima cita.
+
+## Fase 2 — tratamientos, recetas, Mi día y agenda (migración 0031)
+- Etapas de tratamiento con estado (pendiente / en progreso / completado / cancelado), fecha de inicio y de realización, profesional, piezas, observaciones, materiales (descuentan stock), fotos y estudios propios. Protocolos listos (endodoncia, restauración, implante, prótesis fija, exodoncia). El tratamiento pasa a "en proceso" con la primera etapa iniciada; las canceladas no cuentan en el progreso. Plan en PDF.
+- Recetas: varios medicamentos con concentración, presentación, dosis, frecuencia, duración, vía e indicaciones; verificación de alergias y medicación antes de emitir; PDF para imprimir con firma y matrícula; anulación con motivo (nunca se borran); vínculo a la consulta. En la consulta, la receta trae la medicación indicada.
+- Mi día: agenda propia del odontólogo (hoy en hora de Paraguay) con duración, sillón y estado (en espera / en consulta / finalizado) y botón Iniciar / Continuar / Ver consulta; pendientes nuevos: recetas pendientes y presupuestos sin aceptar. Corregido: "Iniciar consulta" desde Mi día no abría el turno.
+- Agenda: botón "Llegó (en espera)" en el turno de hoy y marca "en espera" / "en consulta" en el calendario.

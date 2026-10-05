@@ -351,6 +351,8 @@ const Vistas = (() => {
     { key: 'controlesVencidos', label: 'Controles postop. vencidos', icono: '🩹' },
     { key: 'pacientesParaRevisar', label: 'Pacientes para revisar', icono: '⚠️' },
     { key: 'derivacionesRecibidas', label: 'Derivaciones recibidas', icono: '↪️' },
+    { key: 'recetasPendientes', label: 'Recetas pendientes', icono: '💊' },
+    { key: 'presupuestosPendientes', label: 'Presupuestos sin aceptar', icono: '🧾' },
   ];
 
   function nombrePaciente(item) {
@@ -358,11 +360,28 @@ const Vistas = (() => {
   }
 
   async function vistaDashboardOdontologo() {
-    const hoy = new Date().toISOString().slice(0, 10);
-    const [pendientes, turnosHoy] = await Promise.all([
+    // "Hoy" en la hora de la clínica (no en UTC: después de las 21 h ya sería mañana).
+    const ahora = new Date(); const hoy = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const yo = DOVA.usuarioActual() || {};
+    const [pendientes, todos] = await Promise.all([
       manejarError(() => DOVA.get('/pendientes')),
-      manejarError(() => DOVA.get(`/agenda?desde=${hoy}&hasta=${hoy}`)).catch(() => []),
+      manejarError(() => DOVA.get(`/agenda?desde=${hoy}&hasta=${hoy}${yo.odontologoId ? `&odontologoId=${yo.odontologoId}` : ''}`)).catch(() => []),
     ]);
+    const turnosHoy = (todos || []).filter((t) => !['cancelado', 'reprogramado'].includes(t.estado))
+      .sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+    const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
+    const estadoFlujo = (t) => {
+      if (t.estado === 'no_asistio') return '<span class="dova-badge dova-ext-badge-critica">No asistió</span>';
+      if (t.finalizado_en || t.estado === 'atendido') return '<span class="dova-badge dova-badge-ok">Finalizado</span>';
+      if (t.en_sillon_en) return `<span class="dova-badge dova-ext-badge-atencion">En consulta · ${hora(t.en_sillon_en)}</span>`;
+      if (t.llegada_en) return `<span class="dova-badge dova-ext-badge-info">En espera · ${hora(t.llegada_en)}</span>`;
+      return `<span class="dova-badge">${t.estado === 'confirmado' ? 'Confirmado' : 'Reservado'}</span>`;
+    };
+    const accion = (t) => {
+      if (t.estado === 'no_asistio' || !DOVA.tienePermiso('historia_clinica.edit')) return '';
+      const txt = t.finalizado_en || t.estado === 'atendido' ? 'Ver consulta' : t.en_sillon_en ? 'Continuar consulta' : 'Iniciar consulta';
+      return `<button class="dova-btn-link" data-ir-consulta="${t.paciente_id}/t${t.id}">${txt}</button>`;
+    };
     const puedeFinanzas = DOVA.tienePermiso('presupuestos.view') || DOVA.tienePermiso('pagos.view');
 
     return `
@@ -382,17 +401,19 @@ const Vistas = (() => {
 
       <h3 class="dova-section-title">Agenda de hoy</h3>
       <table class="dova-tabla">
-        <thead><tr><th>Hora</th><th>Paciente</th><th>Motivo</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Hora</th><th>Paciente</th><th>Motivo</th><th>Duración</th><th>Sillón</th><th>Estado</th><th></th></tr></thead>
         <tbody>
-          ${(turnosHoy || []).map((t) => `
+          ${turnosHoy.map((t) => `
             <tr>
-              <td>${esc(t.hora_inicio)}</td>
-              <td>${esc(t.paciente_nombre || '')} ${esc(t.paciente_apellido || '')}</td>
-              <td>${esc(t.motivo || '-')}</td>
-              <td>${esc(t.estado)}</td>
-              <td><button class="dova-btn-link" data-ir-consulta="${t.paciente_id}/t${t.id}">Iniciar consulta</button></td>
+              <td>${esc(String(t.hora_inicio).slice(0, 5))}</td>
+              <td><button class="dova-btn-link" data-ir-paciente="${t.paciente_id}">${esc(t.paciente_nombre || '')} ${esc(t.paciente_apellido || '')}</button></td>
+              <td>${esc(t.tratamiento_nombre || t.motivo || '-')}</td>
+              <td>${t.duracion_minutos ? `${t.duracion_minutos} min` : '-'}</td>
+              <td>${esc(t.sillon_nombre || '-')}</td>
+              <td>${estadoFlujo(t)}</td>
+              <td>${accion(t)}</td>
             </tr>
-          `).join('') || '<tr><td colspan="5">No tenés turnos programados para hoy.</td></tr>'}
+          `).join('') || '<tr><td colspan="7">No tenés turnos programados para hoy.</td></tr>'}
         </tbody>
       </table>
 
@@ -409,7 +430,7 @@ const Vistas = (() => {
               ${(pendientes[c.key] || []).map((item) => `
                 <li>
                   <button class="dova-btn-link" data-ir-paciente="${item.paciente_id}">${nombrePaciente(item)}</button>
-                  — ${esc(item.nombre || item.tratamiento_nombre || item.procedimiento || item.motivo || item.detalle || '')}
+                  — ${esc(item.nombre || item.tratamiento_nombre || item.procedimiento || (item.medicacion ? `Indicó: ${item.medicacion}` : '') || (item.total !== undefined && item.estado ? `Presupuesto ${item.estado} · Gs. ${Number(item.total).toLocaleString('es-PY')}` : '') || item.motivo || item.detalle || '')}
                 </li>
               `).join('')}
             </ul>
@@ -433,7 +454,7 @@ const Vistas = (() => {
       });
     });
     document.querySelectorAll('[data-ir-consulta]').forEach((btn) => {
-      btn.addEventListener('click', () => navegarAConsulta(Number(btn.dataset.irConsulta)));
+      btn.addEventListener('click', () => navegarAConsulta(btn.dataset.irConsulta));
     });
     document.querySelectorAll('[data-ir-paciente]').forEach((btn) => {
       btn.addEventListener('click', () => navegarAFicha(Number(btn.dataset.irPaciente)));
@@ -619,6 +640,8 @@ const Vistas = (() => {
   // sesiones, materiales consumidos (vínculo real a inventario) y acceso a
   // generar el presupuesto asociado si todavía no existe uno.
   async function renderPlanDetalle(root, planId) {
+    // Fase 2: etapas con estados, profesional, piezas, fotos y materiales.
+    if (window.DovaClinica && DovaClinica.planDetalle) return DovaClinica.planDetalle(root, planId);
     root.innerHTML = '<div class="dova-cargando">Cargando plan…</div>';
     const plan = await DOVA.get(`/planes-tratamiento/${planId}`);
     const completadas = (plan.etapas || []).filter((e) => e.completada).length;
