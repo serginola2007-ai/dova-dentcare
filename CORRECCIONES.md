@@ -306,3 +306,4 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Tratamientos: bloque destacado "Tratamientos regenerativos con Bio C" (flyer + foto en el sillón), con texto neutro.
 - Fotos optimizadas en `frontend/web/img/` (sin datos EXIF/ubicación).
 - Service worker pasa a `dova-v13`.
+- Tratamientos: el destacado pasa a "Programa Vitamina C IV" con el afiche nuevo (`img/vitamina-c-iv.jpg`, en los colores de la marca). El afiche verde de Bio C queda guardado en `img/bio-c.jpg` por si se quiere volver a usar. Service worker `dova-v14`.
