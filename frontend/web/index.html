@@ -48,6 +48,21 @@
       </aside>
     </section>
 
+    <section class="bloque resultado" aria-labelledby="resultado-titulo">
+      <div class="resultado-texto">
+        <h2 id="resultado-titulo">Antes y después</h2>
+        <p>Un caso real de la clínica. Deslizá para comparar.</p>
+        <a class="boton boton-claro" href="reservar.html">Quiero una consulta</a>
+      </div>
+      <figure class="comparar" data-comparar>
+        <img src="img/antes.jpg" alt="Sonrisa antes del tratamiento: dientes amarillentos, desgastados y con espacios" width="960" height="720" loading="lazy" />
+        <div class="comparar-despues"><img src="img/despues.jpg" alt="La misma sonrisa después del tratamiento: dientes blancos, parejos y alineados" width="960" height="720" loading="lazy" /></div>
+        <span class="comparar-etq comparar-etq-antes" aria-hidden="true">Antes</span><span class="comparar-etq comparar-etq-despues" aria-hidden="true">Después</span>
+        <span class="comparar-linea" aria-hidden="true"></span>
+        <input type="range" min="0" max="100" value="50" aria-label="Deslizá para ver antes o después" data-comparar-rango />
+      </figure>
+    </section>
+
     <section class="bloque puertas" aria-label="Más sobre la clínica">
       <a class="puerta" href="tratamientos.html"><span class="puerta-titulo">Tratamientos</span><span class="puerta-texto">Qué hacemos, cuánto dura cada tratamiento y desde cuánto sale.</span></a>
       <a class="puerta" href="equipo.html"><span class="puerta-titulo">Equipo</span><span class="puerta-texto">Conocé a quienes te van a atender y elegí con quién.</span></a>

@@ -300,3 +300,9 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 ### Correcciones encontradas en la regresión
 - **App instalada sin internet:** si no podía cargar su configuración, apuntaba a una dirección de desarrollo. Ahora usa la del mismo sitio, y la configuración queda guardada en el celular.
 - **Pestañas internas (subpestañas) de DOVA:** si se cambiaba de pestaña mientras otra seguía cargando (por ejemplo Finanzas → Comisiones), aparecía un error. Ahora el resultado viejo se descarta solo. Vale para todas las secciones.
+
+## Fotos de la clínica en la página web
+- Inicio: sección "Antes y después" con comparador deslizable (mouse, dedo o flechas del teclado).
+- Tratamientos: bloque destacado "Tratamientos regenerativos con Bio C" (flyer + foto en el sillón), con texto neutro.
+- Fotos optimizadas en `frontend/web/img/` (sin datos EXIF/ubicación).
+- Service worker pasa a `dova-v13`.

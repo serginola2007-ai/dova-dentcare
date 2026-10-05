@@ -61,8 +61,17 @@
   // Cada página trae solo sus bloques; acá se activa lo que haya en la página actual.
   const hay = (sel) => !!$(sel);
   const params = new URLSearchParams(location.search);
+  // Antes y después: el control deslizante mueve la línea (también con el teclado).
+  function comparador() {
+    $$('[data-comparar]').forEach((f) => {
+      const r = $('[data-comparar-rango]', f);
+      const mover = () => f.style.setProperty('--pos', `${r.value}%`);
+      r.addEventListener('input', mover); mover();
+    });
+  }
   async function iniciar() {
     menuCelular();
+    comparador();
     // Enlaces viejos (todo en una página): #turno=… ahora vive en mi-turno.html
     const viejo = location.hash.match(/^#turno=([\w-]{20,})/);
     if (viejo) { location.replace(`mi-turno.html#t=${viejo[1]}`); return; }
