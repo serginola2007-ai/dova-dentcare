@@ -44,25 +44,83 @@ async function crearInsumo(clinicaId, d) {
   return res.rows[0];
 }
 
-async function registrarMovimiento(insumoId, tipo, cantidad, motivo, usuarioId) {
-  const delta = ({ entrada: 1, salida: -1, perdida: -1, vencimiento: -1, ajuste: 0 })[tipo];
-  const mov = await query(
-    'INSERT INTO movimientos_inventario (insumo_id, tipo, cantidad, motivo, usuario_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-    [insumoId, tipo, cantidad, motivo || null, usuarioId]
-  );
-  if (tipo === 'ajuste') {
-    await query('UPDATE insumos SET stock_actual = $2 WHERE id = $1', [insumoId, cantidad]);
-  } else {
-    await query('UPDATE insumos SET stock_actual = stock_actual + ($2::numeric * $3::numeric) WHERE id = $1', [insumoId, delta, cantidad]);
+/* Movimiento de stock por lotes (FEFO: sale primero lo que vence antes).
+   - entrada: suma al lote indicado (lote + vencimiento) o al "sin lote".
+   - salida / pérdida / vencimiento: descuenta del lote indicado o, si no se
+     indica, de los lotes que vencen primero.
+   - ajuste: fija el stock contado; la diferencia se suma al "sin lote" o se
+     descuenta por FEFO.
+   Debe llamarse dentro del candado del insumo. */
+async function registrarMovimiento(insumoId, tipo, cantidad, motivo, usuarioId, { lote, vencimiento, loteId } = {}) {
+  const ins = (await query('SELECT stock_actual FROM insumos WHERE id=$1', [insumoId])).rows[0];
+  const actual = Number(ins ? ins.stock_actual : 0);
+  // Lotes existentes que todavía no reflejan el stock (insumos creados antes de usar lotes).
+  const sumaLotes = Number((await query('SELECT COALESCE(SUM(cantidad_actual),0) s FROM insumo_lotes WHERE insumo_id=$1', [insumoId])).rows[0].s);
+  if (sumaLotes < actual) {
+    await query('INSERT INTO insumo_lotes (insumo_id, cantidad_inicial, cantidad_actual) VALUES ($1,$2,$2)', [insumoId, actual - sumaLotes]);
   }
+  let resto = tipo === 'ajuste' ? cantidad - actual : (tipo === 'entrada' ? cantidad : -cantidad);
+  let loteUsado = null;
+  if (resto > 0) {
+    let l = null;
+    if (loteId) l = (await query('SELECT id FROM insumo_lotes WHERE id=$1 AND insumo_id=$2', [loteId, insumoId])).rows[0];
+    if (!l) l = (await query('SELECT id FROM insumo_lotes WHERE insumo_id=$1 AND lote IS NOT DISTINCT FROM $2 AND vencimiento IS NOT DISTINCT FROM $3::date ORDER BY id LIMIT 1', [insumoId, lote || null, vencimiento || null])).rows[0];
+    if (!l) l = (await query('INSERT INTO insumo_lotes (insumo_id, lote, vencimiento, cantidad_inicial, cantidad_actual) VALUES ($1,$2,$3,0,0) RETURNING id', [insumoId, lote || null, vencimiento || null])).rows[0];
+    await query('UPDATE insumo_lotes SET cantidad_actual = cantidad_actual + $2, cantidad_inicial = cantidad_inicial + $2 WHERE id=$1', [l.id, resto]);
+    loteUsado = l.id;
+  } else if (resto < 0) {
+    let falta = -resto;
+    const lotes = loteId
+      ? (await query('SELECT id, cantidad_actual FROM insumo_lotes WHERE id=$1 AND insumo_id=$2 AND cantidad_actual > 0', [loteId, insumoId])).rows
+      : (await query('SELECT id, cantidad_actual FROM insumo_lotes WHERE insumo_id=$1 AND cantidad_actual > 0 ORDER BY vencimiento ASC NULLS LAST, id', [insumoId])).rows;
+    for (const l of lotes) {
+      if (falta <= 0) break;
+      const usar = Math.min(falta, Number(l.cantidad_actual));
+      await query('UPDATE insumo_lotes SET cantidad_actual = cantidad_actual - $2 WHERE id=$1', [l.id, usar]);
+      if (!loteUsado) loteUsado = l.id;
+      falta -= usar;
+    }
+  }
+  const mov = await query(
+    'INSERT INTO movimientos_inventario (insumo_id, tipo, cantidad, motivo, usuario_id, lote_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+    [insumoId, tipo, cantidad, motivo || null, usuarioId, loteUsado]
+  );
+  // Stock = suma de lotes; lote/vencimiento visibles = el que vence primero.
+  await query(`UPDATE insumos i SET
+      stock_actual = (SELECT COALESCE(SUM(cantidad_actual),0) FROM insumo_lotes WHERE insumo_id=i.id),
+      lote = (SELECT lote FROM insumo_lotes WHERE insumo_id=i.id AND cantidad_actual > 0 ORDER BY vencimiento ASC NULLS LAST, id LIMIT 1),
+      fecha_vencimiento = (SELECT vencimiento FROM insumo_lotes WHERE insumo_id=i.id AND cantidad_actual > 0 ORDER BY vencimiento ASC NULLS LAST, id LIMIT 1)
+    WHERE i.id=$1`, [insumoId]);
   const res = await query('SELECT * FROM insumos WHERE id = $1', [insumoId]);
   return { insumo: res.rows[0], movimientoId: mov.rows[0].id };
 }
 
+async function listarLotes(insumoId) {
+  return (await query('SELECT * FROM insumo_lotes WHERE insumo_id=$1 ORDER BY (cantidad_actual > 0) DESC, vencimiento ASC NULLS LAST, id', [insumoId])).rows;
+}
+
+// Lotes con stock que vencen dentro de N días (o ya vencidos).
+async function porVencer(clinicaId, dias) {
+  return (await query(`SELECT l.id AS lote_id, l.lote, l.vencimiento::text AS vencimiento, l.cantidad_actual, i.id AS insumo_id, i.nombre, i.categoria,
+                              (l.vencimiento < (now() AT TIME ZONE 'America/Asuncion')::date) AS vencido
+                         FROM insumo_lotes l JOIN insumos i ON i.id = l.insumo_id
+                        WHERE i.clinica_id=$1 AND i.activo AND l.cantidad_actual > 0 AND l.vencimiento IS NOT NULL
+                          AND l.vencimiento <= (now() AT TIME ZONE 'America/Asuncion')::date + $2::int
+                        ORDER BY l.vencimiento, i.nombre`, [clinicaId, dias])).rows;
+}
+
+async function actualizarInsumo(clinicaId, id, d) {
+  const r = await query(`UPDATE insumos SET nombre=COALESCE($3,nombre), categoria=$4, stock_minimo=COALESCE($5,stock_minimo), proveedor_id=$6,
+                           precio_compra=$7, activo=COALESCE($8,activo) WHERE clinica_id=$1 AND id=$2 RETURNING *`,
+  [clinicaId, id, d.nombre || null, d.categoria || null, d.stockMinimo !== undefined && d.stockMinimo !== '' ? Number(d.stockMinimo) : null,
+    d.proveedorId || null, d.precioCompra !== undefined && d.precioCompra !== '' ? Number(d.precioCompra) : null, typeof d.activo === 'boolean' ? d.activo : null]);
+  return r.rows[0] || null;
+}
+
 async function listarMovimientos(insumoId) {
   const res = await query(
-    `SELECT m.*, u.nombre AS usuario_nombre FROM movimientos_inventario m
-     LEFT JOIN usuarios u ON u.id = m.usuario_id WHERE insumo_id = $1 ORDER BY creado_en DESC`,
+    `SELECT m.*, u.nombre AS usuario_nombre, l.lote AS lote_nombre, l.vencimiento AS lote_vencimiento FROM movimientos_inventario m
+     LEFT JOIN usuarios u ON u.id = m.usuario_id LEFT JOIN insumo_lotes l ON l.id = m.lote_id WHERE m.insumo_id = $1 ORDER BY m.creado_en DESC`,
     [insumoId]
   );
   return res.rows;
@@ -129,6 +187,7 @@ async function listarMaterialesDeSesion(sesionId) {
 }
 
 module.exports = {
+  listarLotes, porVencer, actualizarInsumo,
   listarProveedores, crearProveedor, listarInsumos, obtenerInsumo, crearInsumo,
   registrarMovimiento, listarMovimientos, crearCompra,
   registrarConsumoEtapa, registrarConsumoSesion, listarMaterialesDeEtapa, listarMaterialesDeSesion,

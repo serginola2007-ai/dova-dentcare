@@ -278,6 +278,7 @@ const DovaSecciones = (() => {
       campos: DovaFicha.camposTrabajoLab(labs, ods),
       acciones: [
         { texto: 'Avisar al paciente', visible: (r) => ['recibido', 'controlado'].includes(r.estado), fn: async (r) => { const m = await DOVA.get(`/operaciones/trabajos-laboratorio-aviso/${r.id}`); if (m.whatsapp_link) window.open(m.whatsapp_link, '_blank', 'noopener'); await DOVA.post('/seguimiento/comunicaciones', { pacienteId: r.paciente_id, canal: 'whatsapp', motivo: 'laboratorio', resultado: 'enviado', contenido: m.texto }); X.toast('Aviso registrado', 'ok'); } },
+        { texto: 'Archivos', fn: (r) => DovaFicha.archivosLab(r) },
         { texto: 'Orden', fn: (r) => X.imprimir('Orden de laboratorio', `<h1>Orden de laboratorio</h1><table><tr><th>Paciente</th><td>${esc(r.paciente_nombre)} ${esc(r.paciente_apellido)}</td></tr><tr><th>Laboratorio</th><td>${esc(r.laboratorio_nombre || '')}</td></tr><tr><th>Trabajo</th><td>${esc(r.trabajo)}</td></tr><tr><th>Pieza(s)</th><td>${esc(r.pieza || '')}</td></tr><tr><th>Material</th><td>${esc(r.material || '')}</td></tr><tr><th>Color</th><td>${esc(r.color_tono || '')}</td></tr><tr><th>Instrucciones</th><td>${esc(r.instrucciones || '')}</td></tr><tr><th>Odontólogo</th><td>${esc(r.odontologo_nombre || '')}</td></tr><tr><th>Enviado</th><td>${fmtFecha(r.fecha_envio)}</td></tr><tr><th>Entrega solicitada</th><td>${fmtFecha(r.fecha_estimada)}</td></tr></table><p class="nota">Firma y sello: ____________________</p>`) },
       ],
       vacio: 'No hay trabajos de laboratorio.',

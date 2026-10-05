@@ -10,7 +10,7 @@
    Todo usa la API real; nada se guarda en el navegador. */
 const DovaClinica = (() => {
   const X = DovaExt;
-  const { esc, fmtFecha, fmtFechaHora, toast, puede, badge, cargando } = X;
+  const { esc, fmtFecha, fmtFechaHora, fmtGs, toast, puede, badge, cargando } = X;
   const SEXO = { F: 'Femenino', M: 'Masculino', X: 'Otro' };
   const CATEGORIAS = [['inicial', 'Inicial'], ['durante', 'Durante el tratamiento'], ['final', 'Final'], ['intraoral', 'Intraoral'], ['extraoral', 'Extraoral'],
     ['frontal', 'Frontal'], ['lateral', 'Lateral'], ['oclusal', 'Oclusal'], ['personalizada', 'Otra']];
@@ -168,6 +168,7 @@ const DovaClinica = (() => {
       <div id="modal-root"></div>`;
 
     X.bannerAlertas(pid, root.querySelector('[data-alertas]'));
+    root.querySelectorAll('[data-imprimir-consulta]').forEach((b) => b.addEventListener('click', () => verPdf(`/comprobantes/consulta/${b.dataset.imprimirConsulta}`, 'Consulta')));
     // Notas importantes del equipo.
     if (puede('pacientes.view')) {
       DOVA.get(`/pacientes/${pid}/notas`).then((ns) => {
@@ -305,7 +306,8 @@ const DovaClinica = (() => {
 
   function resumenFinalizada(h) {
     return `<dl class="dova-cli-resumen">${CAMPOS.map(([k, l]) => { const v = valorHC(h, k); return v ? `<dt>${esc(l)}</dt><dd>${esc(v)}</dd>` : ''; }).join('')}</dl>
-      <p class="dova-nota">Para corregirla, usá "Enmendar" en el Historial clínico de la ficha (queda registrado quién, cuándo y por qué).</p>`;
+      <p class="dova-nota">Para corregirla, usá "Enmendar" en el Historial clínico de la ficha (queda registrado quién, cuándo y por qué).</p>
+      <button type="button" class="dova-btn-secundario" data-imprimir-consulta="${h.id}">🖨 Imprimir consulta</button>`;
   }
 
   async function historialCompacto(c, pid) {
@@ -795,6 +797,38 @@ const DovaClinica = (() => {
     }));
   }
 
+
+  // Pestaña "Documentos": todos los PDF reales del paciente en un solo lugar.
+  async function panelDocumentos(c, pid) {
+    const clin = puede('historia_clinica.view', 'pacientes.clinical.view');
+    const fin = puede('pagos.view', 'cuenta_corriente.view');
+    const [hcs, cons, planes, press, recs, pagos] = await Promise.all([
+      clin ? DOVA.get(`/historia-clinica/paciente/${pid}`).catch(() => []) : [],
+      puede('consentimientos.manage', 'pacientes.clinical.view') ? DOVA.get(`/clinico/consentimientos/paciente/${pid}`).catch(() => []) : [],
+      puede('planes_tratamiento.view', 'planes_tratamiento.manage', 'historia_clinica.view') ? DOVA.get(`/planes-tratamiento/paciente/${pid}`).catch(() => []) : [],
+      puede('presupuestos.view') ? DOVA.get(`/presupuestos/paciente/${pid}`).catch(() => []) : [],
+      puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view') ? DOVA.get(`/clinico/recetas/paciente/${pid}`).catch(() => []) : [],
+      puede('pagos.view') ? DOVA.get(`/pagos/paciente/${pid}`).catch(() => []) : [],
+    ]);
+    const fila = (ruta, titulo, sub, extra = '') => `<li><button class="dova-btn-link" data-doc="${esc(ruta)}" data-titulo="${esc(titulo)}">📄 ${esc(titulo)}</button><span class="dova-nota">${esc(sub || '')}</span>${extra}</li>`;
+    const grupo = (t, items, vacio) => `<section class="dova-cli-docgrupo"><h4>${esc(t)} <span class="dova-nota">(${items.length})</span></h4>${items.length ? `<ul class="dova-cli-doclista">${items.join('')}</ul>` : `<p class="dova-nota">${esc(vacio)}</p>`}</section>`;
+    const grupos = [];
+    const generales = [];
+    if (clin) generales.push(fila(`/comprobantes/historia-clinica/${pid}`, 'Historia clínica completa', `${hcs.length} consulta${hcs.length === 1 ? '' : 's'}, antecedentes, odontograma y tratamientos`));
+    if (fin) generales.push(fila(`/comprobantes/estado-cuenta/${pid}`, 'Estado de cuenta', 'Presupuestos, cuotas pendientes, pagos y saldo'));
+    if (generales.length) grupos.push(grupo('Generales', generales, ''));
+    if (clin) grupos.push(grupo('Consultas', hcs.map((h) => fila(`/comprobantes/consulta/${h.id}`, `Consulta del ${fmtFecha(h.fecha)}`, `${h.odontologo_nombre || ''}${h.firmada ? ' · firmada' : ' · borrador'}${h.enmendada_de_id ? ' · enmienda' : ''}`)), 'Sin consultas.'));
+    if (puede('consentimientos.manage', 'pacientes.clinical.view')) grupos.push(grupo('Consentimientos', cons.map((k) => fila(`/comprobantes/consentimiento/${k.id}`, k.procedimiento || `Consentimiento N.º ${k.id}`, `${fmtFecha(k.fecha || k.creado_en)} · ${k.estado}`)), 'Sin consentimientos.'));
+    if (planes.length || clin) grupos.push(grupo('Planes de tratamiento', planes.map((p) => fila(`/comprobantes/plan-tratamiento/${p.id}`, p.nombre, `${p.pieza ? `Pieza ${p.pieza} · ` : ''}${String(p.estado).replace(/_/g, ' ')}`)), 'Sin planes.'));
+    if (puede('presupuestos.view')) grupos.push(grupo('Presupuestos', press.map((x) => fila(`/comprobantes/presupuesto/${x.id}`, `Presupuesto N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.estado} · ${fmtGs(x.total)}`)), 'Sin presupuestos.'));
+    if (puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view')) grupos.push(grupo('Recetas', recs.map((r) => fila(`/comprobantes/receta/${r.id}`, `Receta N.º ${r.id}`, `${fmtFecha(r.fecha)}${r.estado === 'anulada' ? ' · anulada' : ''}`)), 'Sin recetas.'));
+    if (puede('pagos.view')) grupos.push(grupo('Recibos de pago', pagos.map((x) => fila(`/comprobantes/pago/${x.id}`, `Recibo N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.concepto || ''} · ${fmtGs(x.monto)}${x.estado === 'anulado' ? ' · anulado' : ''}`)), 'Sin pagos.'));
+    c.innerHTML = `<h3 class="dova-section-title">Documentos</h3>
+      <p class="dova-nota">Todos los documentos se generan en el momento con los datos guardados. Tocá uno para verlo, imprimirlo o descargarlo.</p>
+      ${grupos.length ? `<div class="dova-cli-docs">${grupos.join('')}</div>` : '<p class="dova-nota">Tu usuario no tiene permiso para ver documentos de este paciente.</p>'}`;
+    c.querySelectorAll('[data-doc]').forEach((b) => b.addEventListener('click', () => verPdf(b.dataset.doc, b.dataset.titulo)));
+  }
+
   // Resumen 360° arriba de la pestaña "Resumen": última consulta, próxima
   // cita, tratamientos en curso y notas importantes.
   async function resumen360(pid) {
@@ -829,6 +863,7 @@ const DovaClinica = (() => {
       { id: 'fotos', texto: 'Fotos y estudios', visible: puede('fotos_clinicas.manage', 'estudios.manage', 'pacientes.clinical.view', 'historia_clinica.view'), render: panelFotosEstudios },
       { id: 'recetas', texto: 'Recetas', visible: puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view'), render: panelRecetas },
       { id: 'notas', texto: 'Notas internas', visible: puede('pacientes.view'), render: panelNotas },
+      { id: 'documentos', texto: 'Documentos', visible: true, render: panelDocumentos },
     ].filter((t) => t.visible);
     // Se ubican después de "Historial clínico" / "Odontograma".
     const despues = tabs.querySelector('[data-tab="documentacion"]') || null;

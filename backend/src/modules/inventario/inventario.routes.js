@@ -12,6 +12,9 @@ router.post('/proveedores', requirePermiso('proveedores.manage'), controller.cre
 
 router.get('/insumos', requirePermiso('inventario.view'), controller.listarInsumos);
 router.post('/insumos', requirePermiso('inventario.manage'), controller.crearInsumo);
+router.put('/insumos/:id', requirePermiso('inventario.manage'), controller.actualizarInsumo);
+router.get('/insumos/:id/lotes', requirePermiso('inventario.view'), controller.listarLotes);
+router.get('/vencimientos', requirePermiso('inventario.view'), controller.porVencer);
 router.post('/insumos/:id/movimiento', requirePermiso('inventario.manage'), controller.registrarMovimiento);
 router.get('/insumos/:id/movimientos', requirePermiso('inventario.view'), controller.listarMovimientos);
 

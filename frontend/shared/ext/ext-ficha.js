@@ -673,7 +673,53 @@ const DovaFicha = (() => {
       claseFila: (r) => (r.atrasado ? 'dova-ext-fila-alerta' : ''),
       columnas: [{ t: 'Trabajo', v: (r) => `<strong>${esc(r.trabajo)}</strong>${r.pieza ? ` — ${esc(r.pieza)}` : ''}${r.color_tono ? ` · ${esc(r.color_tono)}` : ''}` }, { t: 'Laboratorio', v: (r) => esc(r.laboratorio_nombre || '-') }, { t: 'Enviado', v: (r) => fmtFecha(r.fecha_envio) }, { t: 'Estimado', v: (r) => `${fmtFecha(r.fecha_estimada)} ${r.atrasado ? badge('atrasado', 'critica') : ''}` }, { t: 'Estado', v: (r) => badge(etiqueta(r.estado), r.estado === 'rehacer' ? 'critica' : ['instalado', 'entregado', 'controlado'].includes(r.estado) ? 'ok' : 'info') }],
       campos: camposTrabajoLab(labs, ods),
+      acciones: [{ texto: 'Archivos', fn: (r) => archivosLab(r) }],
     }));
+  }
+
+
+  // Archivos de un trabajo de laboratorio: fotos de color, PDF de la orden y modelos STL.
+  async function archivosLab(t) {
+    const ed = puede('laboratorio.manage');
+    X.modal(`Archivos — ${t.trabajo}`, `<div data-lista>${X.cargando}</div>
+      ${ed ? `<form data-subir class="dova-ext-form-grid"><div class="dova-ext-campo dova-ext-campo-completo"><label>Agregar archivo (foto, PDF o STL, hasta 30 MB)</label><input type="file" name="archivo" accept="image/jpeg,image/png,image/webp,application/pdf,.stl" required/></div>
+        <p class="dova-error-text" data-error hidden></p><button class="dova-btn-primary">Subir</button></form>` : ''}
+      <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>`, { ancho: 'ancho' });
+    const box = document.querySelector('.dova-modal-box');
+    const tam = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+    const cargar = async () => {
+      const cont = box.querySelector('[data-lista]');
+      try {
+        const lista = await DOVA.get(`/clinico/laboratorio/${t.id}/archivos`);
+        cont.innerHTML = lista.length ? `<ul class="dova-cli-doclista">${lista.map((a) => `<li><span><button class="dova-btn-link" data-ver="${a.id}" data-nombre="${esc(a.nombre)}">${a.mime === 'model/stl' ? '🧊' : a.mime === 'application/pdf' ? '📄' : '🖼'} ${esc(a.nombre)}</button>
+          ${ed && (a.subido_por === (DOVA.usuarioActual() || {}).id || puede('usuarios.manage')) ? `<button class="dova-btn-link dova-ext-peligro" data-borrar="${a.id}">Quitar</button>` : ''}</span><span class="dova-nota">${tam(a.tamano)} · ${esc(a.subido_por_nombre || '')} · ${X.fmtFechaHora(a.creado_en)}</span></li>`).join('')}</ul>` : '<p class="dova-nota">Todavía no hay archivos.</p>';
+        cont.querySelectorAll('[data-ver]').forEach((b) => b.addEventListener('click', async () => {
+          try {
+            const r = await DOVA.request(`/clinico/laboratorio/archivos/${b.dataset.ver}`, { raw: true });
+            if (!r.ok) throw new Error('No se pudo abrir el archivo');
+            const blob = await r.blob(); const u = URL.createObjectURL(blob);
+            if (/^image\/|pdf/.test(blob.type)) window.open(u, '_blank', 'noopener');
+            else { const a = document.createElement('a'); a.href = u; a.download = b.dataset.nombre; document.body.appendChild(a); a.click(); a.remove(); }
+          } catch (e) { X.toast(e.message, 'error'); }
+        }));
+        cont.querySelectorAll('[data-borrar]').forEach((b) => b.addEventListener('click', async () => {
+          if (b.dataset.seguro !== '1') { b.dataset.seguro = '1'; b.textContent = '¿Seguro? Tocá de nuevo'; return; }
+          try { await DOVA.del(`/clinico/laboratorio/archivos/${b.dataset.borrar}`); X.toast('Archivo quitado', 'ok'); cargar(); } catch (e) { X.toast(e.message, 'error'); }
+        }));
+      } catch (e) { cont.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; }
+    };
+    const f = box.querySelector('[data-subir]');
+    if (f) f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = f.querySelector('[data-error]'); err.hidden = true;
+      const a = f.archivo.files[0];
+      if (!a) return;
+      if (a.size > 30 * 1024 * 1024) { err.textContent = 'El archivo pesa más de 30 MB'; err.hidden = false; return; }
+      const b = f.querySelector('button'); b.disabled = true; b.textContent = 'Subiendo…';
+      try { const fd = new FormData(); fd.append('archivo', a); await DOVA.postForm(`/clinico/laboratorio/${t.id}/archivos`, fd); X.toast('Archivo guardado', 'ok'); f.reset(); cargar(); } catch (er) { err.textContent = er.message; err.hidden = false; }
+      b.disabled = false; b.textContent = 'Subir';
+    });
+    cargar();
   }
 
   function camposTrabajoLab(labs, ods) {
@@ -932,6 +978,6 @@ const DovaFicha = (() => {
     }
   }
 
-  return { extender, camposTarea, camposTrabajoLab, modalContactoRecall };
+  return { extender, camposTarea, camposTrabajoLab, modalContactoRecall, archivosLab };
 })();
 window.DovaFicha = DovaFicha;

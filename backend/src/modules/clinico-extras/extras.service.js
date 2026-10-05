@@ -199,6 +199,9 @@ async function firmarConsentimiento(clinicaId, id, datos, actor) {
   if (!existente) throw new ApiError(404, 'Consentimiento no encontrado');
   if (existente.estado === 'firmado') throw new ApiError(409, 'Este consentimiento ya fue firmado');
   if (!datos.firmaPaciente) throw new ApiError(400, 'Se requiere la firma del paciente');
+  for (const f of [datos.firmaPaciente, datos.firmaOdontologo].filter(Boolean)) {
+    if (typeof f !== 'string' || !/^data:image\/(png|jpeg);base64,/.test(f) || f.length > 700000) throw new ApiError(400, 'La firma no es válida');
+  }
   const consentimiento = await repo.firmarConsentimiento(clinicaId, id, datos);
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
@@ -210,10 +213,11 @@ async function firmarConsentimiento(clinicaId, id, datos, actor) {
 async function anularConsentimiento(clinicaId, id, actor) {
   const existente = await repo.obtenerConsentimiento(clinicaId, id);
   if (!existente) throw new ApiError(404, 'Consentimiento no encontrado');
+  if (existente.estado === 'anulado') throw new ApiError(409, 'El consentimiento ya está anulado');
   const consentimiento = await repo.cambiarEstadoConsentimiento(clinicaId, id, 'anulado');
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
-    accion: 'anular_consentimiento', modulo: 'pacientes', entidadId: id,
+    accion: 'anular_consentimiento', modulo: 'pacientes', entidadId: id, detalle: { estadoAnterior: existente.estado },
   });
   return consentimiento;
 }

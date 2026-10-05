@@ -451,3 +451,12 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-cli-med { grid-template-columns: 1fr 1fr; }
   .dova-cli-med .dova-cli-ancho { grid-column: 1 / -1; }
 }
+
+/* Documentos del paciente */
+.dova-cli-docs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.dova-cli-docgrupo { border: 1px solid var(--dova-borde, #e5e5e5); border-radius: 10px; padding: 12px 14px; }
+.dova-cli-docgrupo h4 { margin: 0 0 8px; }
+.dova-cli-doclista { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+.dova-cli-doclista li { display: flex; flex-direction: column; padding: 6px 0; border-bottom: 1px dashed var(--dova-borde, #eee); }
+.dova-cli-doclista li:last-child { border-bottom: 0; }
+.dova-cli-doclista .dova-btn-link { text-align: left; padding: 0; }

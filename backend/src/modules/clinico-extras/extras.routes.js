@@ -49,6 +49,7 @@ router.patch('/lista-espera/:id/estado', requirePermiso('lista_espera.manage'), 
 router.get('/laboratorio', requirePermiso('laboratorio.manage'), controller.listarLaboratorio);
 router.post('/laboratorio', requirePermiso('laboratorio.manage'), controller.crearLaboratorio);
 router.patch('/laboratorio/:id', requirePermiso('laboratorio.manage'), controller.actualizarLaboratorio);
+router.use('/', require('./laboratorio.archivos'));
 
 // WhatsApp (solo prepara mensajes, nunca los envía automáticamente)
 router.get('/whatsapp/plantillas', requirePermiso('whatsapp.send'), controller.listarPlantillasWhatsapp);
