@@ -93,7 +93,9 @@ async function crearEnTransaccion(clinicaId, datos, usuario) {
   return { ...pago, cajaReflejada: reflejo.reflejado };
 }
 
-async function anular(clinicaId, id, usuario) {
+async function anular(clinicaId, id, usuario, { motivo } = {}) {
+  const m = String(motivo || '').trim().slice(0, 500);
+  if (m.length < 5) throw new ApiError(400, 'Escribí el motivo de la anulación (queda registrado)');
   // Cierre contable: un pago de un período cerrado no se puede anular.
   const { query } = require('../../config/db');
   const previo = await query('SELECT fecha FROM pagos WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
@@ -102,12 +104,24 @@ async function anular(clinicaId, id, usuario) {
     const fechaLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date(previo.rows[0].fecha));
     await verificarBloqueoContable(clinicaId, fechaLocal);
   }
-  const pago = await repo.anular(clinicaId, id);
+  const pago = await repo.anular(clinicaId, id, m, usuario.id);
   if (!pago) throw new ApiError(404, 'Pago no encontrado o ya estaba anulado');
+  // Si la plata había entrado a la caja, se registra la devolución en la caja
+  // abierta (si no, el arqueo esperaría un dinero que ya no está).
+  let caja = null;
+  try {
+    const mov = await query('SELECT m.id FROM caja_movimientos m WHERE m.pago_id=$1 LIMIT 1', [pago.id]);
+    if (mov.rowCount) {
+      const cajaSvc = require('../caja/caja.service');
+      caja = await cajaSvc.registrarDevolucionPago(clinicaId, pago, m, usuario);
+    }
+  } catch (e) { console.error('[caja] no se pudo registrar la devolución del cobro anulado:', e.message); }
   await auditoria.registrar({
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
     accion: 'anular_pago', modulo: 'pagos', entidadId: id,
+    detalle: { motivo: m, monto: Number(pago.monto), metodo: pago.metodo, pacienteId: pago.paciente_id, fecha: pago.fecha, devolucionEnCaja: !!caja },
   });
+  pago.devolucionEnCaja = !!caja;
   // Si el pago estaba en una factura, la factura vuelve a quedar pendiente
   // (la factura NO se anula sola: eso lo decide una persona).
   try {

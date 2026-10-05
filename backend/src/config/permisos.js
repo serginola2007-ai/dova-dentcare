@@ -34,6 +34,7 @@ const PERMISOS = [
   { codigo: 'presupuestos.view', modulo: 'finanzas', descripcion: 'Ver presupuestos' },
   { codigo: 'presupuestos.manage', modulo: 'finanzas', descripcion: 'Crear/editar presupuestos' },
   { codigo: 'pagos.view', modulo: 'finanzas', descripcion: 'Ver pagos' },
+  { codigo: 'pagos.anular', modulo: 'pagos', descripcion: 'Anular cobros (con motivo; queda en la auditoría)' },
   { codigo: 'pagos.create', modulo: 'finanzas', descripcion: 'Registrar pagos' },
   { codigo: 'planes_pago.manage', modulo: 'finanzas', descripcion: 'Gestionar planes de pago y cuotas' },
   { codigo: 'caja.view', modulo: 'finanzas', descripcion: 'Ver caja' },

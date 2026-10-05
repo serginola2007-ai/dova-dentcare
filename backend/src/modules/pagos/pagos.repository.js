@@ -37,10 +37,11 @@ async function crear(clinicaId, d, usuarioId) {
   return res.rows[0];
 }
 
-async function anular(clinicaId, id) {
+async function anular(clinicaId, id, motivo, usuarioId) {
   const res = await query(
-    `UPDATE pagos SET estado = 'anulado' WHERE clinica_id = $1 AND id = $2 AND estado = 'pagado' RETURNING *`,
-    [clinicaId, id]
+    `UPDATE pagos SET estado = 'anulado', anulado_motivo = $3, anulado_por = $4, anulado_en = now()
+      WHERE clinica_id = $1 AND id = $2 AND estado = 'pagado' RETURNING *`,
+    [clinicaId, id, motivo || null, usuarioId || null]
   );
   return res.rows[0] || null;
 }

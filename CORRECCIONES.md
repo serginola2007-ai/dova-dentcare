@@ -344,3 +344,9 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Recetas: varios medicamentos con concentración, presentación, dosis, frecuencia, duración, vía e indicaciones; verificación de alergias y medicación antes de emitir; PDF para imprimir con firma y matrícula; anulación con motivo (nunca se borran); vínculo a la consulta. En la consulta, la receta trae la medicación indicada.
 - Mi día: agenda propia del odontólogo (hoy en hora de Paraguay) con duración, sillón y estado (en espera / en consulta / finalizado) y botón Iniciar / Continuar / Ver consulta; pendientes nuevos: recetas pendientes y presupuestos sin aceptar. Corregido: "Iniciar consulta" desde Mi día no abría el turno.
 - Agenda: botón "Llegó (en espera)" en el turno de hoy y marca "en espera" / "en consulta" en el calendario.
+
+## Fase 3 — presupuestos, cobros, caja y facturación (migraciones 0032 y 0033)
+- Cobros: anular requiere el permiso nuevo `pagos.anular` (el admin lo tiene; se puede dar a otro rol desde Usuarios → Roles) y un motivo; el cobro guarda motivo, quién y cuándo. Si el cobro había entrado a la caja abierta, se registra la devolución en la caja (antes el arqueo esperaba un dinero que ya no estaba).
+- Caja: botón "Devolución" (egreso marcado como devolución) y concepto obligatorio en los movimientos.
+- Presupuestos: cambios de estado validados en el servidor (ej.: un aceptado no vuelve a borrador; uno con cobros no se cancela), vencimiento automático por vigencia (queda en la auditoría) y "Crear plan de tratamiento" desde un presupuesto aceptado (un plan por ítem, con precio y pieza, sin duplicar).
+- Facturación: columnas listas para la facturación electrónica SIFEN (CDC, estado y respuesta del envío, XML; modo de emisión, ambiente e ID de CSC en la configuración). Hoy no se envía nada a la SET: es la base para conectar el servicio de firma y envío.

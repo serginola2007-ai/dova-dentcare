@@ -81,11 +81,18 @@ async function abrirSinCandado(clinicaId, datos, usuario) {
   return { ...caja, pagosIncorporados: previos.length };
 }
 
-async function registrarMovimiento(clinicaId, datos, usuario) {
+async function registrarMovimiento(clinicaId, datosIn, usuario) {
   const caja = await repo.obtenerAbierta(clinicaId);
   if (!caja) throw new ApiError(409, 'No hay una caja abierta. Abrí la caja antes de registrar movimientos.');
+  // Devolución: sale plata de la caja (se guarda como egreso marcado "Devolución").
+  const datos = { ...datosIn };
+  if (datos.tipo === 'devolucion') {
+    datos.tipo = 'egreso';
+    datos.concepto = `Devolución: ${String(datos.concepto || '').trim() || 'sin detalle'}`;
+  }
   if (!['ingreso', 'egreso'].includes(datos.tipo)) throw new ApiError(400, 'Tipo de movimiento inválido');
   if (Number(datos.monto) <= 0) throw new ApiError(400, 'El monto debe ser mayor a cero');
+  if (!String(datos.concepto || '').trim()) throw new ApiError(400, 'Escribí el concepto del movimiento');
 
   const movimiento = await repo.registrarMovimiento(caja.id, {
     tipo: datos.tipo, concepto: datos.concepto, monto: datos.monto,
@@ -110,6 +117,21 @@ async function reflejarSinCandado(clinicaId, { pagoId, concepto, monto, metodo, 
   if (!caja) return { reflejado: false, motivo: 'No hay caja abierta: el cobro se va a sumar a la caja cuando se abra hoy.' };
   await repo.registrarMovimiento(caja.id, { tipo: 'ingreso', concepto, monto, metodo, pagoId, usuarioId });
   return { reflejado: true, cajaId: caja.id };
+}
+
+// Cobro anulado que había entrado a la caja: se registra la devolución en la
+// caja abierta (con el mismo medio de pago) para que el arqueo cierre.
+async function registrarDevolucionPago(clinicaId, pago, motivo, usuario) {
+  return conCandado(`caja:${clinicaId}`, async () => {
+    const caja = await repo.obtenerAbierta(clinicaId);
+    if (!caja) return null;
+    const mov = await repo.registrarMovimiento(caja.id, {
+      tipo: 'egreso', concepto: `Devolución: cobro #${pago.id} anulado (${String(motivo).slice(0, 120)})`,
+      monto: pago.monto, metodo: pago.metodo, usuarioId: usuario.id,
+    });
+    await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'caja_devolucion', modulo: 'caja', entidadId: caja.id, detalle: { pagoId: pago.id, monto: Number(pago.monto), metodo: pago.metodo } });
+    return mov;
+  });
 }
 
 async function cerrar(clinicaId, id, datos, usuario) {
@@ -142,4 +164,5 @@ async function listarHistorico(clinicaId, filtros) {
   return repo.listarHistorico(clinicaId, filtros);
 }
 
-module.exports = { obtenerEstadoActual, abrir, registrarMovimiento, reflejarPagoEnCaja, cerrar, listarHistorico };
+module.exports = {
+  registrarDevolucionPago, obtenerEstadoActual, abrir, registrarMovimiento, reflejarPagoEnCaja, cerrar, listarHistorico };

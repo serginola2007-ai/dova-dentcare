@@ -10,5 +10,5 @@ router.get('/', requirePermiso('pagos.view'), controller.listar);
 router.get('/paciente/:pacienteId', requirePermiso('pagos.view'), controller.listarPorPaciente);
 router.get('/paciente/:pacienteId/resumen', requirePermiso('pagos.view'), controller.resumenPaciente);
 router.post('/', requirePermiso('pagos.create'), controller.crear);
-router.post('/:id/anular', requirePermiso('pagos.create'), controller.anular);
+router.post('/:id/anular', requirePermiso('pagos.anular'), controller.anular);
 module.exports = router;

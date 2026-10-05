@@ -10,4 +10,5 @@ router.get('/paciente/:pacienteId', requirePermiso('presupuestos.view'), control
 router.get('/:id', requirePermiso('presupuestos.view'), controller.obtener);
 router.post('/', requirePermiso('presupuestos.manage'), controller.crear);
 router.patch('/:id/estado', requirePermiso('presupuestos.manage'), controller.cambiarEstado);
+router.post('/:id/planes', requirePermiso('planes_tratamiento.manage', 'presupuestos.manage'), controller.crearPlanes);
 module.exports = router;

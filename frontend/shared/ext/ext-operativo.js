@@ -517,9 +517,10 @@ const DovaOperativo = (() => {
       ${maneja ? `<div class="dova-toolbar"><span></span><div>
         <button class="dova-btn-secundario" data-mov="ingreso">+ Ingreso</button>
         <button class="dova-btn-secundario" data-mov="egreso">− Egreso</button>
+        <button class="dova-btn-secundario" data-mov="devolucion">↩ Devolución</button>
         <button class="dova-btn-primary" data-cerrar-caja>Cerrar caja</button></div></div>` : ''}
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Usuario</th><th>Factura</th></tr></thead><tbody>
-      ${e.movimientos.map((m) => `<tr><td>${new Date(m.creado_en).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td><td>${m.tipo === 'egreso' ? badge('Egreso', 'critica') : badge('Ingreso', 'ok')}</td><td>${esc(m.concepto || '-')}</td><td>${esc(nomMet[m.metodo] || etiqueta(m.metodo || 'efectivo'))}</td><td>${m.tipo === 'egreso' ? '−' : ''}${fmtGs(m.monto)}</td><td>${esc(m.usuario_nombre || '-')}</td>
+      ${e.movimientos.map((m) => `<tr><td>${new Date(m.creado_en).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td><td>${m.tipo === 'egreso' ? (String(m.concepto || '').startsWith('Devolución') ? badge('Devolución', 'atencion') : badge('Egreso', 'critica')) : badge('Ingreso', 'ok')}</td><td>${esc(m.concepto || '-')}</td><td>${esc(nomMet[m.metodo] || etiqueta(m.metodo || 'efectivo'))}</td><td>${m.tipo === 'egreso' ? '−' : ''}${fmtGs(m.monto)}</td><td>${esc(m.usuario_nombre || '-')}</td>
         <td class="dova-ext-acciones">${colFacturaMov(m)}</td></tr>`).join('') || '<tr><td colspan="7">Sin movimientos todavía.</td></tr>'}
       </tbody></table></div>`;
     c.querySelectorAll('[data-ir-factura]').forEach((x) => x.addEventListener('click', () => navegarCaja && navegarCaja('facturacion', `factura/${x.dataset.irFactura}`)));
@@ -534,7 +535,7 @@ const DovaOperativo = (() => {
       const tipo = b.dataset.mov;
       const mets = await opcionesMetodos();
       const op = tipo === 'ingreso' ? await DovaFacturacion.opcionesCobro() : null;
-      X.modalForm(tipo === 'egreso' ? 'Egreso de caja' : 'Ingreso de caja', [
+      X.modalForm(tipo === 'egreso' ? 'Egreso de caja' : tipo === 'devolucion' ? 'Devolución de dinero' : 'Ingreso de caja', [
         { k: 'concepto', label: 'Concepto', req: true, ancho: 'completo', max: 200 },
         { k: 'monto', label: 'Monto (Gs.)', tipo: 'numero', req: true, min: 1 },
         { k: 'metodo', label: 'Medio', tipo: 'select', req: true, opciones: mets },
@@ -626,8 +627,8 @@ const DovaOperativo = (() => {
       <div class="dova-toolbar"><h3 class="dova-section-title" style="margin:0">Cobros</h3>${puedeCobrar ? '<button class="dova-btn-primary" data-cobrar>+ Registrar cobro</button>' : ''}</div>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Concepto</th><th>Medio</th><th>Monto</th><th>Estado</th><th>Cobró</th><th>Factura</th><th></th></tr></thead><tbody>
       ${pagos.map((p, i) => `<tr class="${p.estado === 'anulado' ? 'dova-op-fila-apagada' : ''}"><td>${fmtFecha(p.fecha)}</td><td>${esc(p.concepto || '-')}</td><td>${esc(mets[p.metodo] || etiqueta(p.metodo))}</td><td>${fmtGs(p.monto)}</td>
-        <td>${p.estado === 'anulado' ? badge('Anulado', 'critica') : badge('Pagado', 'ok')}</td><td>${esc(p.usuario_nombre || '-')}</td><td>${colFactura(p)}</td>
-        <td class="dova-ext-acciones"><button class="dova-btn-link" data-recibo="${p.id}">Recibo PDF</button>${puedeCobrar && p.estado !== 'anulado' ? `<button class="dova-btn-link dova-ext-peligro" data-anular="${i}">Anular</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8">Sin cobros.</td></tr>'}
+        <td>${p.estado === 'anulado' ? `${badge('Anulado', 'critica')}${p.anulado_motivo ? `<br><span class="dova-nota">${esc(p.anulado_motivo)}</span>` : ''}` : badge('Pagado', 'ok')}</td><td>${esc(p.usuario_nombre || '-')}</td><td>${colFactura(p)}</td>
+        <td class="dova-ext-acciones"><button class="dova-btn-link" data-recibo="${p.id}">Recibo PDF</button>${puede('pagos.anular') && p.estado !== 'anulado' ? `<button class="dova-btn-link dova-ext-peligro" data-anular="${i}">Anular</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8">Sin cobros.</td></tr>'}
       </tbody></table></div>`;
     const b = c.querySelector('[data-cobrar]');
     if (b) b.addEventListener('click', () => modalCobro(pid, { alGuardar: () => cobros(c, pid) }));
@@ -641,15 +642,25 @@ const DovaOperativo = (() => {
       if (f) cobros(c, pid); else x.disabled = false;
     }));
     c.querySelectorAll('[data-recibo]').forEach((x) => x.addEventListener('click', () => DOVA.descargarPdf(`/comprobantes/pago/${x.dataset.recibo}`, `recibo-${x.dataset.recibo}.pdf`).catch((e) => toast(e.message, 'error'))));
-    c.querySelectorAll('[data-anular]').forEach((x) => x.addEventListener('click', async () => {
+    c.querySelectorAll('[data-anular]').forEach((x) => x.addEventListener('click', () => {
       const p = pagos[Number(x.dataset.anular)];
-      if (!(await confirmar('¿Anular este cobro?', `${fmtGs(p.monto)} del ${fmtFecha(p.fecha)}. Queda registrado en la auditoría.`, 'Anular cobro'))) return;
-      try { await DOVA.post(`/pagos/${p.id}/anular`, {}); toast('Cobro anulado', 'ok'); cobros(c, pid); } catch (e) { toast(e.message, 'error'); }
+      X.modal('Anular cobro', `<p>${fmtGs(p.monto)} del ${fmtFecha(p.fecha)} (${esc(mets[p.metodo] || etiqueta(p.metodo))}).</p>
+        <p class="dova-nota">El cobro no se borra: queda anulado con el motivo, quién y cuándo. Si había entrado a la caja de hoy, se registra la devolución en la caja.</p>
+        <label>Motivo de la anulación<textarea data-motivo rows="2" maxlength="500" placeholder="Ej.: se cobró dos veces"></textarea></label>
+        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary dova-btn-peligro-fondo" data-si>Anular cobro</button></div>`);
+      const box = document.querySelector('.dova-modal-box');
+      box.querySelector('[data-si]').addEventListener('click', async (ev) => {
+        const b = ev.currentTarget; b.disabled = true;
+        try {
+          const r = await DOVA.post(`/pagos/${p.id}/anular`, { motivo: box.querySelector('[data-motivo]').value });
+          X.cerrarModal(); toast(r.devolucionEnCaja ? 'Cobro anulado y devolución registrada en la caja' : 'Cobro anulado', 'ok'); cobros(c, pid);
+        } catch (e) { toast(e.message, 'error'); b.disabled = false; }
+      });
     }));
   }
 
   const PRES_NIVEL = { borrador: 'info', enviado: 'atencion', aceptado: 'ok', rechazado: 'critica', vencido: 'critica', cancelado: 'critica' };
-  const PRES_SIGUIENTE = { borrador: ['enviado', 'aceptado', 'cancelado'], enviado: ['aceptado', 'rechazado', 'vencido'], vencido: ['enviado'], rechazado: [], aceptado: ['cancelado'], cancelado: [] };
+  const PRES_SIGUIENTE = { borrador: ['enviado', 'aceptado', 'cancelado'], enviado: ['aceptado', 'rechazado', 'vencido', 'cancelado'], vencido: ['enviado', 'cancelado'], rechazado: [], aceptado: ['cancelado'], cancelado: [] };
   const PRES_TEXTO = { enviado: 'Marcar enviado', aceptado: 'Aceptado', rechazado: 'Rechazado', vencido: 'Vencido', cancelado: 'Cancelar' };
 
   async function presupuestos(c, pid) {
@@ -674,6 +685,7 @@ const DovaOperativo = (() => {
         <td class="dova-ext-acciones"><button class="dova-btn-link" data-pdf="${p.id}">PDF</button>
           ${crearFac && p.estado === 'aceptado' && res[p.id] && res[p.id].facturado < res[p.id].total ? `<button class="dova-btn-link" data-generar-factura-pres="${p.id}">Generar factura</button>` : ''}
           ${maneja ? (PRES_SIGUIENTE[p.estado] || []).map((s) => `<button class="dova-btn-link ${['rechazado', 'cancelado', 'vencido'].includes(s) ? 'dova-ext-peligro' : ''}" data-est="${s}" data-i="${i}">${PRES_TEXTO[s]}</button>`).join('') : ''}
+          ${p.estado === 'aceptado' && puede('planes_tratamiento.manage', 'presupuestos.manage') ? `<button class="dova-btn-link" data-a-plan="${p.id}">Crear plan de tratamiento</button>` : ''}
           ${p.estado === 'aceptado' && puede('planes_pago.manage') && !conPlan.has(p.id) ? `<button class="dova-btn-link" data-financiar="${i}">Financiar en cuotas</button>` : ''}
           ${p.estado === 'aceptado' && conPlan.has(p.id) ? badge('con plan de pago', 'info') : ''}</td></tr>`).join('') || '<tr><td colspan="5">Sin presupuestos.</td></tr>'}
       </tbody></table></div>`;
@@ -687,6 +699,15 @@ const DovaOperativo = (() => {
     c.querySelectorAll('[data-ir-factura]').forEach((x) => x.addEventListener('click', () => navegarFicha && navegarFicha('facturacion', `factura/${x.dataset.irFactura}`)));
     c.querySelectorAll('[data-generar-factura-pres]').forEach((x) => x.addEventListener('click', () => navegarFicha && navegarFicha('facturacion', `nueva/presupuesto/${x.dataset.generarFacturaPres}`)));
     c.querySelectorAll('[data-financiar]').forEach((b) => b.addEventListener('click', () => modalPlanPago(pid, lista[Number(b.dataset.financiar)], recargar)));
+    // Presupuesto aceptado → un plan de tratamiento por cada ítem (sin duplicar).
+    c.querySelectorAll('[data-a-plan]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        const r = await DOVA.post(`/presupuestos/${b.dataset.aPlan}/planes`, {});
+        toast(r.creados.length ? `Se crearon ${r.creados.length} plan(es) de tratamiento: ${r.creados.map((x) => x.nombre).join(', ')}` : 'Los planes de este presupuesto ya estaban creados', 'ok');
+      } catch (e) { toast(e.message, 'error'); }
+      b.disabled = false;
+    }));
     const bn = c.querySelector('[data-nuevo]');
     if (bn) bn.addEventListener('click', () => modalPresupuesto(pid, recargar));
   }
