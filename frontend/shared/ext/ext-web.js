@@ -15,6 +15,7 @@ const DovaWeb = (() => {
       <div data-subs></div>`;
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'solicitudes', texto: 'Lo que llegó', visible: puede('web.ver', 'web.configurar'), render: (c) => solicitudes(c, navegar, { estado: 'pendiente' }) },
+      { id: 'pagos', texto: 'Pagos para revisar', visible: puede('web.ver'), render: (c) => pagosWeb(c, navegar, { estado: 'pendiente' }) },
       { id: 'config', texto: 'Configurar la página', visible: puede('web.configurar'), render: (c) => configuracion(c) },
     ]);
   }
@@ -34,6 +35,14 @@ const DovaWeb = (() => {
     c.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => recargar({ [b.dataset.f]: b.dataset.v })));
     c.querySelectorAll('[data-pac]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.pac)));
     c.querySelectorAll('[data-agenda]').forEach((b) => b.addEventListener('click', () => navegar('agenda')));
+    c.querySelectorAll('[data-verificar]').forEach((b) => b.addEventListener('click', () => {
+      X.modal('Verificar identidad', `<p>Confirmá que <strong>viste la cédula</strong> de esta persona (en la clínica) y que sus datos son correctos.</p>
+        <p class="dova-nota">Recién después de verificarla puede crear su cuenta en la página web y ver sus turnos y pagos. Así nadie puede abrir una cuenta a nombre de otro.</p>
+        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary" data-si>Sí, la verifiqué</button></div>`);
+      document.querySelector('.dova-modal-box [data-si]').addEventListener('click', async () => {
+        try { await DOVA.post(`/web/pacientes/${b.dataset.verificar}/verificar`, {}); X.cerrarModal(); toast('Identidad verificada', 'ok'); recargar({}); } catch (e) { toast(e.message, 'error'); }
+      });
+    }));
     c.querySelectorAll('[data-estado]').forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true;
       try { await DOVA.patch(`/web/solicitudes/${b.dataset.id}`, { estado: b.dataset.estado }); toast(b.dataset.estado === 'resuelta' ? 'Marcada como atendida' : b.dataset.estado === 'descartada' ? 'Descartada' : 'Vuelve a pendientes', 'ok'); recargar({}); } catch (e) { toast(e.message, 'error'); b.disabled = false; }
@@ -53,6 +62,55 @@ const DovaWeb = (() => {
     }));
   }
 
+  // ---------------- Pagos informados desde la web ----------------
+  const EST_PAGO = { pendiente: ['Para revisar', 'atencion'], aprobado: ['Aprobado', 'ok'], rechazado: ['Rechazado', 'critica'] };
+  async function pagosWeb(c, navegar, fl) {
+    const r = await DOVA.get(`/web/pagos?${new URLSearchParams(Object.entries(fl).filter(([, v]) => v))}`);
+    const f = (v, t) => `<button class="dova-ext-subtab ${fl.estado === v ? 'activo' : ''}" data-f="${v}">${t}</button>`;
+    c.innerHTML = `<p class="dova-nota">Pagos que los pacientes hicieron por transferencia o QR desde su cuenta. <strong>Mirá el comprobante y fijate que la plata haya entrado al banco</strong> antes de aprobar: al aprobar se registra el cobro y entra a la caja.</p>
+      <div class="dova-web-filtros">${f('pendiente', `Para revisar (${r.pendientes})`)}${f('', 'Todos')}</div>
+      ${r.items.length ? `<div class="dova-web-lista">${r.items.map((x) => `<article class="dova-web-card ${x.estado !== 'pendiente' ? 'cerrada' : ''}">
+          <header>${badge(EST_PAGO[x.estado][0], EST_PAGO[x.estado][1])} <strong>${esc(x.paciente)}</strong> <span class="dova-nota">C.I. ${esc(x.ci || '-')}</span><span class="dova-nota dova-web-cuando">${esc(fmtFechaHora(x.creado_en))}</span></header>
+          <p><strong>${X.fmtGs(x.monto)}</strong> · ${x.metodo === 'qr' ? 'QR' : 'Transferencia'}${x.referencia ? ` · operación ${esc(x.referencia)}` : ''} · ${x.cuota_numero ? `cuota ${x.cuota_numero}` : x.presupuesto_id ? `a cuenta del presupuesto N.º ${x.presupuesto_id}` : 'pago a cuenta'}</p>
+          ${x.nota ? `<p class="dova-nota">“${esc(x.nota)}”</p>` : ''}
+          ${x.estado === 'rechazado' ? `<p class="dova-nota">Motivo: ${esc(x.motivo_rechazo)} · ${esc(x.revisado_por_nombre || '')}</p>` : ''}
+          ${x.estado === 'aprobado' ? `<p class="dova-nota">Aprobado por ${esc(x.revisado_por_nombre || '-')}${x.factura_numero ? ` · factura ${esc(x.factura_numero)}` : ''}</p>` : ''}
+          <div class="dova-web-acciones"><button class="dova-btn-secundario" data-ver-comp="${x.id}" data-mime="${esc(x.comprobante_mime)}">Ver comprobante</button>
+            <button class="dova-btn-secundario" data-pac="${x.paciente_id}">Ver ficha</button>
+            ${x.estado === 'pendiente' && puede('pagos.create') ? `<button class="dova-btn-primary" data-aprobar="${x.id}">Aprobar</button><button class="dova-btn-link dova-ext-peligro" data-rechazar="${x.id}">Rechazar</button>` : ''}</div>
+        </article>`).join('')}</div>`
+        : `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">💳</div><h3>${fl.estado === 'pendiente' ? 'No hay pagos para revisar' : 'Todavía no hay pagos desde la web'}</h3><p class="dova-nota">Cuando un paciente envíe un comprobante desde su cuenta, aparece acá y te llega un aviso.</p></div>`}`;
+    const recargar = (cambio) => pagosWeb(c, navegar, { ...fl, ...cambio });
+    c.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => recargar({ estado: b.dataset.f })));
+    c.querySelectorAll('[data-pac]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.pac)));
+    c.querySelectorAll('[data-ver-comp]').forEach((b) => b.addEventListener('click', async () => {
+      const w = window.open('', '_blank');
+      try { const res = await DOVA.request(`/web/pagos/${b.dataset.verComp}/comprobante`, { raw: true }); if (!res.ok) throw new Error('No se pudo abrir el comprobante'); const u = URL.createObjectURL(await res.blob()); if (w) w.location.href = u; setTimeout(() => URL.revokeObjectURL(u), 60000); }
+      catch (e) { if (w) w.close(); toast(e.message, 'error'); }
+    }));
+    c.querySelectorAll('[data-aprobar]').forEach((b) => b.addEventListener('click', () => {
+      const x = r.items.find((i) => String(i.id) === b.dataset.aprobar);
+      X.modal('Aprobar pago', `<p>¿Confirmás que entraron <strong>${X.fmtGs(x.monto)}</strong> de ${esc(x.paciente)} al banco?</p>
+        <p class="dova-nota">Se registra el cobro${x.cuota_numero ? ` de la cuota ${x.cuota_numero}` : ''}, entra a la caja (si está abierta) y le llega un email al paciente.</p>
+        ${puede('facturacion.crear') ? '<label class="dova-ext-check"><input type="checkbox" data-facturar checked/> Generar la factura del cobro</label>' : ''}
+        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary" data-si>Aprobar pago</button></div>`);
+      const box = document.querySelector('.dova-modal-box');
+      box.querySelector('[data-si]').addEventListener('click', async (ev) => {
+        ev.target.disabled = true;
+        try {
+          const fz = box.querySelector('[data-facturar]');
+          const rr = await DOVA.post(`/web/pagos/${x.id}/aprobar`, { facturar: !!(fz && fz.checked) });
+          X.cerrarModal();
+          toast(`Pago aprobado${rr.factura ? ` · factura ${rr.factura.numero}` : ''}${rr.cajaReflejada === false ? '. La caja está cerrada: se suma al abrirla.' : ''}`, 'ok');
+          recargar({});
+        } catch (e) { ev.target.disabled = false; toast(e.message, 'error'); }
+      });
+    }));
+    c.querySelectorAll('[data-rechazar]').forEach((b) => b.addEventListener('click', () => X.modalForm('Rechazar pago', [
+      { k: 'motivo', label: 'Motivo (el paciente lo va a ver)', tipo: 'textarea', req: true },
+    ], {}, async (d) => { await DOVA.post(`/web/pagos/${b.dataset.rechazar}/rechazar`, d); toast('Pago rechazado: le avisamos al paciente', 'ok'); recargar({}); }, { textoBoton: 'Rechazar pago', extraHtml: '<p class="dova-nota">Por ejemplo: "No vemos la transferencia en el banco" o "El monto no coincide".</p>' })));
+  }
+
   function tarjeta(s) {
     const d = s.datos || {};
     const salud = Object.entries(d.salud || {}).filter(([, v]) => v && v.r === 'si');
@@ -70,12 +128,13 @@ const DovaWeb = (() => {
         ${s.mensaje ? `<p class="dova-nota">“${esc(s.mensaje)}”</p>` : ''}`;
     } else cuerpo = `<p class="dova-web-msg">${esc(s.mensaje)}</p>`;
     return `<article class="dova-web-card ${s.estado !== 'pendiente' ? 'cerrada' : ''}">
-      <header>${badge(TIPO[s.tipo][0], TIPO[s.tipo][1])} <strong>${esc(s.nombre)}</strong> ${s.paciente_nuevo ? badge('Paciente nuevo', 'ok') : s.paciente_id ? badge('Ya era paciente', 'info') : ''}
+      <header>${badge(TIPO[s.tipo][0], TIPO[s.tipo][1])} <strong>${esc(s.nombre)}</strong> ${s.paciente_nuevo ? badge('Paciente nuevo', 'ok') : s.paciente_id ? badge('Ya era paciente', 'info') : ''} ${s.paciente_id && s.web_verificado === false ? badge('Identidad sin verificar', 'atencion') : ''}
         <span class="dova-nota dova-web-cuando">${esc(fmtFechaHora(s.creado_en))}</span></header>
       ${cuerpo}
       <p class="dova-nota">${contacto}</p>
       <div class="dova-web-acciones">
         ${s.paciente_id ? `<button class="dova-btn-secundario" data-pac="${s.paciente_id}">Ver ficha</button>` : ''}
+        ${s.paciente_id && s.web_verificado === false && puede('pacientes.edit') ? `<button class="dova-btn-secundario" data-verificar="${s.paciente_id}" title="Hacelo cuando el paciente venga en persona y muestre su cédula">Verificar identidad</button>` : ''}
         ${s.turno_id ? '<button class="dova-btn-secundario" data-agenda>Ver agenda</button>' : ''}
         ${wa ? `<a class="dova-btn-secundario" href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
         ${s.tipo === 'registro' && !s.paciente_nuevo && s.paciente_id && s.estado === 'pendiente' && puede('pacientes.edit') ? `<button class="dova-btn-secundario" data-aplicar="${s.id}">Pasar datos a la ficha</button>` : ''}
@@ -120,6 +179,24 @@ const DovaWeb = (() => {
           <p class="dova-nota" style="margin-top:12px">Profesionales que atienden turnos online.</p>
           <div class="dova-web-checks">${oAct.map((o) => `<label class="dova-ext-check"><input type="checkbox" data-odo="${o.id}" ${marcado(cfg.odontologos_web, o.id) ? 'checked' : ''}/> ${esc(o.nombre)}</label>`).join('')}</div>
         </section>
+        <section class="dova-ext-caja"><h4>Cuentas de pacientes</h4>
+          <label class="dova-ext-check"><input type="checkbox" name="cuentasActivas" ${cfg.cuentas_activas ? 'checked' : ''}/> Los pacientes pueden crear su cuenta y entrar a "Mi cuenta"</label>
+          <p class="dova-nota">La cuenta se crea con un código que llega al <strong>email de la ficha</strong> del paciente. Los pacientes que se registraron solos desde la web tienen que ser verificados en recepción (botón "Verificar identidad").</p>
+          <p>${cfg.correo_configurado ? badge('Envío de emails configurado', 'ok') : badge('Falta configurar el envío de emails', 'critica')}</p>
+          ${cfg.correo_configurado ? '' : '<p class="dova-nota">Sin email no se pueden crear cuentas. Hay que cargar en Render las variables SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_FROM (ver README).</p>'}
+          <div class="dova-fac-filtros-form"><div><label>Mandar un email de prueba a</label><input type="email" data-prueba-mail placeholder="tu@email.com"/></div><div class="dova-fac-f-botones"><button type="button" class="dova-btn-secundario" data-probar-mail>Probar</button></div></div>
+        </section>
+        <section class="dova-ext-caja"><h4>Pagos online (transferencia o QR)</h4>
+          <label class="dova-ext-check"><input type="checkbox" name="pagosActivos" ${cfg.pagos_activos ? 'checked' : ''}/> Los pacientes pueden pagar desde su cuenta y mandar el comprobante</label>
+          ${X.formHtml([
+            { k: 'banco', label: 'Banco', max: 100 }, { k: 'titular', label: 'Titular de la cuenta', max: 150 }, { k: 'numeroCuenta', label: 'N.º de cuenta', max: 60 },
+            { k: 'documentoTitular', label: 'RUC o C.I. del titular', max: 40 }, { k: 'aliasPago', label: 'Alias (ej. celular o RUC)', max: 100 },
+            { k: 'instruccionesPago', label: 'Instrucciones para el paciente (opcional)', tipo: 'textarea' },
+          ], { banco: cfg.banco, titular: cfg.titular, numeroCuenta: cfg.numero_cuenta, documentoTitular: cfg.documento_titular, aliasPago: cfg.alias_pago, instruccionesPago: cfg.instrucciones_pago })}
+          <div class="dova-fac-logo">${cfg.qr_mime ? '<img data-qr alt="QR de pago" style="max-height:140px"/>' : '<span class="dova-nota">Sin QR cargado.</span>'}</div>
+          <div><input type="file" accept="image/png,image/jpeg" data-qr-archivo aria-label="Imagen del QR"/> <button type="button" class="dova-btn-secundario" data-subir-qr>Subir QR</button></div>
+          <p class="dova-nota">Cada pago queda "para revisar" en la pestaña <strong>Pagos para revisar</strong>: recién al aprobarlo se registra el cobro y entra a la caja.</p>
+        </section>
         <section class="dova-ext-caja"><h4>Textos y contacto</h4>
           ${X.formHtml([
             { k: 'titulo', label: 'Nombre de la clínica en la página', max: 150 }, { k: 'eslogan', label: 'Frase de bienvenida', max: 250 },
@@ -134,6 +211,17 @@ const DovaWeb = (() => {
         <div class="dova-fac-form-pie"><a class="dova-btn-secundario" href="${urlWeb()}" target="_blank" rel="noopener">Ver la página</a><button class="dova-btn-primary">Guardar cambios</button></div>
       </form>`;
     const f = c.querySelector('[data-cfg]');
+    if (cfg.qr_mime) { try { const rq = await fetch('/api/web/publico/qr'); if (rq.ok) c.querySelector('[data-qr]').src = URL.createObjectURL(await rq.blob()); } catch (_e) { /* */ } }
+    c.querySelector('[data-subir-qr]').addEventListener('click', async () => {
+      const a = c.querySelector('[data-qr-archivo]').files[0];
+      if (!a) { toast('Elegí la imagen del QR', 'error'); return; }
+      const fd = new FormData(); fd.append('qr', a);
+      try { await DOVA.postForm('/web/config/qr', fd); toast('QR guardado', 'ok'); configuracion(c); } catch (e) { toast(e.message, 'error'); }
+    });
+    c.querySelector('[data-probar-mail]').addEventListener('click', async () => {
+      const em = c.querySelector('[data-prueba-mail]').value.trim();
+      try { await DOVA.post('/web/correo/prueba', { email: em }); toast(`Email de prueba enviado a ${em}`, 'ok'); } catch (e) { toast(e.message, 'error'); }
+    });
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const err = f.querySelector('[data-error]'); err.style.display = 'none';
@@ -147,9 +235,10 @@ const DovaWeb = (() => {
       }
       const trat = [...f.querySelectorAll('[data-trat]')]; const odo = [...f.querySelectorAll('[data-odo]')];
       const sel = (l, k) => (l.every((x) => x.checked) ? null : l.filter((x) => x.checked).map((x) => Number(x.dataset[k])));
-      const textos = X.leerForm(f, ['titulo', 'eslogan', 'presentacion', 'direccion', 'telefono', 'whatsapp', 'email', 'instagram', 'facebook', 'mapaUrl'].map((k) => ({ k })), true);
+      const textos = X.leerForm(f, ['titulo', 'eslogan', 'presentacion', 'direccion', 'telefono', 'whatsapp', 'email', 'instagram', 'facebook', 'mapaUrl', 'banco', 'titular', 'numeroCuenta', 'documentoTitular', 'aliasPago', 'instruccionesPago'].map((k) => ({ k })), true);
       const datos = {
         ...textos, horarios, reservasActivas: f.reservasActivas.checked, mostrarPrecios: f.mostrarPrecios.checked,
+        cuentasActivas: f.cuentasActivas.checked, pagosActivos: f.pagosActivos.checked,
         intervaloMinutos: Number(f.intervaloMinutos.value), diasAdelante: Number(f.diasAdelante.value), anticipacionHoras: Number(f.anticipacionHoras.value),
         cancelacionHoras: Number(f.cancelacionHoras.value), maxTurnosPorPersona: Number(f.maxTurnosPorPersona.value),
         tratamientosWeb: sel(trat, 'trat'), odontologosWeb: sel(odo, 'odo'),

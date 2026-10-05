@@ -47,6 +47,18 @@ services:
       # "Hoy" es el día de Paraguay para toda la aplicación y la base.
       - key: DOVA_TZ
         value: America/Asuncion
+      # Email para las cuentas de pacientes de la página web (ver README).
+      # Se completan a mano en Render → dova → Environment.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
 
 databases:
   - name: dova-db

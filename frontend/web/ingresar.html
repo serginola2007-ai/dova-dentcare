@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Primera visita — dentcarerc</title>
-  <meta name="description" content="Completá tu ficha de paciente antes de tu primera visita a dentcarerc." />
+  <title>Ingresar — dentcarerc</title>
+  <meta name="description" content="Ingresá a tu cuenta de paciente de dentcarerc." />
   <meta name="theme-color" content="#2B241E" />
   <link rel="icon" href="/iconos/icono-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,21 +21,15 @@
     <nav class="cabecera-nav" id="menu-principal" aria-label="Secciones">
       <a href="tratamientos.html">Tratamientos</a>
       <a href="equipo.html">Equipo</a>
-      <a href="primera-visita.html" aria-current="page">Primera visita</a>
+      <a href="primera-visita.html">Primera visita</a>
       <a href="contacto.html">Contacto</a>
-      <a href="mi-cuenta.html" data-nav-cuenta>Mi cuenta</a>
+      <a href="mi-cuenta.html" aria-current="page" data-nav-cuenta>Mi cuenta</a>
       <a class="boton boton-chico" href="reservar.html">Reservar turno</a>
     </nav>
   </header>
 
   <main id="contenido" class="">
-    <section class="encabezado">
-      <h1>¿Es tu primera visita?</h1>
-      <p>Completá tu ficha desde casa y el día del turno vas directo al sillón. Tus datos de salud solo los ve el equipo de la clínica.</p>
-    </section>
-    <section class="bloque bloque-sin-linea ficha" aria-label="Ficha de paciente">
-      <form class="formulario" data-form-ficha novalidate></form>
-    </section>
+    <section class="acceso" data-acceso aria-live="polite"><p class="cargando">Cargando…</p></section>
   </main>
 
   <footer class="pie">

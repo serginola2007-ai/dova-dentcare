@@ -253,3 +253,50 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - **Enlaces viejos:** los del tipo `/web/#turno=…` redirigen solos a `mi-turno.html`.
 - **Cómo se generan:** las páginas salen de un mismo molde, así el encabezado y el pie son idénticos en todas.
 - **Pruebas:** `ui-web.js` 60/60.
+
+## Cuenta del paciente y pagos online (migración 0026)
+
+**En la página web:**
+- **"Ingresar" / "Mi cuenta"** (en el menú). El paciente entra con su **cédula o email** y su **contraseña**.
+  - **Crear la cuenta / Olvidé la contraseña:** escribe su cédula y recibe un **código de 6 números al email que la clínica tiene en su ficha** (no a uno que escriba él). Con el código elige su contraseña.
+  - **Protecciones:**
+    - Si la cédula no existe, el mensaje es el mismo, así no se puede averiguar quién es paciente.
+    - El código vence en 15 minutos y admite 5 intentos.
+    - Se manda un máximo de 3 códigos por hora.
+    - La cuenta se bloquea 15 minutos después de 5 contraseñas incorrectas.
+    - Cambiar la contraseña cierra las demás sesiones.
+  - **Pacientes que se registraron solos desde la web:** no pueden crear la cuenta hasta que recepción **verifique su identidad** (botón "Verificar identidad" en Página web → Lo que llegó). Así nadie abre una cuenta con una cédula ajena.
+- **Mi cuenta:**
+  - **Turnos:** próximos (confirmar y cancelar) y anteriores. Reservar con sesión no pide datos.
+  - **Pagos:**
+    - Cuotas y saldos pendientes. Los presupuestos financiados se pagan por cuota.
+    - Para pagar ve los **datos del banco y el QR**, paga por transferencia o QR y **sube el comprobante** (foto o PDF, hasta 5 MB; se revisa el contenido real del archivo).
+    - Ve si su pago está en revisión, confirmado o rechazado (con el motivo).
+  - **Comprobantes:** descarga de recibos y facturas en PDF.
+  - **Mis datos** y cambio de contraseña.
+
+**En DOVA (Movimientos → Página web):**
+- **"Pagos para revisar":** ver el comprobante, y **Aprobar** o **Rechazar** con motivo.
+  - Al aprobar se registra el cobro (y la cuota queda pagada), entra **una sola vez** a la caja y, si se marca, se genera la factura.
+  - El paciente recibe un email en los dos casos.
+  - Informar un pago **no** toca la caja: recién cuenta cuando recepción lo aprueba.
+- **Configurar la página:**
+  - Activar las cuentas y los pagos online.
+  - Datos del banco (banco, titular, cuenta, RUC, alias, instrucciones) e imagen del QR.
+  - Ver si el email está configurado y mandar un email de prueba.
+- **Permisos:**
+  - Revisar pagos: `web.ver` + `pagos.create`.
+  - Verificar identidad: `pacientes.edit`.
+  - Banco, QR y email: `web.configurar`.
+
+**Seguridad:**
+- La sesión del paciente usa una clave distinta a la de DOVA: **un paciente no puede entrar al sistema de la clínica** (probado).
+- Cada pedido filtra por su paciente: no puede ver ni tocar turnos, cuotas, recibos ni facturas de otro (probado).
+
+**Falta configurar en Render:** las variables SMTP del email (ver README).
+
+**Pruebas:** `portal-api.js` 57/57 y `ui-portal.js` 52/52 (celular y compu).
+
+### Correcciones encontradas en la regresión
+- **App instalada sin internet:** si no podía cargar su configuración, apuntaba a una dirección de desarrollo. Ahora usa la del mismo sitio, y la configuración queda guardada en el celular.
+- **Pestañas internas (subpestañas) de DOVA:** si se cambiaba de pestaña mientras otra seguía cargando (por ejemplo Finanzas → Comisiones), aparecía un error. Ahora el resultado viejo se descarta solo. Vale para todas las secciones.

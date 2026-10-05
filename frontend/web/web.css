@@ -264,3 +264,60 @@ legend { font: 700 20px var(--titulo); margin-bottom: 4px; padding: 0; }
 .pie-nav a { color: var(--pizarra); text-decoration: none; font-size: 14px; }
 .pie-nav a:hover { color: var(--tinta); text-decoration: underline; }
 body { min-height: 100vh; display: flex; flex-direction: column; } main { flex: 1; }
+
+/* ---- Ingresar y Mi cuenta ---- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.acceso { max-width: 520px; margin: 0 auto; padding: clamp(32px, 6vw, 72px) 16px; }
+.acceso-titulo { font-size: clamp(32px, 5vw, 44px); margin-bottom: 8px; }
+.acceso-caja .formulario { margin-top: 20px; }
+.acceso-otros { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--linea); }
+.acceso-otros .boton { margin-top: 12px; }
+input.codigo { font: 700 28px/1 var(--texto); letter-spacing: 10px; text-align: center; }
+
+.cuenta { max-width: 1000px; margin: 0 auto; padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 48px); }
+.cuenta-cab { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.cuenta-cab h1 { font-size: clamp(34px, 5vw, 52px); }
+.cuenta-cab .lema { margin-bottom: 4px; }
+.cuenta-cab-acc { display: flex; gap: 12px; align-items: center; }
+.cuenta-resumen { display: flex; flex-wrap: wrap; gap: 12px 40px; margin: 24px 0 8px; padding: 18px 22px; background: var(--blanco); border-radius: var(--radio); border: 1px solid var(--linea); }
+.cuenta-resumen:empty { display: none; }
+.cuenta-resumen span { display: block; font-size: 14px; color: var(--pizarra); }
+.cuenta-resumen strong { font: 500 26px var(--titulo); }
+.cuenta-resumen strong.alerta { color: var(--error); }
+.cuenta-tabs { display: flex; gap: 4px; margin: 24px 0 20px; border-bottom: 1px solid var(--linea); overflow-x: auto; }
+.cuenta-tabs a { padding: 12px 16px; text-decoration: none; color: var(--pizarra); font-weight: 600; border-bottom: 3px solid transparent; white-space: nowrap; }
+.cuenta-tabs a[aria-current="page"] { color: var(--tinta); border-color: var(--cobalto); }
+.cuenta-panel h2 { font-size: clamp(24px, 3vw, 30px); margin-bottom: 14px; }
+.lista-cuenta { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.turno-item { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 16px 18px; background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--radio); }
+.turno-item.vencida { border-color: var(--error); }
+.turno-acc { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.turno-acc .monto { font: 500 20px var(--titulo); }
+.estado { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; background: var(--suave); color: var(--cobalto-osc); }
+.estado.ok { background: #E6EBDD; color: var(--ok); }
+.estado.no { background: #F6E0D8; color: var(--error); }
+.lista-simple li { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linea); }
+.lista-simple li > span:first-child { min-width: 120px; color: var(--pizarra); }
+.lista-simple .docs { margin-left: auto; display: flex; gap: 8px; }
+.lista-simple .motivo { width: 100%; font-size: 14px; color: var(--error); }
+.vacio { color: var(--pizarra); padding: 8px 0; }
+.mis-datos { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0 0 16px; }
+.mis-datos dt { color: var(--pizarra); }
+.mis-datos dd { margin: 0; font-weight: 600; }
+
+.pago-form { margin-top: 24px; background: var(--blanco); border-radius: 24px; padding: clamp(20px, 3vw, 32px); box-shadow: var(--sombra); max-width: none; }
+.pago-form h3 { font-size: 26px; }
+.pago-pasos { margin: 0; padding-left: 22px; display: grid; gap: 12px; }
+.datos-banco { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; margin: 10px 0; padding: 14px 16px; background: var(--encia-suave); border-radius: var(--radio); }
+.datos-banco dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
+.datos-banco dt { color: var(--pizarra); }
+.datos-banco dd { margin: 0; font-weight: 700; }
+.copiar { margin-left: 8px; border: 1px solid var(--linea); background: var(--blanco); border-radius: 8px; padding: 2px 8px; font: 600 12px var(--texto); color: var(--cobalto-osc); cursor: pointer; }
+.qr { width: 160px; height: 160px; object-fit: contain; background: #fff; border-radius: 12px; padding: 8px; }
+.metodos { display: flex; gap: 10px; flex-wrap: wrap; }
+.opcion-chica { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 1.5px solid var(--linea); border-radius: 999px; cursor: pointer; font-weight: 700; }
+.opcion-chica:has(input:checked) { border-color: var(--cobalto); background: var(--suave); }
+.opcion-chica input { accent-color: var(--cobalto); }
+input[type=file] { padding: 10px; background: var(--porcelana); }
+@media (max-width: 560px) { .lista-simple .docs { margin-left: 0; } .mis-datos, .datos-banco dl { grid-template-columns: 1fr; gap: 2px; } .mis-datos dd, .datos-banco dd { margin-bottom: 8px; } }
+@media (max-width: 560px) { .cuenta-tabs a { padding: 12px 10px; font-size: 15px; } }

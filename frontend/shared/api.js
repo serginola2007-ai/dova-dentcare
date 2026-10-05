@@ -5,7 +5,8 @@
 
 const DOVA = (() => {
   const STORAGE_KEY = 'dova_session';
-  let apiBase = window.DOVA_API_BASE || 'http://localhost:4000/api';
+  // Sin config.js (p. ej. la app instalada abierta sin internet): la API del mismo sitio.
+  let apiBase = window.DOVA_API_BASE || (/^https?:$/.test(location.protocol) ? '/api' : 'http://localhost:4000/api');
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (_e) { return null; }

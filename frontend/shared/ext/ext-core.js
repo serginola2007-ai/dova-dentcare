@@ -215,8 +215,12 @@ const DovaExt = (() => {
     const abrir = (id) => {
       root.querySelectorAll(':scope > .dova-ext-subtabs .dova-ext-subtab').forEach((b) => b.classList.toggle('activo', b.dataset.subtab === id));
       const p = vis.find((x) => x.id === id);
-      panel.innerHTML = cargando;
-      Promise.resolve(p.render(panel)).catch((e) => { panel.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; });
+      // Cada apertura dibuja en su propio contenedor: si el usuario cambia de
+      // pestaña antes de que termine de cargar, lo viejo se descarta sin errores.
+      const cont = document.createElement('div');
+      cont.innerHTML = cargando;
+      panel.replaceChildren(cont);
+      Promise.resolve(p.render(cont)).catch((e) => { if (cont.isConnected) cont.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; });
     };
     root.querySelectorAll(':scope > .dova-ext-subtabs .dova-ext-subtab').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.subtab)));
     if (vis.length) abrir(inicial && vis.some((p) => p.id === inicial) ? inicial : vis[0].id);

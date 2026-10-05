@@ -28,6 +28,32 @@
   const misTurnos = () => { try { return JSON.parse(localStorage.getItem(MIS) || '[]'); } catch (_e) { return []; } };
   const guardarTurno = (t) => { try { const l = misTurnos().filter((x) => x.token !== t.token); l.unshift(t); localStorage.setItem(MIS, JSON.stringify(l.slice(0, 10))); } catch (_e) { /* modo privado */ } };
 
+  // ---- Sesión del paciente (cuenta en la web) ----
+  const SES = 'dentcare-sesion';
+  const sesion = () => { try { return JSON.parse(localStorage.getItem(SES) || 'null'); } catch (_e) { return null; } };
+  const guardarSesion = (x) => { try { localStorage.setItem(SES, JSON.stringify(x)); } catch (_e) { /* modo privado */ } };
+  const cerrarSesion = () => { try { localStorage.removeItem(SES); } catch (_e) { /* */ } };
+  async function cuentaApi(ruta, { method = 'GET', body, form, blob } = {}) {
+    const s = sesion();
+    const h = {}; if (s) h.Authorization = `Bearer ${s.token}`;
+    if (body) h['Content-Type'] = 'application/json';
+    let r;
+    try { r = await fetch(`/api/web/cuenta${ruta}`, { method, headers: h, body: form || (body ? JSON.stringify(body) : undefined) }); }
+    catch (_e) { throw new Error('No hay conexión. Revisá tu internet y probá de nuevo.'); }
+    if (r.status === 401 && s && !ruta.startsWith('/ingresar') && !ruta.startsWith('/activar')) { cerrarSesion(); location.href = `ingresar.html?volver=${encodeURIComponent(location.pathname.split('/').pop() + location.hash)}`; throw new Error('Tu sesión venció'); }
+    if (blob && r.ok) return r.blob();
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || 'No se pudo completar. Probá de nuevo.');
+    return j;
+  }
+  async function bajarPdf(ruta, nombre) {
+    try {
+      const b = await cuentaApi(ruta, { blob: true });
+      const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nombre; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 1500);
+    } catch (e) { aviso(e.message); }
+  }
+
   let info = null;
   const st = { tratamientoId: null, odontologoId: null, fecha: null, hora: null, paso: 1, mes: null, dias: {} };
 
@@ -65,6 +91,10 @@
       }
     }
     if (hay('[data-vista-turno]')) { window.addEventListener('hashchange', ruteoTurno); ruteoTurno(); }
+    const ses = sesion();
+    $$('[data-nav-cuenta]').forEach((a) => { a.textContent = ses ? `Hola, ${ses.nombre}` : 'Ingresar'; });
+    if (hay('[data-acceso]')) paginaIngresar();
+    if (hay('[data-cuenta]')) paginaCuenta();
     if (hay('[data-form-ficha]')) formFicha();
     if (hay('[data-form-consulta]')) formConsulta();
   }
@@ -257,7 +287,31 @@
   const leer = (form) => Object.fromEntries(new FormData(form).entries());
 
   function pasoDatos(c) {
-    c.innerHTML = `${resumenHtml()}<h3>Tus datos</h3><p class="reserva-ayuda">Los usamos solo para tu turno. Si ya sos paciente, con tu cédula te encontramos.</p>
+    const ses = sesion();
+    if (ses) {
+      c.innerHTML = `${resumenHtml()}<h3>Confirmá tu turno</h3><p class="reserva-ayuda">Reservás como <strong>${esc(ses.nombre)} ${esc(ses.apellido || '')}</strong>. <a href="#" data-otro>¿No sos vos?</a></p>
+        <form class="formulario" data-form-reserva novalidate>
+          <div class="campo"><label for="r-com">¿Algo que debamos saber? <span class="opcional">(opcional)</span></label><textarea id="r-com" name="comentario" rows="2" maxlength="500"></textarea></div>
+          <p class="error" data-error role="alert" hidden></p>
+          <div class="reserva-pie"><button type="button" class="boton-texto" data-atras>Cambiar día u hora</button><button class="boton" type="submit">Confirmar turno</button></div>
+        </form>`;
+      $('[data-otro]', c).addEventListener('click', (e) => { e.preventDefault(); cerrarSesion(); pasoDatos(c); $$('[data-nav-cuenta]').forEach((a) => { a.textContent = 'Ingresar'; }); });
+      $('[data-atras]', c).addEventListener('click', () => irPaso(st.fecha ? 3 : 1));
+      const form = $('[data-form-reserva]', c);
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const err = $('[data-error]', form); err.hidden = true; const btn = $('button[type=submit]', form);
+        btn.disabled = true; btn.textContent = 'Reservando…';
+        try {
+          const r = await cuentaApi('/reservar', { method: 'POST', body: { tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora, comentario: form.comentario.value } });
+          try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+          guardarTurno({ token: r.token, fecha: st.fecha, hora: st.hora, motivo: (tratElegido() || {}).nombre || 'Consulta' });
+          location.href = 'mi-cuenta.html#turnos';
+        } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno'; }
+      });
+      return;
+    }
+    c.innerHTML = `${resumenHtml()}<h3>Tus datos</h3><p class="reserva-ayuda">Los usamos solo para tu turno. Si ya sos paciente, con tu cédula te encontramos.${info.cuentasActivas ? ` ¿Tenés cuenta? <a href="ingresar.html?volver=${encodeURIComponent(`reservar.html?${new URLSearchParams(Object.entries({ t: st.tratamientoId || '', o: st.odontologoId || '', f: st.fecha, h: st.hora }).filter(([, v]) => v))}`)}">Ingresá</a> y no cargues nada.` : ''}</p>
       <form class="formulario" data-form-reserva novalidate>
         ${camposPersona('r')}
         <div class="campo"><label for="r-com">¿Algo que debamos saber? <span class="opcional">(opcional)</span></label><textarea id="r-com" name="comentario" rows="2" maxlength="500" placeholder="Por ejemplo: me duele una muela de abajo"></textarea></div>
@@ -387,6 +441,247 @@
         await api('/consulta', { method: 'POST', body: d });
         f.innerHTML = `<p><strong>Recibimos tu consulta.</strong> Te vamos a responder lo antes posible.</p>`;
       } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Enviar consulta'; }
+    });
+  }
+
+  // =================================================================== ingresar / crear cuenta
+  function volverA() {
+    const v = params.get('volver') || '';
+    return /^[a-z-]+\.html([?#][\w=&%.:#-]*)?$/i.test(v) ? v : 'mi-cuenta.html';
+  }
+  function paginaIngresar() {
+    const c = $('[data-acceso]');
+    if (sesion()) { location.replace(volverA()); return; }
+    if (!info.cuentasActivas) {
+      c.innerHTML = `<div class="tarjeta-turno"><h1 class="acceso-titulo">Mi cuenta</h1><p style="margin-top:10px">Las cuentas online todavía no están disponibles. Mientras tanto podés <a href="reservar.html">reservar tu turno</a> sin cuenta o escribirnos desde <a href="contacto.html">Contacto</a>.</p></div>`;
+      return;
+    }
+    const vista = (modo) => {
+      if (modo === 'ingresar') {
+        c.innerHTML = `<div class="tarjeta-turno acceso-caja">
+          <h1 class="acceso-titulo">Ingresá a tu cuenta</h1>
+          <p class="ayuda">Mirá tus turnos, lo que te queda por pagar y tus comprobantes, y pagá desde acá.</p>
+          <form class="formulario" data-f-ingresar novalidate>
+            <div class="campo"><label for="i-u">Cédula o email</label><input id="i-u" name="usuario" autocomplete="username" maxlength="150" required /></div>
+            <div class="campo"><label for="i-c">Contraseña</label><input id="i-c" name="clave" type="password" autocomplete="current-password" maxlength="100" required /></div>
+            <p class="error" data-error role="alert" hidden></p>
+            <button class="boton" type="submit">Ingresar</button>
+          </form>
+          <div class="acceso-otros">
+            <p><strong>¿Es la primera vez?</strong> Creá tu cuenta con tu cédula: te mandamos un código al email que tenemos en tu ficha.</p>
+            <button type="button" class="boton boton-claro" data-crear>Crear mi cuenta</button>
+            <p style="margin-top:14px"><button type="button" class="boton-texto" data-olvido>Me olvidé la contraseña</button></p>
+          </div></div>`;
+        $('[data-crear]', c).addEventListener('click', () => vista('codigo'));
+        $('[data-olvido]', c).addEventListener('click', () => vista('codigo'));
+        const f = $('[data-f-ingresar]', c);
+        f.addEventListener('submit', async (ev) => {
+          ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
+          if (!f.usuario.value.trim() || !f.clave.value) { err.textContent = 'Escribí tu cédula o email y tu contraseña'; err.hidden = false; return; }
+          const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Ingresando…';
+          try { const r = await cuentaApi('/ingresar', { method: 'POST', body: { usuario: f.usuario.value, clave: f.clave.value } }); guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); }
+          catch (e) { err.textContent = e.message; err.hidden = false; b.disabled = false; b.textContent = 'Ingresar'; }
+        });
+      } else if (modo === 'codigo') {
+        c.innerHTML = `<div class="tarjeta-turno acceso-caja">
+          <h1 class="acceso-titulo">Tu código</h1>
+          <p class="ayuda">Escribí tu cédula. Te mandamos un código de 6 números al email que la clínica tiene en tu ficha.</p>
+          <form class="formulario" data-f-codigo novalidate>
+            <div class="campo"><label for="k-ci">Cédula</label><input id="k-ci" name="ci" inputmode="numeric" maxlength="20" autocomplete="off" required /></div>
+            <p class="error" data-error role="alert" hidden></p>
+            <button class="boton" type="submit">Enviarme el código</button>
+          </form>
+          <p class="ayuda" style="margin-top:16px">¿No tenés email cargado o cambiaste de email? Pedí en recepción que lo actualicen.</p>
+          <p style="margin-top:14px"><button type="button" class="boton-texto" data-volver>Ya tengo cuenta</button></p></div>`;
+        $('[data-volver]', c).addEventListener('click', () => vista('ingresar'));
+        const f = $('[data-f-codigo]', c);
+        f.addEventListener('submit', async (ev) => {
+          ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
+          const ci = f.ci.value.trim(); if (ci.replace(/\D/g, '').length < 4) { err.textContent = 'Escribí tu número de cédula'; err.hidden = false; return; }
+          const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Enviando…';
+          try { const r = await cuentaApi('/codigo', { method: 'POST', body: { ci } }); vista({ paso: 'activar', ci, mensaje: r.mensaje }); }
+          catch (e) { err.textContent = e.message; err.hidden = false; b.disabled = false; b.textContent = 'Enviarme el código'; }
+        });
+      } else {
+        c.innerHTML = `<div class="tarjeta-turno acceso-caja">
+          <h1 class="acceso-titulo">Revisá tu email</h1>
+          <p class="ayuda">${esc(modo.mensaje)}</p>
+          <form class="formulario" data-f-activar novalidate>
+            <div class="campo"><label for="a-cod">Código de 6 números</label><input id="a-cod" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="codigo" required /></div>
+            <div class="campo"><label for="a-c1">Elegí una contraseña</label><input id="a-c1" name="clave" type="password" autocomplete="new-password" maxlength="100" required /><span class="ayuda">Al menos 8 caracteres, con letras y números.</span></div>
+            <div class="campo"><label for="a-c2">Repetí la contraseña</label><input id="a-c2" name="clave2" type="password" autocomplete="new-password" maxlength="100" required /></div>
+            <p class="error" data-error role="alert" hidden></p>
+            <button class="boton" type="submit">Listo, entrar</button>
+          </form>
+          <p style="margin-top:14px"><button type="button" class="boton-texto" data-reenviar>No me llegó: pedir otro código</button></p></div>`;
+        $('[data-reenviar]', c).addEventListener('click', () => vista('codigo'));
+        const f = $('[data-f-activar]', c);
+        f.addEventListener('submit', async (ev) => {
+          ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
+          const m = (t) => { err.textContent = t; err.hidden = false; };
+          if (!/^\d{6}$/.test(f.codigo.value.trim())) return m('Escribí los 6 números del código');
+          if (f.clave.value.length < 8 || !/[A-Za-z]/.test(f.clave.value) || !/\d/.test(f.clave.value)) return m('La contraseña tiene que tener al menos 8 caracteres, con letras y números');
+          if (f.clave.value !== f.clave2.value) return m('Las dos contraseñas no coinciden');
+          const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Guardando…';
+          try { const r = await cuentaApi('/activar', { method: 'POST', body: { ci: modo.ci, codigo: f.codigo.value.trim(), clave: f.clave.value } }); guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); }
+          catch (e) { m(e.message); b.disabled = false; b.textContent = 'Listo, entrar'; }
+        });
+      }
+      const primero = $('input', c); if (primero) primero.focus();
+    };
+    vista(params.get('modo') === 'crear' ? 'codigo' : 'ingresar');
+  }
+
+  // =================================================================== mi cuenta
+  const ESTADO_PAGO = { pendiente: ['En revisión', ''], aprobado: ['Confirmado', 'ok'], rechazado: ['No confirmado', 'no'] };
+  const fechaCorta = (f) => new Intl.DateTimeFormat('es-PY', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${String(f).slice(0, 10)}T12:00:00Z`));
+  async function paginaCuenta() {
+    const c = $('[data-cuenta]'); const ses = sesion();
+    if (!ses) { location.replace(`ingresar.html?volver=${encodeURIComponent('mi-cuenta.html' + location.hash)}`); return; }
+    const SECC = [['turnos', 'Turnos'], ['pagos', 'Pagos'], ['comprobantes', 'Comprobantes'], ['datos', 'Mis datos']];
+    c.innerHTML = `<div class="cuenta-cab"><div><p class="lema">Mi cuenta</p><h1>Hola, ${esc(ses.nombre)}</h1></div>
+        <div class="cuenta-cab-acc"><a class="boton" href="reservar.html">Reservar turno</a><button type="button" class="boton-texto" data-salir>Cerrar sesión</button></div></div>
+      <div class="cuenta-resumen" data-resumen></div>
+      <nav class="cuenta-tabs" aria-label="Mi cuenta">${SECC.map(([k, t]) => `<a href="#${k}" data-tab="${k}">${t}</a>`).join('')}</nav>
+      <div class="cuenta-panel" data-panel aria-live="polite"></div>`;
+    $('[data-salir]', c).addEventListener('click', () => { cerrarSesion(); location.href = 'index.html'; });
+    try { if (sessionStorage.getItem('dentcare-recien')) { sessionStorage.removeItem('dentcare-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
+    const mostrar = async () => {
+      const k = (location.hash.slice(1) || 'turnos'); const sec = SECC.some(([x]) => x === k) ? k : 'turnos';
+      $$('[data-tab]', c).forEach((a) => { if (a.dataset.tab === sec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+      const p = $('[data-panel]', c); p.innerHTML = '<p class="cargando">Cargando…</p>';
+      try { await ({ turnos: panelTurnos, pagos: panelPagos, comprobantes: panelComprobantes, datos: panelDatos })[sec](p); }
+      catch (e) { p.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+    };
+    window.addEventListener('hashchange', mostrar);
+    resumenCuenta();
+    mostrar();
+  }
+  async function resumenCuenta() {
+    const r = $('[data-resumen]'); if (!r) return;
+    try {
+      const e = await cuentaApi('/estado');
+      r.innerHTML = `<div><span>Te queda por pagar</span><strong>${gs(e.resumen.pendiente)}</strong></div>
+        <div><span>Cuotas vencidas</span><strong class="${e.resumen.cuotasVencidas ? 'alerta' : ''}">${e.resumen.cuotasVencidas}</strong></div>
+        ${e.resumen.enRevision ? `<div><span>Pagos en revisión</span><strong>${gs(e.resumen.enRevision)}</strong></div>` : ''}`;
+    } catch (_e) { r.innerHTML = ''; }
+  }
+
+  async function panelTurnos(p) {
+    const t = await cuentaApi('/turnos');
+    const tarjeta = (x) => `<li class="turno-item">
+        <div><strong>${esc(mayus(fechaLarga(x.fecha)))} a las ${esc(x.hora)}</strong><br><span class="ayuda">${esc(x.motivo || 'Consulta')} con ${esc(x.odontologo)}</span></div>
+        <div class="turno-acc">${x.confirmado ? '<span class="estado ok">Confirmado</span>' : `<button type="button" class="boton boton-chico" data-conf="${x.id}">Confirmar que voy</button>`}
+          ${x.puedeCancelar ? `<button type="button" class="boton boton-chico boton-peligro" data-canc="${x.id}">Cancelar</button>` : ''}</div></li>`;
+    const ESTADO_T = { atendido: 'Atendido', cancelado: 'Cancelado', no_asistio: 'No asistió', reprogramado: 'Reprogramado' };
+    p.innerHTML = `<h2>Próximos turnos</h2>
+      ${t.proximos.length ? `<ul class="lista-cuenta">${t.proximos.map(tarjeta).join('')}</ul>` : '<p class="vacio">No tenés turnos próximos. <a href="reservar.html">Reservá uno</a>.</p>'}
+      ${t.proximos.some((x) => !x.puedeCancelar) ? `<p class="ayuda">Online se puede cancelar hasta ${t.cancelacionHoras} h antes. Si falta menos, escribinos.</p>` : ''}
+      <h2 style="margin-top:32px">Anteriores</h2>
+      ${t.anteriores.length ? `<ul class="lista-cuenta lista-simple">${t.anteriores.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.hora)}</span><span>${esc(x.motivo || 'Consulta')}</span><span class="ayuda">${esc(ESTADO_T[x.estado] || (x.vigente ? '' : 'Pasado'))}</span></li>`).join('')}</ul>` : '<p class="vacio">Todavía no hay turnos anteriores.</p>'}`;
+    $$('[data-conf]', p).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.conf}/confirmar`, { method: 'POST' }); aviso('¡Gracias! Confirmaste tu asistencia.'); panelTurnos(p); } catch (e) { aviso(e.message); b.disabled = false; } }));
+    $$('[data-canc]', p).forEach((b) => b.addEventListener('click', async () => {
+      if (b.dataset.seguro !== '1') { b.dataset.seguro = '1'; b.textContent = 'Tocá de nuevo para cancelar'; return; }
+      b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.canc}/cancelar`, { method: 'POST' }); aviso('Cancelaste el turno.'); panelTurnos(p); } catch (e) { aviso(e.message); b.disabled = false; }
+    }));
+  }
+
+  async function panelPagos(p) {
+    const e = await cuentaApi('/estado');
+    const deudas = [
+      ...e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.cantidad_cuotas}`, detalle: `Vence el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: e.enviados.some((x) => x.cuota_id === q.id && x.estado === 'pendiente') })),
+      ...e.presupuestos.filter((x) => x.estado === 'aceptado' && x.pendiente > 0 && !x.enCuotas).map((x) => ({ tipo: 'presupuesto', id: x.id, titulo: `Presupuesto del ${fechaCorta(x.fecha)}`, detalle: `Total ${gs(x.total)} · pagado ${gs(x.pagado)}`, monto: x.pendiente, aCuenta: true })),
+    ];
+    p.innerHTML = `<h2>Lo que te queda por pagar</h2>
+      ${deudas.length ? `<ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}${d.vencida ? ' · vencida' : ''}</span></div>
+          <div class="turno-acc"><strong class="monto">${d.aCuenta ? 'Falta ' : ''}${gs(d.monto)}</strong>${!e.pagosActivos ? '' : d.enRevision ? '<span class="estado">En revisión</span>' : `<button type="button" class="boton boton-chico" data-pagar="${i}">Pagar</button>`}</div></li>`).join('')}</ul>`
+        : '<p class="vacio">No tenés pagos pendientes. 🎉</p>'}
+      ${!e.pagosActivos ? '<p class="ayuda">Los pagos online no están activos. Podés pagar en la clínica.</p>' : `<p style="margin-top:12px"><button type="button" class="boton-texto" data-pagar="libre">Hacer otro pago (seña o a cuenta)</button></p>`}
+      <div data-form-pago></div>
+      <h2 style="margin-top:32px">Pagos que enviaste</h2>
+      ${e.enviados.length ? `<ul class="lista-cuenta lista-simple">${e.enviados.map((x) => `<li><span>${esc(fechaCorta(x.creado_en))}</span><span><strong>${gs(x.monto)}</strong> · ${x.metodo === 'qr' ? 'QR' : 'Transferencia'}</span>
+          <span class="estado ${ESTADO_PAGO[x.estado][1]}">${ESTADO_PAGO[x.estado][0]}</span>${x.motivo_rechazo ? `<span class="motivo">Motivo: ${esc(x.motivo_rechazo)}</span>` : ''}</li>`).join('')}</ul>`
+        : '<p class="vacio">Todavía no enviaste pagos desde la web.</p>'}`;
+    $$('[data-pagar]', p).forEach((b) => b.addEventListener('click', () => formPago($('[data-form-pago]', p), e, b.dataset.pagar === 'libre' ? null : deudas[Number(b.dataset.pagar)], () => { panelPagos(p); resumenCuenta(); })));
+  }
+
+  function formPago(cont, e, deuda, listo) {
+    const d = e.datosPago || {};
+    const dato = (t, v) => (v ? `<div><dt>${t}</dt><dd>${esc(v)} <button type="button" class="copiar" data-copiar="${esc(v)}" aria-label="Copiar ${t}">Copiar</button></dd></div>` : '');
+    cont.innerHTML = `<form class="formulario pago-form" data-f-pago novalidate>
+        <h3>${deuda ? `Pagar ${esc(deuda.titulo.toLowerCase())}` : 'Hacer un pago'}</h3>
+        <ol class="pago-pasos">
+          <li><strong>Pagá</strong> por transferencia o con el QR.
+            <div class="datos-banco"><dl>${dato('Banco', d.banco)}${dato('Titular', d.titular)}${dato('Cuenta', d.cuenta)}${dato('RUC / C.I.', d.documento)}${dato('Alias', d.alias)}</dl>
+              ${d.tieneQr ? '<img class="qr" src="/api/web/publico/qr" alt="QR para pagar" />' : ''}</div>
+            ${d.instrucciones ? `<p class="ayuda">${esc(d.instrucciones)}</p>` : ''}</li>
+          <li><strong>Mandanos el comprobante</strong> (captura o PDF).</li>
+        </ol>
+        <fieldset class="metodos"><legend class="sr">Cómo pagaste</legend>
+          <label class="opcion-chica"><input type="radio" name="metodo" value="transferencia" checked /> Transferencia</label>
+          ${d.tieneQr ? '<label class="opcion-chica"><input type="radio" name="metodo" value="qr" /> QR</label>' : ''}</fieldset>
+        <div class="campo-fila">
+          <div class="campo"><label for="p-monto">Monto pagado (Gs.)</label><input id="p-monto" name="monto" inputmode="numeric" value="${deuda ? Math.round(deuda.monto) : ''}" ${deuda && deuda.tipo === 'cuota' ? 'readonly' : ''} required /></div>
+          <div class="campo"><label for="p-ref">N.º de operación <span class="opcional">(opcional)</span></label><input id="p-ref" name="referencia" maxlength="100" /></div>
+        </div>
+        <div class="campo"><label for="p-comp">Comprobante</label><input id="p-comp" name="comprobante" type="file" accept="image/*,application/pdf" required /><span class="ayuda">Foto o PDF, hasta 5 MB.</span></div>
+        <div class="campo"><label for="p-nota">Nota <span class="opcional">(opcional)</span></label><input id="p-nota" name="nota" maxlength="500" /></div>
+        <p class="error" data-error role="alert" hidden></p>
+        <div class="reserva-pie"><button type="button" class="boton-texto" data-cancelar-pago>Cancelar</button><button class="boton" type="submit">Enviar comprobante</button></div>
+        <p class="ayuda">La clínica revisa el comprobante y te avisa por email cuando el pago queda confirmado.</p>
+      </form>`;
+    cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $$('[data-copiar]', cont).forEach((b) => b.addEventListener('click', async () => { try { await navigator.clipboard.writeText(b.dataset.copiar); aviso('Copiado'); } catch (_e) { aviso(b.dataset.copiar); } }));
+    $('[data-cancelar-pago]', cont).addEventListener('click', () => { cont.innerHTML = ''; });
+    const f = $('[data-f-pago]', cont);
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
+      const m = (t) => { err.textContent = t; err.hidden = false; };
+      const monto = Number(String(f.monto.value).replace(/\D/g, ''));
+      const arch = f.comprobante.files[0];
+      if (!(monto > 0)) return m('Escribí el monto que pagaste');
+      if (!arch) return m('Adjuntá el comprobante');
+      if (arch.size > 5 * 1024 * 1024) return m('El archivo pesa más de 5 MB. Probá con una captura de pantalla.');
+      const fd = new FormData();
+      fd.append('metodo', f.metodo.value); fd.append('monto', String(monto)); fd.append('referencia', f.referencia.value); fd.append('nota', f.nota.value);
+      if (deuda && deuda.tipo === 'cuota') fd.append('cuotaId', deuda.id);
+      if (deuda && deuda.tipo === 'presupuesto') fd.append('presupuestoId', deuda.id);
+      fd.append('comprobante', arch);
+      const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Enviando…';
+      try { await cuentaApi('/pagos', { method: 'POST', form: fd }); aviso('¡Recibimos tu comprobante! Te avisamos cuando lo confirmemos.'); listo(); }
+      catch (e2) { m(e2.message); b.disabled = false; b.textContent = 'Enviar comprobante'; }
+    });
+  }
+
+  async function panelComprobantes(p) {
+    const e = await cuentaApi('/estado');
+    p.innerHTML = `<h2>Pagos realizados</h2>
+      ${e.pagos.length ? `<ul class="lista-cuenta lista-simple">${e.pagos.map((x) => `<li><span>${esc(fechaCorta(x.fecha))}</span><span><strong>${gs(x.monto)}</strong> ${x.concepto ? `· ${esc(x.concepto)}` : ''}</span>
+          <span class="docs"><button type="button" class="boton-texto" data-recibo="${x.id}">Recibo</button>${x.factura_id ? `<button type="button" class="boton-texto" data-factura="${x.factura_id}" data-num="${esc(x.factura_numero)}">Comprobante ${esc(x.factura_numero)}</button>` : ''}</span></li>`).join('')}</ul>`
+        : '<p class="vacio">Todavía no hay pagos registrados.</p>'}
+      <p class="ayuda" style="margin-top:16px">Los comprobantes son internos de la clínica (no son factura fiscal).</p>`;
+    $$('[data-recibo]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/recibos/${b.dataset.recibo}`, `recibo-${b.dataset.recibo}.pdf`)));
+    $$('[data-factura]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/facturas/${b.dataset.factura}`, `comprobante-${b.dataset.num}.pdf`)));
+  }
+
+  async function panelDatos(p) {
+    const y = await cuentaApi('/yo');
+    const fila = (t, v) => `<div><dt>${t}</dt><dd>${esc(v || '—')}</dd></div>`;
+    p.innerHTML = `<h2>Mis datos</h2>
+      <dl class="mis-datos">${fila('Nombre', `${y.nombre} ${y.apellido}`)}${fila('Cédula', y.ci)}${fila('Email', y.email)}${fila('Teléfono', y.telefono)}${fila('Dirección', [y.direccion, y.ciudad].filter(Boolean).join(', '))}${fila('Nacimiento', y.fecha_nacimiento ? fechaCorta(y.fecha_nacimiento) : '')}</dl>
+      <p class="ayuda">¿Algo cambió? <a href="contacto.html">Avisanos</a> y lo actualizamos en tu ficha.</p>
+      <form class="formulario" data-f-clave novalidate style="margin-top:28px"><h2>Cambiar contraseña</h2>
+        <div class="campo"><label for="c-act">Contraseña actual</label><input id="c-act" name="actual" type="password" autocomplete="current-password" required /></div>
+        <div class="campo-fila"><div class="campo"><label for="c-n1">Nueva contraseña</label><input id="c-n1" name="nueva" type="password" autocomplete="new-password" required /></div>
+        <div class="campo"><label for="c-n2">Repetila</label><input id="c-n2" name="nueva2" type="password" autocomplete="new-password" required /></div></div>
+        <p class="error" data-error role="alert" hidden></p>
+        <div><button class="boton" type="submit">Cambiar contraseña</button></div></form>`;
+    const f = $('[data-f-clave]', p);
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
+      if (f.nueva.value !== f.nueva2.value) { err.textContent = 'Las dos contraseñas no coinciden'; err.hidden = false; return; }
+      try { const r = await cuentaApi('/clave', { method: 'POST', body: { actual: f.actual.value, nueva: f.nueva.value } }); guardarSesion({ token: r.token, ...r.paciente }); f.reset(); aviso('Contraseña cambiada'); }
+      catch (e) { err.textContent = e.message; err.hidden = false; }
     });
   }
 

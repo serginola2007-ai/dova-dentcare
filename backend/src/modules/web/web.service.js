@@ -49,10 +49,14 @@ async function obtenerConfig(clinicaId) {
                SELECT id, nombre, direccion, telefono, whatsapp, email, instagram, facebook FROM clinicas WHERE id=$1
                ON CONFLICT (clinica_id) DO NOTHING`, [clinicaId]);
   const r = await query(`SELECT w.*, u.nombre AS actualizado_por_nombre FROM web_config w LEFT JOIN usuarios u ON u.id=w.actualizado_por WHERE w.clinica_id=$1`, [clinicaId]);
-  return r.rows[0];
+  const cfg = r.rows[0];
+  delete cfg.qr; // la imagen se sirve aparte
+  cfg.correo_configurado = require('../../utils/correo').configurado();
+  return cfg;
 }
 
-const CAMPOS_TEXTO = { titulo: 150, eslogan: 250, presentacion: 3000, direccion: 300, telefono: 60, whatsapp: 60, email: 150, instagram: 150, facebook: 150, mapaUrl: 1000 };
+const CAMPOS_TEXTO = { titulo: 150, eslogan: 250, presentacion: 3000, direccion: 300, telefono: 60, whatsapp: 60, email: 150, instagram: 150, facebook: 150, mapaUrl: 1000,
+  banco: 100, titular: 150, numeroCuenta: 60, documentoTitular: 40, aliasPago: 100, instruccionesPago: 1000 };
 const snake = (k) => k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
 function validarHorarios(h) {
   if (!h || typeof h !== 'object') throw new ApiError(400, 'Horarios inválidos');
@@ -75,7 +79,7 @@ async function guardarConfig(clinicaId, d, usuario) {
   for (const [k, max] of Object.entries(CAMPOS_TEXTO)) if (d[k] !== undefined) set(snake(k), txt(d[k], max));
   if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) throw new ApiError(400, 'El email no es válido');
   if (d.mapaUrl && !/^https:\/\/(www\.)?google\.[a-z.]+\/maps\/embed/.test(d.mapaUrl)) throw new ApiError(400, 'El mapa tiene que ser un enlace "Insertar mapa" de Google Maps (empieza con https://www.google.com/maps/embed)');
-  for (const k of ['reservasActivas', 'mostrarPrecios']) if (d[k] !== undefined) set(snake(k), d[k] === true || d[k] === 'true');
+  for (const k of ['reservasActivas', 'mostrarPrecios', 'cuentasActivas', 'pagosActivos']) if (d[k] !== undefined) set(snake(k), d[k] === true || d[k] === 'true');
   const NUM = { intervaloMinutos: [10, 120], diasAdelante: [1, 180], anticipacionHoras: [0, 168], cancelacionHoras: [0, 168], maxTurnosPorPersona: [1, 10] };
   for (const [k, [mn, mx]] of Object.entries(NUM)) {
     if (d[k] === undefined) continue;
@@ -101,6 +105,20 @@ async function guardarConfig(clinicaId, d, usuario) {
   return obtenerConfig(clinicaId);
 }
 
+// QR de pago (imagen que la clínica sube; el paciente la ve en su cuenta).
+async function guardarQr(clinicaId, archivo, usuario) {
+  if (!archivo) throw new ApiError(400, 'Elegí una imagen');
+  const tipo = require('./portal.service').tipoArchivo(archivo.buffer);
+  if (!tipo || !tipo.startsWith('image/')) throw new ApiError(400, 'El QR tiene que ser una imagen (PNG o JPG)');
+  await obtenerConfig(clinicaId);
+  await query('UPDATE web_config SET qr=$2, qr_mime=$3, actualizado_en=now(), actualizado_por=$4 WHERE clinica_id=$1', [clinicaId, archivo.buffer, tipo, usuario ? usuario.id : null]);
+  await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'cambiar_qr_pago', modulo: 'web', entidadId: 'config' });
+  return { ok: true };
+}
+async function obtenerQr(clinicaId) {
+  return (await query('SELECT qr, qr_mime FROM web_config WHERE clinica_id=$1 AND qr IS NOT NULL', [clinicaId])).rows[0] || null;
+}
+
 // ---------------------------------------------------------------- catálogo público
 async function tratamientosPublicos(clinicaId, cfg) {
   const r = await query(`SELECT id, nombre, categoria, descripcion, precio, duracion_minutos FROM tratamientos
@@ -123,7 +141,8 @@ async function infoPublica() {
     nombre: cfg.titulo || c.nombre, eslogan: cfg.eslogan, presentacion: cfg.presentacion,
     direccion: cfg.direccion, telefono: cfg.telefono, whatsapp: cfg.whatsapp, email: cfg.email,
     instagram: cfg.instagram, facebook: cfg.facebook, mapaUrl: cfg.mapa_url,
-    horarios: cfg.horarios, reservasActivas: cfg.reservas_activas, diasAdelante: cfg.dias_adelante,
+    horarios: cfg.horarios, reservasActivas: cfg.reservas_activas,
+    cuentasActivas: cfg.cuentas_activas && cfg.correo_configurado, pagosActivos: cfg.pagos_activos, diasAdelante: cfg.dias_adelante,
     cancelacionHoras: cfg.cancelacion_horas,
     tieneLogo: (await query('SELECT 1 FROM facturacion_config WHERE clinica_id=$1 AND logo IS NOT NULL', [c.id])).rowCount > 0,
     tratamientos, odontologos,
@@ -224,8 +243,9 @@ function validarPersona(d) {
 async function pacientePorCi(clinicaId, p) {
   const ex = (await query('SELECT id, activo FROM pacientes WHERE clinica_id=$1 AND ci=$2 ORDER BY activo DESC, id LIMIT 1', [clinicaId, p.ci])).rows[0];
   if (ex) return { id: ex.id, nuevo: false };
-  const r = await query(`INSERT INTO pacientes (clinica_id, nombre, apellido, ci, fecha_nacimiento, telefono, whatsapp, email, fuente_referencia, observaciones)
-                         VALUES ($1,$2,$3,$4,$5,$6,$6,$7,'pagina_web','Se registró desde la página web.') RETURNING id`,
+  // web_verificado=false: hasta que recepción confirme su identidad, no puede abrir una cuenta en la web.
+  const r = await query(`INSERT INTO pacientes (clinica_id, nombre, apellido, ci, fecha_nacimiento, telefono, whatsapp, email, fuente_referencia, observaciones, web_verificado)
+                         VALUES ($1,$2,$3,$4,$5,$6,$6,$7,'pagina_web','Se registró desde la página web.', false) RETURNING id`,
   [clinicaId, p.nombre, p.apellido, p.ci, p.fechaNacimiento, p.telefono, p.email]);
   return { id: r.rows[0].id, nuevo: true };
 }
@@ -244,6 +264,38 @@ async function notificarRecepcion(clinicaId, datos) {
 const nombreDia = (f) => new Intl.DateTimeFormat('es-PY', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${f}T12:00:00Z`));
 
 // ---------------------------------------------------------------- reservar
+// Ocupa el horario (con el candado de la agenda) para un paciente ya identificado.
+async function ocuparHorario(k, pac, { fecha, hora, comentario, tokenHash }) {
+  const hoy = hoyIso();
+  // Tope de turnos web futuros por persona (evita que alguien llene la agenda).
+  const futuros = await query(`SELECT count(*)::int n FROM turnos WHERE clinica_id=$1 AND paciente_id=$2 AND origen='web' AND fecha >= $3 AND estado NOT IN ('cancelado','no_asistio','atendido')`, [k.clinicaId, pac.id, hoy]);
+  if (futuros.rows[0].n >= k.cfg.max_turnos_por_persona) throw new ApiError(409, 'Ya tenés turnos reservados desde la web. Para otro turno, comunicate con la clínica.');
+  // Recalcular con candado por odontólogo y día (el mismo de la agenda).
+  const libres = await calcularLibres(k.clinicaId, k.cfg, { desde: fecha, hasta: fecha, duracion: k.duracion, odontologoIds: k.ids });
+  const candidatos = (libres[fecha] || {})[hora] || [];
+  if (!candidatos.length) throw new ApiError(409, 'Ese horario se acaba de ocupar. Elegí otro, por favor.');
+  // "Cualquier profesional": el que tenga menos turnos ese día.
+  const carga = await query(`SELECT odontologo_id, count(*)::int n FROM turnos WHERE clinica_id=$1 AND fecha=$2 AND odontologo_id = ANY($3::int[]) AND estado <> ALL($4::text[]) GROUP BY 1`, [k.clinicaId, fecha, candidatos, ESTADOS_LIBRES]);
+  const n = Object.fromEntries(carga.rows.map((r) => [r.odontologo_id, r.n]));
+  const orden = [...candidatos].sort((a, b) => (n[a] || 0) - (n[b] || 0));
+  for (const oid of orden) {
+    const r = await conCandado([`agenda:odo:${k.clinicaId}:${oid}:${fecha}`], async () => {
+      const choca = await query(`SELECT 1 FROM turnos WHERE clinica_id=$1 AND odontologo_id=$2 AND fecha=$3 AND estado <> ALL($6::text[])
+                                   AND hora_inicio < ($4::time + ($5::int * interval '1 minute')) AND $4::time < (hora_inicio + (duracion_minutos * interval '1 minute')) LIMIT 1`,
+      [k.clinicaId, oid, fecha, hora, k.duracion, ESTADOS_LIBRES]);
+      if (choca.rowCount) return null;
+      const motivo = k.trat ? k.trat.nombre : 'Consulta (reservado desde la web)';
+      const t = await query(`INSERT INTO turnos (clinica_id, paciente_id, odontologo_id, fecha, hora_inicio, duracion_minutos, motivo, tratamiento_id, observaciones, origen, web_token_hash, confirmacion, primera_vez)
+                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'web',$10,'sin_confirmar', NOT EXISTS (SELECT 1 FROM turnos x WHERE x.paciente_id=$2 AND x.estado='atendido')) RETURNING id`,
+      [k.clinicaId, pac.id, oid, fecha, hora, k.duracion, motivo, k.trat ? k.trat.id : null, comentario ? `Comentario del paciente: ${comentario}` : 'Reservado desde la página web.', tokenHash]);
+      await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.rows[0].id, JSON.stringify({ accion: 'reservado desde la página web' })]);
+      return { turnoId: t.rows[0].id, odontologoId: oid };
+    });
+    if (r) return { ...r, pac };
+  }
+  throw new ApiError(409, 'Ese horario se acaba de ocupar. Elegí otro, por favor.');
+}
+
 async function reservar(d, ip) {
   if (d.sitio) throw new ApiError(400, 'No se pudo enviar'); // campo trampa para robots
   limitar(ip, 'reservar', 6, 30);
@@ -258,33 +310,7 @@ async function reservar(d, ip) {
   const token = crypto.randomBytes(24).toString('base64url');
   const res = await conCandado([`web:ci:${k.clinicaId}:${persona.ci}`], async () => {
     const pac = await pacientePorCi(k.clinicaId, persona);
-    // Tope de turnos web futuros por persona (evita que alguien llene la agenda).
-    const futuros = await query(`SELECT count(*)::int n FROM turnos WHERE clinica_id=$1 AND paciente_id=$2 AND origen='web' AND fecha >= $3 AND estado NOT IN ('cancelado','no_asistio','atendido')`, [k.clinicaId, pac.id, hoy]);
-    if (futuros.rows[0].n >= k.cfg.max_turnos_por_persona) throw new ApiError(409, 'Ya tenés turnos reservados desde la web. Para otro turno, comunicate con la clínica.');
-    // Recalcular con candado por odontólogo y día (el mismo de la agenda).
-    const libres = await calcularLibres(k.clinicaId, k.cfg, { desde: fecha, hasta: fecha, duracion: k.duracion, odontologoIds: k.ids });
-    const candidatos = (libres[fecha] || {})[hora] || [];
-    if (!candidatos.length) throw new ApiError(409, 'Ese horario se acaba de ocupar. Elegí otro, por favor.');
-    // "Cualquier profesional": el que tenga menos turnos ese día.
-    const carga = await query(`SELECT odontologo_id, count(*)::int n FROM turnos WHERE clinica_id=$1 AND fecha=$2 AND odontologo_id = ANY($3::int[]) AND estado <> ALL($4::text[]) GROUP BY 1`, [k.clinicaId, fecha, candidatos, ESTADOS_LIBRES]);
-    const n = Object.fromEntries(carga.rows.map((r) => [r.odontologo_id, r.n]));
-    const orden = [...candidatos].sort((a, b) => (n[a] || 0) - (n[b] || 0));
-    for (const oid of orden) {
-      const r = await conCandado([`agenda:odo:${k.clinicaId}:${oid}:${fecha}`], async () => {
-        const choca = await query(`SELECT 1 FROM turnos WHERE clinica_id=$1 AND odontologo_id=$2 AND fecha=$3 AND estado <> ALL($6::text[])
-                                     AND hora_inicio < ($4::time + ($5::int * interval '1 minute')) AND $4::time < (hora_inicio + (duracion_minutos * interval '1 minute')) LIMIT 1`,
-        [k.clinicaId, oid, fecha, hora, k.duracion, ESTADOS_LIBRES]);
-        if (choca.rowCount) return null;
-        const motivo = k.trat ? k.trat.nombre : 'Consulta (reservado desde la web)';
-        const t = await query(`INSERT INTO turnos (clinica_id, paciente_id, odontologo_id, fecha, hora_inicio, duracion_minutos, motivo, tratamiento_id, observaciones, origen, web_token_hash, confirmacion, primera_vez)
-                               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'web',$10,'sin_confirmar', NOT EXISTS (SELECT 1 FROM turnos x WHERE x.paciente_id=$2 AND x.estado='atendido')) RETURNING id`,
-        [k.clinicaId, pac.id, oid, fecha, hora, k.duracion, motivo, k.trat ? k.trat.id : null, comentario ? `Comentario del paciente: ${comentario}` : 'Reservado desde la página web.', hash(token)]);
-        await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.rows[0].id, JSON.stringify({ accion: 'reservado desde la página web' })]);
-        return { turnoId: t.rows[0].id, odontologoId: oid };
-      });
-      if (r) return { ...r, pac };
-    }
-    throw new ApiError(409, 'Ese horario se acaba de ocupar. Elegí otro, por favor.');
+    return ocuparHorario(k, pac, { fecha, hora, comentario, tokenHash: hash(token) });
   });
 
   const odo = k.odos.find((o) => o.id === res.odontologoId);
@@ -393,7 +419,7 @@ async function listarSolicitudes(clinicaId, { estado, tipo, page = 1 }) {
   if (tipo) { p.push(tipo); c.push(`s.tipo=$${p.length}`); }
   const lim = 30; const off = (Math.max(Number(page) || 1, 1) - 1) * lim;
   const r = await query(`SELECT s.*, u.nombre AS resuelta_por_nombre, t.fecha::text AS turno_fecha, to_char(t.hora_inicio,'HH24:MI') AS turno_hora, t.estado AS turno_estado,
-                                o.nombre AS turno_odontologo, pa.nombre || ' ' || pa.apellido AS paciente_nombre
+                                o.nombre AS turno_odontologo, pa.nombre || ' ' || pa.apellido AS paciente_nombre, pa.web_verificado
                            FROM web_solicitudes s LEFT JOIN usuarios u ON u.id=s.resuelta_por LEFT JOIN turnos t ON t.id=s.turno_id
                            LEFT JOIN odontologos o ON o.id=t.odontologo_id LEFT JOIN pacientes pa ON pa.id=s.paciente_id
                           WHERE ${c.join(' AND ')} ORDER BY (s.estado='pendiente') DESC, s.creado_en DESC LIMIT ${lim} OFFSET ${off}`, p);
@@ -427,6 +453,9 @@ async function aplicarAFicha(clinicaId, id, campos, usuario) {
 }
 
 module.exports = {
+  guardarQr, obtenerQr,
+  ocuparHorario, validarHorarios,
+  calcularLibres, contexto, minutosHasta, nombreDia, limitar, notificarRecepcion, hash, txt, ESTADOS_LIBRES,
   infoPublica, disponibilidad, reservar, turnoPublico, accionTurno, registrar, consultar,
   obtenerConfig, guardarConfig, listarSolicitudes, resolverSolicitud, aplicarAFicha, clinicaPublica, PREGUNTAS_SALUD,
 };

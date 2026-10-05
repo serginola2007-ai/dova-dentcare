@@ -130,6 +130,7 @@ app.use('/api/kpis', kpisRoutes);
 app.use('/api/facturacion', facturacionRoutes);
 // Página web pública (sin sesión) y su panel en DOVA.
 app.use('/api/web/publico', webRoutes.publico);
+app.use('/api/web/cuenta', webRoutes.cuenta);
 app.use('/api/web', webRoutes.interno);
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en
