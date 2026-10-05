@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>dentcarerc — Odontología humanizada</title>
-  <meta name="description" content="Reservá tu turno en dentcarerc desde el celular: elegí el tratamiento, el día y el horario que te queden bien." />
+  <title>Mi turno — dentcarerc</title>
+  <meta name="description" content="Mirá, confirmá o cancelá tu turno en dentcarerc." />
   <meta name="theme-color" content="#2B241E" />
   <link rel="icon" href="/iconos/icono-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,37 +23,13 @@
       <a href="equipo.html">Equipo</a>
       <a href="primera-visita.html">Primera visita</a>
       <a href="contacto.html">Contacto</a>
-      <a href="mi-turno.html">Mis turnos</a>
+      <a href="mi-turno.html" aria-current="page">Mis turnos</a>
       <a class="boton boton-chico" href="reservar.html">Reservar turno</a>
     </nav>
   </header>
 
   <main id="contenido" class="">
-    <section class="portada">
-      <div class="portada-texto">
-        <p class="lema">Odontología humanizada</p>
-        <h1>Tu turno, a un toque.</h1>
-        <p class="portada-bajada" data-eslogan>Elegí el día y el horario que te queden bien. Te esperamos.</p>
-        <div class="portada-botones">
-          <a class="boton" href="reservar.html">Reservar turno</a>
-          <a class="boton boton-claro" data-wa hidden target="_blank" rel="noopener">Escribinos por WhatsApp</a>
-        </div>
-        <p class="portada-hoy" data-hoy></p>
-      </div>
-      <aside class="libres" aria-labelledby="libres-titulo">
-        <span class="libres-diente" style="color:var(--tinta)"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 18c-7 0-11 5-15 5s-8-4-13-3c-6 1-9 8-8 16 1 9 6 18 10 25 3 5 5 9 9 9 4 0 4-6 8-6s4 6 8 6c4 0 6-4 9-9 4-7 9-16 10-25 1-8-2-15-8-16-5-1-9 3-13 3s-8-5-15-5z"/></svg></span>
-        <h2 id="libres-titulo">Próximos horarios libres</h2>
-        <p class="libres-nota">Tocá uno para reservarlo.</p>
-        <div data-libres class="libres-dias"><p class="cargando">Buscando horarios…</p></div>
-      </aside>
-    </section>
-
-    <section class="bloque puertas" aria-label="Más sobre la clínica">
-      <a class="puerta" href="tratamientos.html"><span class="puerta-titulo">Tratamientos</span><span class="puerta-texto">Qué hacemos, cuánto dura cada tratamiento y desde cuánto sale.</span></a>
-      <a class="puerta" href="equipo.html"><span class="puerta-titulo">Equipo</span><span class="puerta-texto">Conocé a quienes te van a atender y elegí con quién.</span></a>
-      <a class="puerta" href="primera-visita.html"><span class="puerta-titulo">¿Primera visita?</span><span class="puerta-texto">Completá tu ficha desde casa y el día del turno vas directo al sillón.</span></a>
-      <a class="puerta" href="contacto.html"><span class="puerta-titulo">Dónde estamos</span><span class="puerta-texto">Horarios, cómo llegar y cómo escribirnos.</span></a>
-    </section>
+    <section class="mi-turno" data-vista-turno aria-live="polite"><p class="cargando">Cargando…</p></section>
   </main>
 
   <footer class="pie">

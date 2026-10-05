@@ -32,24 +32,54 @@
   const st = { tratamientoId: null, odontologoId: null, fecha: null, hora: null, paso: 1, mes: null, dias: {} };
 
   // =================================================================== inicio
+  // Cada página trae solo sus bloques; acá se activa lo que haya en la página actual.
+  const hay = (sel) => !!$(sel);
+  const params = new URLSearchParams(location.search);
   async function iniciar() {
-    window.addEventListener('hashchange', ruteo);
-    $('[data-mis-turnos]').addEventListener('click', verMisTurnos);
-    try { info = await api('/info'); } catch (e) { $('[data-libres]').innerHTML = `<p class="libres-vacio">${esc(e.message)}</p>`; return; }
+    menuCelular();
+    // Enlaces viejos (todo en una página): #turno=… ahora vive en mi-turno.html
+    const viejo = location.hash.match(/^#turno=([\w-]{20,})/);
+    if (viejo) { location.replace(`mi-turno.html#t=${viejo[1]}`); return; }
+    try { info = await api('/info'); } catch (e) {
+      const d = $('[data-libres]') || $('[data-reserva]') || $('main');
+      if (d) d.insertAdjacentHTML('afterbegin', `<p class="error">${esc(e.message)}</p>`);
+      return;
+    }
     pintarDatos();
-    ruteo();
-    if (!info.reservasActivas) {
-      $('[data-libres]').innerHTML = '<p class="libres-vacio">Las reservas online están pausadas por ahora. Escribinos por WhatsApp o llamanos.</p>';
-      $('[data-reserva]').innerHTML = '<p>Las reservas online están pausadas por ahora. Comunicate con la clínica para coordinar tu turno.</p>';
-      $('[data-pasos]').hidden = true;
-    } else { cargarLibres(); pintarPaso(); }
-    formFicha(); formConsulta();
+    const pausadas = !info.reservasActivas;
+    if (hay('[data-libres]')) {
+      if (pausadas) $('[data-libres]').innerHTML = '<p class="libres-vacio">Las reservas online están pausadas por ahora. Escribinos por WhatsApp o llamanos.</p>';
+      else cargarLibres();
+    }
+    if (hay('[data-reserva]')) {
+      if (pausadas) { $('[data-reserva]').innerHTML = '<p>Las reservas online están pausadas por ahora. Comunicate con la clínica para coordinar tu turno.</p>'; $('[data-pasos]').hidden = true; }
+      else {
+        // Llega con algo ya elegido desde otra página: tratamiento (t), profesional (o), día y hora (f, h).
+        const num = (k) => (/^\d+$/.test(params.get(k) || '') ? Number(params.get(k)) : null);
+        st.tratamientoId = info.tratamientos.some((t) => t.id === num('t')) ? num('t') : null;
+        st.odontologoId = info.odontologos.some((o) => o.id === num('o')) ? num('o') : null;
+        const f = params.get('f'); const h = params.get('h');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(f || '') && /^\d{2}:\d{2}$/.test(h || '')) { st.fecha = f; st.hora = h; st.paso = 4; }
+        else st.paso = st.odontologoId ? 3 : st.tratamientoId ? 2 : 1;
+        pintarPaso();
+      }
+    }
+    if (hay('[data-vista-turno]')) { window.addEventListener('hashchange', ruteoTurno); ruteoTurno(); }
+    if (hay('[data-form-ficha]')) formFicha();
+    if (hay('[data-form-consulta]')) formConsulta();
   }
 
-  function ruteo() {
-    const m = location.hash.match(/^#turno=([\w-]{20,})/);
-    $('[data-vista-turno]').hidden = !m; $('[data-vista-sitio]').hidden = !!m;
-    if (m) { verTurno(m[1]); window.scrollTo(0, 0); }
+  function ruteoTurno() {
+    const m = location.hash.match(/^#t=([\w-]{20,})/);
+    if (m) verTurno(m[1]); else verMisTurnos();
+    window.scrollTo(0, 0);
+  }
+
+  // Menú en el celular (botón ☰)
+  function menuCelular() {
+    const b = $('[data-menu]'); const nav = $('.cabecera-nav'); if (!b || !nav) return;
+    b.addEventListener('click', () => { const abierto = nav.classList.toggle('abierto'); b.setAttribute('aria-expanded', String(abierto)); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('abierto')) { nav.classList.remove('abierto'); b.setAttribute('aria-expanded', 'false'); b.focus(); } });
   }
 
   function linkWa(texto) {
@@ -65,30 +95,32 @@
     // Nombre como en la marca: "Dent" + "Care" en terracota (+ lo que siga, ej. "RC").
     const m = info.nombre.match(/^(dent)(care)(.*)$/i);
     $('[data-marca]').innerHTML = m ? `${esc(m[1])}<span class="care">${esc(m[2])}</span>${m[3] ? `<span class="rc">${esc(m[3].trim())}</span>` : ''}` : esc(info.nombre);
-    $('[data-titulo]').textContent = 'Tu turno, a un toque.';
-    if (info.eslogan) $('[data-eslogan]').textContent = info.eslogan;
-    if (info.presentacion) $('[data-presentacion]').textContent = info.presentacion;
+    if (info.eslogan && hay('[data-eslogan]')) $('[data-eslogan]').textContent = info.eslogan;
+    if (info.presentacion && hay('[data-presentacion]')) $('[data-presentacion]').textContent = info.presentacion;
     // Logo cargado en DOVA (Facturación → Configuración); si no hay, el diente de la marca.
     if (info.tieneLogo) { const l = $('[data-logo]'); l.src = `${API}/logo`; l.hidden = false; l.alt = ''; $('[data-diente]').hidden = true; }
     const wa = linkWa('Hola, quería hacer una consulta.');
-    if (wa) { const b = $('[data-wa]'); b.href = wa; b.hidden = false; }
+    $$('[data-wa]').forEach((b) => { if (wa) { b.href = wa; b.hidden = false; } });
 
     // Tratamientos agrupados por categoría
     const grupos = {};
     for (const t of info.tratamientos) (grupos[t.categoria || 'General'] ||= []).push(t);
-    $('[data-tratamientos]').innerHTML = Object.entries(grupos).map(([cat, ts]) => `
+    if (hay('[data-tratamientos]')) $('[data-tratamientos]').innerHTML = Object.entries(grupos).map(([cat, ts]) => `
       <div class="trat-grupo"><h3>${esc(cat)}</h3>
         ${ts.map((t) => `<div class="trat"><div><strong>${esc(t.nombre)}</strong>${t.descripcion ? `<p>${esc(t.descripcion)}</p>` : ''}</div>
-          <div class="trat-dato">${t.precio ? `<b>Desde ${gs(t.precio)}</b>` : ''}${t.duracion} min</div></div>`).join('')}</div>`).join('')
+          <div class="trat-dato">${t.precio ? `<b>Desde ${gs(t.precio)}</b>` : ''}${t.duracion} min${info.reservasActivas ? `<a class="trat-reservar" href="reservar.html?t=${t.id}">Reservar</a>` : ''}</div></div>`).join('')}</div>`).join('')
       || '<p class="cargando">Pronto vas a ver acá los tratamientos.</p>';
 
     // Equipo (el color es el mismo que usa la agenda de DOVA)
-    $('[data-equipo]').innerHTML = info.odontologos.map((o) => `<li><span class="inicial" style="background:${/^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : '#B96A47'}">${esc((o.nombre.replace(/^(Dra?\.|Lic\.)\s*/i, '')[0] || '?').toUpperCase())}</span>
-      <div><strong>${esc(o.nombre)}</strong><small>${esc(o.especialidad || 'Odontología general')}</small></div></li>`).join('');
+    if (hay('[data-equipo]')) $('[data-equipo]').innerHTML = info.odontologos.map((o) => `<li><span class="inicial" style="background:${/^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : '#B96A47'}">${esc((o.nombre.replace(/^(Dra?\.|Lic\.)\s*/i, '')[0] || '?').toUpperCase())}</span>
+      <div><strong>${esc(o.nombre)}</strong><small>${esc(o.especialidad || 'Odontología general')}</small>${info.reservasActivas ? `<a class="trat-reservar" href="reservar.html?o=${o.id}">Reservar con ${esc(o.nombre.split(' ').slice(0, 2).join(' '))}</a>` : ''}</div></li>`).join('')
+      || '<li>Pronto vas a conocer acá al equipo.</li>';
 
     // Horarios de atención
     const hoy = new Date(`${hoyIso()}T12:00:00Z`).getUTCDay();
-    $('[data-horarios]').innerHTML = `<caption class="ayuda" style="text-align:left;padding-bottom:6px">Horario de atención</caption>${[1, 2, 3, 4, 5, 6, 0].map((d) => {
+    // Horario de hoy (portada)
+    if (hay('[data-hoy]')) { const r = info.horarios[hoy] || []; $('[data-hoy]').textContent = r.length ? `Hoy atendemos de ${r.map(([a, b]) => `${a} a ${b}`).join(' y ')}.` : 'Hoy la clínica está cerrada.'; }
+    if (hay('[data-horarios]')) $('[data-horarios]').innerHTML = `<caption class="ayuda" style="text-align:left;padding-bottom:6px">Horario de atención</caption>${[1, 2, 3, 4, 5, 6, 0].map((d) => {
       const r = info.horarios[d] || [];
       return `<tr class="${d === hoy ? 'hoy' : ''}"><td>${mayus(DIAS[d])}</td><td>${r.length ? r.map(([a, b]) => `${a} a ${b}`).join(' y ') : 'Cerrado'}</td></tr>`;
     }).join('')}`;
@@ -98,8 +130,8 @@
     if (wa) c.push(`<li>WhatsApp: <a href="${esc(wa)}" target="_blank" rel="noopener">${esc(info.whatsapp)}</a></li>`);
     if (info.email) c.push(`<li>Email: <a href="mailto:${esc(info.email)}">${esc(info.email)}</a></li>`);
     if (info.instagram) c.push(`<li>Instagram: <a href="https://instagram.com/${esc(info.instagram.replace(/^@|https?:\/\/(www\.)?instagram\.com\//g, ''))}" target="_blank" rel="noopener">${esc(info.instagram)}</a></li>`);
-    $('[data-contacto]').innerHTML = c.join('');
-    if (info.mapaUrl) { const m = $('[data-mapa]'); m.innerHTML = `<iframe src="${esc(info.mapaUrl)}" title="Cómo llegar" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`; m.hidden = false; }
+    if (hay('[data-contacto]')) $('[data-contacto]').innerHTML = c.join('');
+    if (info.mapaUrl && hay('[data-mapa]')) { const m = $('[data-mapa]'); m.innerHTML = `<iframe src="${esc(info.mapaUrl)}" title="Cómo llegar" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`; m.hidden = false; }
   }
 
   // =================================================================== horarios libres (portada)
@@ -113,10 +145,7 @@
       const hoy = hoyIso();
       cont.innerHTML = dias.map((x) => `<div class="libres-dia"><h3>${x.fecha === hoy ? 'Hoy' : mayus(fechaLarga(x.fecha))}</h3>
         <div class="libres-horas">${x.horarios.slice(0, 6).map((h) => `<button type="button" class="hora-chip" data-f="${x.fecha}" data-h="${h}" aria-label="Reservar ${esc(fechaLarga(x.fecha))} a las ${h}">${h}</button>`).join('')}</div></div>`).join('');
-      $$('.hora-chip', cont).forEach((b) => b.addEventListener('click', () => {
-        Object.assign(st, { tratamientoId: null, odontologoId: null, fecha: b.dataset.f, hora: b.dataset.h, paso: 4 });
-        pintarPaso(); $('#reservar').scrollIntoView();
-      }));
+      $$('.hora-chip', cont).forEach((b) => b.addEventListener('click', () => { location.href = `reservar.html?f=${b.dataset.f}&h=${b.dataset.h}`; }));
     } catch (e) { cont.innerHTML = `<p class="libres-vacio">${esc(e.message)}</p>`; }
   }
 
@@ -250,10 +279,8 @@
       try {
         const r = await api('/reservar', { method: 'POST', body: { ...d, acepta: true, tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora } });
         guardarTurno({ token: r.token, fecha: r.turno.fecha, hora: r.turno.hora, motivo: r.turno.motivo });
-        Object.assign(st, { tratamientoId: null, odontologoId: null, fecha: null, hora: null, paso: 1 });
-        location.hash = `turno=${r.token}`;
-        aviso('¡Listo! Tu turno quedó reservado.');
-        cargarLibres();
+        try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+        location.href = `mi-turno.html#t=${r.token}`;
       } catch (e) {
         err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno';
         if (/ocup/.test(e.message)) { st.hora = null; }
@@ -267,10 +294,11 @@
     v.innerHTML = '<p class="cargando">Cargando tu turno…</p>';
     let t;
     try { t = await api(`/turno/${encodeURIComponent(token)}`); } catch (e) {
-      v.innerHTML = `<div class="tarjeta-turno"><h2>No encontramos ese turno</h2><p style="margin-top:8px">${esc(e.message)}. Revisá el enlace o comunicate con la clínica.</p><p style="margin-top:20px"><a class="boton" href="#inicio">Ir a la página</a></p></div>`;
+      v.innerHTML = `<div class="tarjeta-turno"><h2>No encontramos ese turno</h2><p style="margin-top:8px">${esc(e.message)}. Revisá el enlace o comunicate con la clínica.</p><p style="margin-top:20px"><a class="boton" href="index.html">Ir a la página</a></p></div>`;
       return;
     }
-    const enlace = `${location.origin}${location.pathname}#turno=${token}`;
+    const enlace = `${location.origin}${location.pathname}#t=${token}`;
+    try { if (sessionStorage.getItem('dentcare-recien')) { sessionStorage.removeItem('dentcare-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
     const estado = t.estado === 'cancelado' ? ['Cancelado', 'no'] : t.estado === 'atendido' ? ['Atendido', 'ok'] : t.estado === 'no_asistio' ? ['No asistió', 'no'] : !t.vigente ? ['Pasado', ''] : t.confirmado ? ['Confirmado', 'ok'] : ['Reservado', ''];
     const wa = linkWa(`Hola, soy ${t.nombre}. Tengo turno el ${fechaLarga(t.fecha)} a las ${t.hora}.`);
     v.innerHTML = `<div class="tarjeta-turno">
@@ -288,14 +316,14 @@
         <input readonly value="${esc(enlace)}" aria-label="Enlace de tu turno" data-enlace />
         <div class="acciones-turno"><button type="button" class="boton boton-chico" data-copiar>Copiar enlace</button>
           <a class="boton boton-chico boton-claro" href="https://wa.me/?text=${encodeURIComponent(`Mi turno en ${info ? info.nombre : 'la clínica'}: ${fechaLarga(t.fecha)} a las ${t.hora}. ${enlace}`)}" target="_blank" rel="noopener">Mandármelo por WhatsApp</a></div></div>` : ''}
-      <p style="margin-top:24px"><a href="#inicio" class="boton-texto">Volver a la página</a></p>
+      <p style="margin-top:24px"><a href="index.html" class="boton-texto">Volver a la página</a></p>
     </div>`;
     const conf = $('[data-confirmar]', v); const canc = $('[data-cancelar]', v); const cop = $('[data-copiar]', v);
     if (conf) conf.addEventListener('click', async () => { conf.disabled = true; try { await api(`/turno/${encodeURIComponent(token)}/confirmar`, { method: 'POST' }); aviso('¡Gracias! Confirmaste tu asistencia.'); verTurno(token); } catch (e) { aviso(e.message); conf.disabled = false; } });
     if (canc) canc.addEventListener('click', async () => {
       if (canc.dataset.seguro !== '1') { canc.dataset.seguro = '1'; canc.textContent = 'Tocá de nuevo para cancelar'; return; }
       canc.disabled = true;
-      try { await api(`/turno/${encodeURIComponent(token)}/cancelar`, { method: 'POST' }); aviso('Cancelaste el turno. El horario quedó libre para otra persona.'); verTurno(token); cargarLibres(); } catch (e) { aviso(e.message); canc.disabled = false; }
+      try { await api(`/turno/${encodeURIComponent(token)}/cancelar`, { method: 'POST' }); aviso('Cancelaste el turno. El horario quedó libre para otra persona.'); verTurno(token); } catch (e) { aviso(e.message); canc.disabled = false; }
     });
     if (cop) cop.addEventListener('click', async () => { const i = $('[data-enlace]', v); try { await navigator.clipboard.writeText(i.value); aviso('Enlace copiado'); } catch (_e) { i.select(); aviso('Seleccioná el enlace y copialo'); } });
   }
@@ -303,13 +331,10 @@
   function verMisTurnos() {
     const l = misTurnos();
     const v = $('[data-vista-turno]');
-    $('[data-vista-sitio]').hidden = true; v.hidden = false;
     v.innerHTML = `<div class="tarjeta-turno"><h2>Mis turnos</h2>
-      ${l.length ? `<p class="ayuda" style="margin-top:6px">Los que reservaste desde este celular o computadora.</p><div class="lista-turnos">${l.map((t) => `<a href="#turno=${esc(t.token)}"><strong>${esc(mayus(fechaLarga(t.fecha)))} a las ${esc(t.hora)}</strong><br><span class="ayuda">${esc(t.motivo || 'Consulta')}</span></a>`).join('')}</div>`
+      ${l.length ? `<p class="ayuda" style="margin-top:6px">Los que reservaste desde este celular o computadora.</p><div class="lista-turnos">${l.map((t) => `<a href="#t=${esc(t.token)}"><strong>${esc(mayus(fechaLarga(t.fecha)))} a las ${esc(t.hora)}</strong><br><span class="ayuda">${esc(t.motivo || 'Consulta')}</span></a>`).join('')}</div>`
         : '<p style="margin-top:8px">No hay turnos reservados desde este dispositivo. Si reservaste desde otro, usá el enlace que te quedó guardado.</p>'}
-      <p style="margin-top:24px"><a class="boton" href="#reservar">Reservar un turno</a></p></div>`;
-    $$('a[href^="#reservar"]', v).forEach((a) => a.addEventListener('click', () => { v.hidden = true; $('[data-vista-sitio]').hidden = false; }));
-    window.scrollTo(0, 0);
+      <p style="margin-top:24px"><a class="boton" href="reservar.html">Reservar un turno</a></p></div>`;
   }
 
   // =================================================================== ficha (primera visita)
@@ -343,7 +368,7 @@
       try {
         await api('/registro', { method: 'POST', body: { ...d, acepta: true, salud } });
         f.innerHTML = `<div><h3 style="font-size:26px">¡Gracias, ${esc(d.nombre)}!</h3><p style="margin-top:8px">Recibimos tu ficha. ${info.reservasActivas ? 'Si todavía no tenés turno, podés reservarlo ahora.' : ''}</p>
-          ${info.reservasActivas ? '<p style="margin-top:20px"><a class="boton" href="#reservar">Reservar turno</a></p>' : ''}</div>`;
+          ${info.reservasActivas ? '<p style="margin-top:20px"><a class="boton" href="reservar.html">Reservar turno</a></p>' : ''}</div>`;
       } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Enviar mi ficha'; }
     });
   }

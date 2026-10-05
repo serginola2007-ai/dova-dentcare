@@ -235,3 +235,21 @@ La página pública está en **/web/** (por ejemplo, https://dova.onrender.com/w
 - **Freno anti-abuso:** límite de intentos por conexión, campo trampa para robots y tope de turnos web por persona.
 
 **Pruebas:** `web-api.js` 51/51 y `ui-web.js` 45/45 (celular y compu, recepción y admin).
+
+### Página web en varias páginas
+
+La web ya no está toda en una sola página. Cada sección tiene la suya, con el mismo menú arriba (en el celular, con el botón "Menú") y el mismo pie:
+
+| Página | Qué tiene |
+|---|---|
+| `index.html` (Inicio) | Lema, horarios libres en vivo, horario de hoy y accesos a las demás páginas |
+| `reservar.html` | Reserva en 4 pasos. Puede llegar ya elegido el tratamiento (`?t=`), el profesional (`?o=`) o el día y la hora (`?f=&h=`) |
+| `tratamientos.html` | Lista por categoría, con "Reservar" en cada tratamiento |
+| `equipo.html` | Profesionales, con "Reservar con…" |
+| `primera-visita.html` | Ficha y cuestionario de salud |
+| `contacto.html` | Horarios, datos, mapa y formulario de consulta |
+| `mi-turno.html` | "Mis turnos" y el turno del enlace privado (`#t=`) |
+
+- **Enlaces viejos:** los del tipo `/web/#turno=…` redirigen solos a `mi-turno.html`.
+- **Cómo se generan:** las páginas salen de un mismo molde, así el encabezado y el pie son idénticos en todas.
+- **Pruebas:** `ui-web.js` 60/60.

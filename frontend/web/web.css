@@ -55,8 +55,8 @@ img { max-width: 100%; }
 .cabecera-nav a { color: var(--pizarra); text-decoration: none; font-size: 15px; }
 .cabecera-nav a:hover { color: var(--tinta); }
 .cabecera-acciones { display: flex; align-items: center; gap: 10px; }
-@media (max-width: 860px) { .cabecera-nav { display: none; } .cabecera-acciones { margin-left: auto; } }
-@media (max-width: 420px) { .marca { font-size: 19px; } .cabecera-acciones .boton { display: none; } }
+
+@media (max-width: 420px) { .marca { font-size: 19px; } }
 
 /* Portada: el titular a la izquierda, horarios libres reales a la derecha */
 .portada { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(24px, 5vw, 72px); align-items: center;
@@ -222,3 +222,45 @@ legend { font: 700 20px var(--titulo); margin-bottom: 4px; padding: 0; }
 .mes-cab strong { text-transform: none; }
 .mes .dsem { color: var(--pizarra); }
 .ficha fieldset.formulario { background: none; box-shadow: none; padding: 0; border-radius: 0; }
+
+/* ---- Sitio en varias páginas ---- */
+.cabecera-nav { align-items: center; }
+.cabecera-nav a[aria-current="page"]:not(.boton) { color: var(--cobalto-osc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.cabecera-nav a.boton { color: #fff; }
+.cabecera-nav a.boton[aria-current="page"] { background: var(--cobalto-osc); border-color: var(--cobalto-osc); }
+.menu-boton { display: none; margin-left: auto; min-height: 42px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--tinta); background: transparent; color: var(--tinta); font: 700 15px var(--texto); cursor: pointer; }
+@media (max-width: 860px) {
+  .cabecera { flex-wrap: wrap; }
+  .menu-boton { display: inline-flex; align-items: center; }
+  .cabecera-nav { display: none; width: 100%; flex-direction: column; align-items: stretch; gap: 0; margin: 4px 0 6px; }
+  .cabecera-nav.abierto { display: flex; }
+  .cabecera-nav a { padding: 13px 4px; border-top: 1px solid var(--linea); font-size: 17px; color: var(--tinta); }
+  .cabecera-nav a.boton { margin-top: 10px; border-top: 0; justify-content: center; }
+}
+.encabezado { max-width: 1200px; margin: 0 auto; padding: clamp(36px, 6vw, 72px) clamp(16px, 4vw, 48px) 8px; }
+.encabezado h1 { font-size: clamp(40px, 6vw, 68px); font-weight: 400; max-width: 16ch; }
+.encabezado p { color: var(--pizarra); font-size: clamp(17px, 1.8vw, 20px); margin-top: 14px; max-width: 56ch; }
+.bloque-sin-linea { border-top: 0; padding-top: clamp(20px, 3vw, 32px); }
+.contacto h2 { font-size: clamp(26px, 3vw, 34px); margin-bottom: 6px; }
+.portada-hoy { margin-top: 22px; color: var(--pizarra); font-size: 15px; }
+.portada-hoy:empty { display: none; }
+
+/* Portada: accesos a las otras páginas, como un índice */
+.puertas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 clamp(24px, 5vw, 72px); }
+.puerta { display: grid; gap: 6px; padding: 26px 0; border-bottom: 1px solid var(--linea); text-decoration: none; color: var(--tinta); }
+.puerta:nth-child(-n+2) { border-top: 1px solid var(--linea); }
+.puerta-titulo { font: 400 clamp(26px, 3vw, 34px)/1.1 var(--titulo); }
+.puerta-texto { color: var(--pizarra); max-width: 44ch; }
+.puerta:hover .puerta-titulo { color: var(--cobalto-osc); }
+.puerta-titulo::after { content: ''; display: inline-block; width: .45em; height: .45em; margin-left: .35em; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: translateY(-.12em) rotate(45deg); }
+@media (max-width: 700px) { .puertas { grid-template-columns: 1fr; } .puerta:nth-child(2) { border-top: 0; } }
+
+.trat-reservar { display: inline-block; margin-top: 4px; font-weight: 700; color: var(--cobalto-osc); }
+.trat-dato .trat-reservar { display: block; }
+.equipo .trat-reservar { font-size: 14px; }
+.nota-pie { margin-top: 28px; color: var(--pizarra); }
+.pie { align-items: center; }
+.pie-nav { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.pie-nav a { color: var(--pizarra); text-decoration: none; font-size: 14px; }
+.pie-nav a:hover { color: var(--tinta); text-decoration: underline; }
+body { min-height: 100vh; display: flex; flex-direction: column; } main { flex: 1; }
