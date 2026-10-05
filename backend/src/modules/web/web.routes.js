@@ -53,7 +53,7 @@ publico.get('/qr', async (req, res, next) => {
 // ---------------- Portal del paciente (cuenta en la web) ----------------
 const cuenta = express.Router();
 cuenta.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-cuenta.post('/codigo', h((req) => portal.pedirCodigo(req.body || {}, ip(req))));
+cuenta.post('/registro', h((req) => portal.registrarse(req.body || {}, ip(req))));
 cuenta.post('/activar', h((req) => portal.activar(req.body || {}, ip(req))));
 cuenta.post('/ingresar', h((req) => portal.ingresar(req.body || {}, ip(req))));
 cuenta.use(portal.autenticar);
@@ -91,6 +91,9 @@ interno.get('/pagos/:id/comprobante', requirePermiso('web.ver'), async (req, res
 });
 interno.post('/pagos/:id/aprobar', requirePermiso('web.ver'), requirePermiso('pagos.create'), h((req) => portal.aprobarPago(req.clinicaId, req.params.id, req.body || {}, req.usuario)));
 interno.post('/pagos/:id/rechazar', requirePermiso('web.ver'), h((req) => portal.rechazarPago(req.clinicaId, req.params.id, req.body || {}, req.usuario)));
+interno.get('/accesos', requirePermiso('web.ver'), h((req) => portal.listarAccesos(req.clinicaId, req.query)));
+interno.post('/pacientes/:id/codigo', requirePermiso('web.ver'), h((req) => portal.generarCodigo(req.clinicaId, req.params.id, req.usuario)));
+interno.post('/pacientes/:id/desactivar-cuenta', requirePermiso('web.ver'), h((req) => portal.desactivarCuenta(req.clinicaId, req.params.id, req.usuario)));
 interno.post('/pacientes/:id/verificar', requirePermiso('pacientes.edit'), h((req) => portal.verificarPaciente(req.clinicaId, req.params.id, req.usuario)));
 interno.put('/config', requirePermiso('web.configurar'), h((req) => s.guardarConfig(req.clinicaId, req.body || {}, req.usuario)));
 

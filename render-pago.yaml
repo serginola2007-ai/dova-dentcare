@@ -49,6 +49,14 @@ services:
         value: America/Asuncion
       # Email para las cuentas de pacientes de la página web (ver README).
       # Se completan a mano en Render → dova → Environment.
+      # Opción 1 (recomendada): Brevo por API web.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_REMITENTE
+        sync: false
+      - key: MAIL_NOMBRE
+        value: DentCare
+      # Opción 2: SMTP.
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

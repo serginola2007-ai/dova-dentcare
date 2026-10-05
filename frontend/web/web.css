@@ -349,3 +349,9 @@ input[type=file] { padding: 10px; background: var(--porcelana); }
 .destacado-fotos { align-items: center; }
 .destacado-foto { margin-top: 0; }
 @media (max-width: 760px) { .destacado { grid-template-columns: 1fr; } }
+
+/* ---- Crear cuenta y cuenta sin verificar ---- */
+.acceso:has(.acceso-ancha) { max-width: 680px; }
+.acceso-caja .check { margin-top: 4px; }
+.cuenta-verificar { flex: 1 1 100%; }
+.cuenta-verificar p { margin: 4px 0 0; color: var(--tinta); max-width: 60ch; }

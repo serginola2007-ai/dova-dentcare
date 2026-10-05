@@ -7,7 +7,7 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v14';
+const VERSION = 'dova-v15';
 const PRECARGA = [
   '/moderno/', '/minimalista/', '/tecnico/',
   '/shared/base.css', '/shared/ext/ext.css', '/shared/config.js', '/shared/api.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js',

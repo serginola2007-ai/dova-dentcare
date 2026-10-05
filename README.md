@@ -114,7 +114,8 @@ funcione de una.
 
 - `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
 - `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
-- **Email (cuentas de pacientes en la web)**: `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y opcionalmente `SMTP_SECURE=true` (puerto 465). Con Gmail: `SMTP_HOST=smtp.gmail.com`, `SMTP_USER` = la cuenta de Gmail y `SMTP_PASS` = una **contraseña de aplicación** (Cuenta de Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones). Sin estas variables, la web funciona pero no se pueden crear cuentas de pacientes. Para pruebas locales: `MAIL_TRANSPORTE=archivo` y `MAIL_ARCHIVO=/ruta/emails.jsonl`.
+- **Cuentas de pacientes en la web**: no necesitan email. Las personas nuevas se registran solas; los pacientes con ficha entran con un código que se genera en DOVA → Página web → "Cuentas de pacientes" y se manda por WhatsApp.
+- **Email (opcional, solo avisos de pagos)**: el plan gratis de Render bloquea el SMTP, así que se usa **Brevo** por su API web: `BREVO_API_KEY` y `MAIL_REMITENTE` (email verificado en Brevo), `MAIL_NOMBRE` opcional. Con un plan pago también sirve SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`). Para pruebas locales: `MAIL_TRANSPORTE=archivo` y `MAIL_ARCHIVO=/ruta/emails.jsonl`.
 
 ## Sistema de diseños
 

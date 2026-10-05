@@ -16,8 +16,76 @@ const DovaWeb = (() => {
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'solicitudes', texto: 'Lo que llegó', visible: puede('web.ver', 'web.configurar'), render: (c) => solicitudes(c, navegar, { estado: 'pendiente' }) },
       { id: 'pagos', texto: 'Pagos para revisar', visible: puede('web.ver'), render: (c) => pagosWeb(c, navegar, { estado: 'pendiente' }) },
+      { id: 'accesos', texto: 'Cuentas de pacientes', visible: puede('web.ver'), render: (c) => accesos(c, navegar) },
       { id: 'config', texto: 'Configurar la página', visible: puede('web.configurar'), render: (c) => configuracion(c) },
     ]);
+  }
+
+
+  // ---------------- Cuentas de pacientes (código para entrar a la web) ----------------
+  const telWa = (t) => { const n = String(t || '').replace(/\D/g, ''); if (n.length < 6) return null; return n.startsWith('0') ? `595${n.slice(1)}` : n; };
+  async function accesos(c, navegar, buscar = '') {
+    c.innerHTML = `<p class="dova-nota">Los pacientes que ya tienen ficha entran a la página con un <strong>código de 6 números</strong> que les das desde acá (vale 48 horas). También sirve si se olvidaron la contraseña. Las personas nuevas crean su cuenta solas desde la página.</p>
+      <div class="dova-fac-filtros-form"><div style="flex:1;min-width:240px;max-width:520px"><label>Buscar paciente (nombre, apellido o cédula)</label><input style="width:100%" data-buscar value="${esc(buscar)}" placeholder="Ej.: Benítez o 4567890" /></div>
+        <div class="dova-fac-f-botones"><button type="button" class="dova-btn-primary" data-ir>Buscar</button></div></div>
+      <div data-res></div>`;
+    const inp = c.querySelector('[data-buscar]'); const out = c.querySelector('[data-res]');
+    const buscarAhora = async () => {
+      const b = inp.value.trim();
+      if (b.length < 2) { out.innerHTML = '<p class="dova-nota">Escribí al menos 2 letras o números.</p>'; return; }
+      out.innerHTML = cargando;
+      try {
+        const r = await DOVA.get(`/web/accesos?buscar=${encodeURIComponent(b)}`);
+        out.innerHTML = r.length ? `<div class="dova-web-lista">${r.map((x) => `<article class="dova-web-card">
+            <header><strong>${esc(x.nombre)} ${esc(x.apellido)}</strong> <span class="dova-nota">C.I. ${esc(x.ci || 'sin cargar')}</span>
+              ${x.cuenta_id ? (x.cuenta_activa ? badge('Tiene cuenta', 'ok') : badge('Cuenta desactivada', 'critica')) : badge('Sin cuenta', 'info')}
+              ${x.web_verificado === false ? badge('Identidad sin verificar', 'atencion') : ''}</header>
+            ${x.ultimo_ingreso ? `<p class="dova-nota">Último ingreso: ${esc(fmtFechaHora(x.ultimo_ingreso))}</p>` : ''}
+            <div class="dova-web-acciones">
+              <button class="dova-btn-primary" data-dar="${x.id}">${x.cuenta_id ? 'Código para nueva contraseña' : 'Dar código para entrar'}</button>
+              ${x.web_verificado === false && puede('pacientes.edit') ? `<button class="dova-btn-secundario" data-verif="${x.id}" title="Cuando viste su cédula">Verificar identidad</button>` : ''}
+              ${x.cuenta_id && x.cuenta_activa ? `<button class="dova-btn-secundario" data-desact="${x.id}">Desactivar cuenta</button>` : ''}
+              <button class="dova-btn-secundario" data-pac="${x.id}">Ver ficha</button>
+            </div></article>`).join('')}</div>` : '<p class="dova-nota">No se encontró ningún paciente.</p>';
+      } catch (e) { out.innerHTML = `<p class="dova-nota">${esc(e.message)}</p>`; return; }
+      out.querySelectorAll('[data-pac]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.pac)));
+      out.querySelectorAll('[data-dar]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try { mostrarCodigo(await DOVA.post(`/web/pacientes/${b.dataset.dar}/codigo`, {})); } catch (e) { toast(e.message, 'error'); }
+        b.disabled = false;
+      }));
+      out.querySelectorAll('[data-verif]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirmarSimple('¿Viste la cédula de este paciente en la clínica?')) return;
+        try { await DOVA.post(`/web/pacientes/${b.dataset.verif}/verificar`, {}); toast('Identidad verificada', 'ok'); buscarAhora(); } catch (e) { toast(e.message, 'error'); }
+      }));
+      out.querySelectorAll('[data-desact]').forEach((b) => b.addEventListener('click', async () => {
+        try { await DOVA.post(`/web/pacientes/${b.dataset.desact}/desactivar-cuenta`, {}); toast('Cuenta desactivada. Para volver a entrar necesita un código nuevo.', 'ok'); buscarAhora(); } catch (e) { toast(e.message, 'error'); }
+      }));
+    };
+    c.querySelector('[data-ir]').addEventListener('click', buscarAhora);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buscarAhora(); } });
+    if (buscar) buscarAhora(); else inp.focus();
+  }
+  // Confirmación sin ventanas del navegador: segundo clic dentro de 4 s.
+  const pendientes = new Map();
+  function confirmarSimple(msg) {
+    const ahora = Date.now(); const t = pendientes.get(msg);
+    if (t && ahora - t < 4000) { pendientes.delete(msg); return true; }
+    pendientes.set(msg, ahora); toast(`${msg} Tocá de nuevo para confirmar.`, 'info'); return false;
+  }
+  function mostrarCodigo(r) {
+    const enlace = `${urlWeb()}ingresar.html?modo=codigo`;
+    const texto = `Hola ${r.nombre}. Tu código para ${r.tieneCuenta ? 'cambiar tu contraseña' : 'entrar a tu cuenta'} en la página de la clínica es ${r.codigo}. Entrá en ${enlace} con tu cédula (${r.ci}). Vale por 48 horas.`;
+    const tel = telWa(r.telefono);
+    const wa = `https://wa.me/${tel || ''}?text=${encodeURIComponent(texto)}`;
+    X.modal(`Código para ${r.nombre} ${r.apellido}`, `
+      <p class="dova-web-codigo" aria-label="Código">${esc(r.codigo.slice(0, 3))} ${esc(r.codigo.slice(3))}</p>
+      <p class="dova-nota">Vale por 48 horas y se usa una sola vez. Si das otro, este deja de servir. El paciente entra en <strong>${esc(enlace)}</strong> con su cédula, el código y una contraseña nueva.</p>
+      ${tel ? '' : '<p class="dova-nota">La ficha no tiene celular cargado: al abrir WhatsApp vas a tener que elegir el contacto.</p>'}
+      <div class="dova-modal-actions"><button class="dova-btn-secundario" data-copiar>Copiar mensaje</button><a class="dova-btn-primary" href="${esc(wa)}" target="_blank" rel="noopener">Enviar por WhatsApp</a></div>`);
+    document.querySelector('.dova-modal-box [data-copiar]').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(texto); toast('Mensaje copiado', 'ok'); } catch (_e) { toast('No se pudo copiar: anotá el código', 'error'); }
+    });
   }
 
   // ---------------- Lo que llegó ----------------
@@ -37,7 +105,7 @@ const DovaWeb = (() => {
     c.querySelectorAll('[data-agenda]').forEach((b) => b.addEventListener('click', () => navegar('agenda')));
     c.querySelectorAll('[data-verificar]').forEach((b) => b.addEventListener('click', () => {
       X.modal('Verificar identidad', `<p>Confirmá que <strong>viste la cédula</strong> de esta persona (en la clínica) y que sus datos son correctos.</p>
-        <p class="dova-nota">Recién después de verificarla puede crear su cuenta en la página web y ver sus turnos y pagos. Así nadie puede abrir una cuenta a nombre de otro.</p>
+        <p class="dova-nota">Recién después de verificarla puede ver sus pagos y comprobantes en la página web y pagar desde ahí. Así nadie ve datos de pagos a nombre de otro.</p>
         <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary" data-si>Sí, la verifiqué</button></div>`);
       document.querySelector('.dova-modal-box [data-si]').addEventListener('click', async () => {
         try { await DOVA.post(`/web/pacientes/${b.dataset.verificar}/verificar`, {}); X.cerrarModal(); toast('Identidad verificada', 'ok'); recargar({}); } catch (e) { toast(e.message, 'error'); }
@@ -181,10 +249,7 @@ const DovaWeb = (() => {
         </section>
         <section class="dova-ext-caja"><h4>Cuentas de pacientes</h4>
           <label class="dova-ext-check"><input type="checkbox" name="cuentasActivas" ${cfg.cuentas_activas ? 'checked' : ''}/> Los pacientes pueden crear su cuenta y entrar a "Mi cuenta"</label>
-          <p class="dova-nota">La cuenta se crea con un código que llega al <strong>email de la ficha</strong> del paciente. Los pacientes que se registraron solos desde la web tienen que ser verificados en recepción (botón "Verificar identidad").</p>
-          <p>${cfg.correo_configurado ? badge('Envío de emails configurado', 'ok') : badge('Falta configurar el envío de emails', 'critica')}</p>
-          ${cfg.correo_configurado ? '' : '<p class="dova-nota">Sin email no se pueden crear cuentas. Hay que cargar en Render las variables SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_FROM (ver README).</p>'}
-          <div class="dova-fac-filtros-form"><div><label>Mandar un email de prueba a</label><input type="email" data-prueba-mail placeholder="tu@email.com"/></div><div class="dova-fac-f-botones"><button type="button" class="dova-btn-secundario" data-probar-mail>Probar</button></div></div>
+          <p class="dova-nota">Las personas nuevas crean su cuenta solas (ven y reservan turnos; pagos y comprobantes, cuando verificás su cédula). Los que ya tienen ficha entran con un código que les das en la pestaña "Cuentas de pacientes" (por WhatsApp). No hace falta configurar emails.</p>
         </section>
         <section class="dova-ext-caja"><h4>Pagos online (transferencia o QR)</h4>
           <label class="dova-ext-check"><input type="checkbox" name="pagosActivos" ${cfg.pagos_activos ? 'checked' : ''}/> Los pacientes pueden pagar desde su cuenta y mandar el comprobante</label>
@@ -217,10 +282,6 @@ const DovaWeb = (() => {
       if (!a) { toast('Elegí la imagen del QR', 'error'); return; }
       const fd = new FormData(); fd.append('qr', a);
       try { await DOVA.postForm('/web/config/qr', fd); toast('QR guardado', 'ok'); configuracion(c); } catch (e) { toast(e.message, 'error'); }
-    });
-    c.querySelector('[data-probar-mail]').addEventListener('click', async () => {
-      const em = c.querySelector('[data-prueba-mail]').value.trim();
-      try { await DOVA.post('/web/correo/prueba', { email: em }); toast(`Email de prueba enviado a ${em}`, 'ok'); } catch (e) { toast(e.message, 'error'); }
     });
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault();

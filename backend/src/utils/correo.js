@@ -1,5 +1,10 @@
 /* Envío de emails (códigos de la cuenta del paciente, avisos de pagos).
-   Se configura con variables de entorno:
+   Opción recomendada (funciona en el plan gratis de Render, que BLOQUEA el
+   SMTP): Brevo, por su API web. Variables:
+     BREVO_API_KEY  la clave de API de brevo.com (gratis, 300 emails por día)
+     MAIL_REMITENTE el email remitente, verificado en Brevo (ej. dentcarerc@gmail.com)
+     MAIL_NOMBRE    nombre que ve el paciente (opcional, ej. DentCare)
+   Alternativa con servidor pago: SMTP con
      SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_SECURE (true para 465)
    Ejemplo con Gmail: SMTP_HOST=smtp.gmail.com, SMTP_USER=la cuenta, SMTP_PASS=una
    "contraseña de aplicación" (no la contraseña normal).
@@ -10,6 +15,7 @@ const fs = require('fs');
 let transporte = null;
 function modo() {
   if (process.env.MAIL_TRANSPORTE === 'archivo' && process.env.MAIL_ARCHIVO) return 'archivo';
+  if (process.env.BREVO_API_KEY && (process.env.MAIL_REMITENTE || process.env.SMTP_FROM)) return 'brevo';
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return 'smtp';
   return null;
 }
@@ -23,6 +29,7 @@ function obtenerTransporte() {
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true',
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000,
   });
   return transporte;
 }
@@ -44,6 +51,19 @@ async function enviar({ para, asunto, texto, htmlCuerpo }) {
   if (!m) throw Object.assign(new Error('El envío de emails no está configurado'), { codigo: 'SIN_CORREO' });
   const msg = { from: process.env.SMTP_FROM || process.env.SMTP_USER || 'no-responder@dova.local', to: para, subject: asunto, text: texto, html: htmlCuerpo };
   if (m === 'archivo') { fs.appendFileSync(process.env.MAIL_ARCHIVO, JSON.stringify({ ...msg, fecha: new Date().toISOString() }) + '\n'); return { ok: true }; }
+  if (m === 'brevo') {
+    const r = await fetch(process.env.BREVO_URL || 'https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { email: process.env.MAIL_REMITENTE || process.env.SMTP_FROM, name: process.env.MAIL_NOMBRE || 'DentCare' },
+        to: [{ email: para }], subject: asunto, textContent: texto, htmlContent: htmlCuerpo || undefined,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) throw new Error(`Brevo respondió ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return { ok: true };
+  }
   await obtenerTransporte().sendMail(msg);
   return { ok: true };
 }

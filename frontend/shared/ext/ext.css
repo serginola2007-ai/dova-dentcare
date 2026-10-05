@@ -320,3 +320,5 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-web-horario td { white-space: nowrap; }
 .dova-cal-web { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: var(--dova-ext-info-bg); color: var(--sage-dark); }
 @media (max-width: 700px) { .dova-web-cuando { margin-left: 0; width: 100%; } .dova-web-horario td { display: block; white-space: normal; } }
+.dova-web-codigo { font: 700 40px/1.1 ui-monospace, monospace; letter-spacing: 6px; text-align: center; margin: 8px 0 14px; padding: 14px; border-radius: var(--radius-m); background: var(--bg, #f6f3ee); }
+.dova-modal-actions a.dova-btn-primary { text-decoration: none; display: inline-flex; align-items: center; }

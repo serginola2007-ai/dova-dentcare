@@ -307,3 +307,11 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Fotos optimizadas en `frontend/web/img/` (sin datos EXIF/ubicación).
 - Service worker pasa a `dova-v13`.
 - Tratamientos: el destacado pasa a "Programa Vitamina C IV" con el afiche nuevo (`img/vitamina-c-iv.jpg`, en los colores de la marca). El afiche verde de Bio C queda guardado en `img/bio-c.jpg` por si se quiere volver a usar. Service worker `dova-v14`.
+
+## "No puedo crear cuenta" (migración 0027): cuentas sin email
+- Causa: la cuenta dependía de un código por email y el plan gratis de Render bloquea el SMTP. Además, solo podían crear cuenta los pacientes ya cargados con email.
+- Ahora no hace falta email ni ningún servicio externo:
+  - **Personas nuevas**: "Crear mi cuenta" (nombre, apellido, cédula, celular, email opcional y contraseña) crea la ficha y la cuenta al instante. La ficha queda "sin verificar": ven y reservan turnos; pagos, comprobantes y pagar online se habilitan cuando recepción toca "Verificar identidad" (al ver la cédula). Cada cuenta nueva aparece en "Lo que llegó" y avisa a recepción.
+  - **Pacientes con ficha** (o quien se olvidó la contraseña): entran con un **código de 6 números** que genera recepción en DOVA → Página web → "Cuentas de pacientes" (vale 48 horas, 5 intentos, se usa una vez). El botón "Enviar por WhatsApp" abre WhatsApp con el mensaje y el enlace listos. Desde ahí también se puede verificar la identidad o desactivar una cuenta.
+  - Una cédula que ya tiene ficha no se puede registrar desde la web (evita que alguien tome la ficha de otro): la página ofrece pedir el código por WhatsApp.
+- El email queda opcional (solo avisos de pagos aprobados/rechazados): Brevo por API web (`BREVO_API_KEY`, `MAIL_REMITENTE`) o SMTP en planes pagos.

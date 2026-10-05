@@ -142,7 +142,7 @@ async function infoPublica() {
     direccion: cfg.direccion, telefono: cfg.telefono, whatsapp: cfg.whatsapp, email: cfg.email,
     instagram: cfg.instagram, facebook: cfg.facebook, mapaUrl: cfg.mapa_url,
     horarios: cfg.horarios, reservasActivas: cfg.reservas_activas,
-    cuentasActivas: cfg.cuentas_activas && cfg.correo_configurado, pagosActivos: cfg.pagos_activos, diasAdelante: cfg.dias_adelante,
+    cuentasActivas: cfg.cuentas_activas, pagosActivos: cfg.pagos_activos, diasAdelante: cfg.dias_adelante,
     cancelacionHoras: cfg.cancelacion_horas,
     tieneLogo: (await query('SELECT 1 FROM facturacion_config WHERE clinica_id=$1 AND logo IS NOT NULL', [c.id])).rowCount > 0,
     tratamientos, odontologos,
@@ -458,4 +458,5 @@ module.exports = {
   calcularLibres, contexto, minutosHasta, nombreDia, limitar, notificarRecepcion, hash, txt, ESTADOS_LIBRES,
   infoPublica, disponibilidad, reservar, turnoPublico, accionTurno, registrar, consultar,
   obtenerConfig, guardarConfig, listarSolicitudes, resolverSolicitud, aplicarAFicha, clinicaPublica, PREGUNTAS_SALUD,
+  validarPersona, pacientePorCi,
 };

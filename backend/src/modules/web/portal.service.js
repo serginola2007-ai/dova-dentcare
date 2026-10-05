@@ -1,9 +1,10 @@
 /* Portal del paciente (página web con cuenta).
-   - La cuenta se abre con un código que llega al email QUE LA CLÍNICA TIENE
-     EN LA FICHA (no a uno que escriba el visitante): saber una cédula no
-     alcanza para entrar a la cuenta de otro.
-   - Los pacientes que se crearon solos desde la web necesitan que recepción
-     confirme su identidad antes de poder abrir la cuenta.
+   - Sin email ni SMS (Render gratis bloquea el SMTP):
+     · personas nuevas: crean su cuenta al instante; su ficha queda "sin
+       verificar" y no ven pagos ni comprobantes hasta que recepción vea su cédula;
+     · pacientes que ya tienen ficha: entran con un código que les da
+       recepción desde DOVA (por WhatsApp o en persona). Saber una cédula no
+       alcanza para entrar a la cuenta de otro.
    - El token del portal se firma con una clave distinta a la de DOVA: no
      sirve para entrar al sistema de la clínica.
    - Cada consulta filtra por el paciente del token: nadie ve datos ajenos.
@@ -28,6 +29,8 @@ const ciLimpia = (v) => String(v || '').replace(/[.\s]/g, '').slice(0, 30);
 const NOMBRE_METODO = { transferencia: 'Transferencia', qr: 'QR' };
 const HASH_FALSO = bcrypt.hashSync('no-existe-esta-cuenta', 10); // para que no se note por tiempo si una cuenta existe
 
+const SIN_VERIFICAR = () => new ApiError(403, 'Para ver tus pagos y comprobantes, la clínica tiene que confirmar tu identidad: mostrá tu cédula en recepción en tu próxima visita.');
+
 async function contextoClinica() {
   const c = await w.clinicaPublica();
   const cfg = await w.obtenerConfig(c.id);
@@ -35,36 +38,12 @@ async function contextoClinica() {
 }
 
 // ---------------------------------------------------------------- código por email
-async function pedirCodigo({ ci }, ip) {
-  w.limitar(ip, 'portal-codigo', 6, 30);
+const fichaPorCi = async (clinicaId, doc) => (await query('SELECT id, nombre, apellido, email, activo, web_verificado FROM pacientes WHERE clinica_id=$1 AND ci=$2 ORDER BY activo DESC, id LIMIT 1', [clinicaId, doc])).rows[0];
+
+async function clinicaConCuentas() {
   const { c, cfg } = await contextoClinica();
   if (!cfg.cuentas_activas) throw new ApiError(409, 'Las cuentas online no están activas. Consultá en recepción.');
-  if (!correo.configurado()) throw new ApiError(503, 'Las cuentas online todavía no están disponibles: la clínica tiene que configurar el envío de emails.');
-  const doc = ciLimpia(ci);
-  if (!/^[0-9A-Za-z-]{4,20}$/.test(doc)) throw new ApiError(400, 'Escribí tu número de cédula');
-  // Respuesta siempre igual: no revela si la cédula es paciente de la clínica.
-  const respuesta = { ok: true, mensaje: 'Si tu cédula está registrada en la clínica con un email, te mandamos un código. Revisá tu bandeja de entrada (y la de spam).' };
-  const p = (await query('SELECT id, nombre, email, activo, web_verificado FROM pacientes WHERE clinica_id=$1 AND ci=$2 ORDER BY activo DESC, id LIMIT 1', [c.id, doc])).rows[0];
-  if (!p || !p.activo || !p.web_verificado || !p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return respuesta;
-  const recientes = (await query("SELECT count(*)::int n FROM web_codigos WHERE paciente_id=$1 AND creado_en > now() - interval '1 hour'", [p.id])).rows[0].n;
-  if (recientes >= 3) return respuesta;
-  const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-  await query('UPDATE web_codigos SET usado=true WHERE paciente_id=$1 AND NOT usado', [p.id]);
-  await query("INSERT INTO web_codigos (clinica_id, paciente_id, codigo_hash, expira_en, ip) VALUES ($1,$2,$3, now() + interval '15 minutes', $4)", [c.id, p.id, hashCodigo(p.id, codigo), ip]);
-  const tieneCuenta = (await query('SELECT 1 FROM web_cuentas WHERE paciente_id=$1', [p.id])).rowCount > 0;
-  const nombreClinica = cfg.titulo || c.nombre;
-  try {
-    await correo.enviar({
-      para: p.email,
-      asunto: `${codigo} es tu código de ${nombreClinica}`,
-      texto: `Hola ${p.nombre}. Tu código para ${tieneCuenta ? 'cambiar tu contraseña' : 'crear tu cuenta'} es ${codigo}. Vence en 15 minutos.`,
-      htmlCuerpo: correo.html(tieneCuenta ? 'Cambiá tu contraseña' : 'Creá tu cuenta', [
-        `<p>Hola ${correo.esc(p.nombre)}. Tu código es:</p>`,
-        `<p style="font-size:32px;letter-spacing:6px;font-weight:bold;margin:12px 0">${codigo}</p>`,
-        '<p>Vence en 15 minutos.</p>'], nombreClinica),
-    });
-  } catch (e) { console.error('[portal] no se pudo enviar el email:', e.message); throw new ApiError(502, 'No pudimos enviar el email en este momento. Probá de nuevo en unos minutos.'); }
-  return respuesta;
+  return { c, cfg };
 }
 
 function validarClave(clave) {
@@ -75,30 +54,105 @@ function validarClave(clave) {
   return c;
 }
 
-// Crea la cuenta (o cambia la contraseña) con el código del email.
+async function guardarCuenta(clinicaId, pacienteId, email, clave) {
+  const claveHash = await bcrypt.hash(clave, 10);
+  const r = await query(`INSERT INTO web_cuentas (clinica_id, paciente_id, email, clave_hash) VALUES ($1,$2,$3,$4)
+                         ON CONFLICT (paciente_id) DO UPDATE SET clave_hash=EXCLUDED.clave_hash, email=EXCLUDED.email, version_token=web_cuentas.version_token+1,
+                           intentos_fallidos=0, bloqueada_hasta=NULL, activa=true RETURNING *, (xmax = 0) AS nueva`, [clinicaId, pacienteId, email || '', claveHash]);
+  return r.rows[0];
+}
+
+async function avisarCuentaNueva(c, p, { ci, telefono, email, nuevo, fechaNacimiento }, ip) {
+  const sol = await query(`INSERT INTO web_solicitudes (clinica_id, tipo, nombre, ci, telefono, email, mensaje, datos, paciente_id, paciente_nuevo, ip)
+                           VALUES ($1,'registro',$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+  [c.id, `${p.nombre} ${p.apellido}`, ci, telefono || null, email || null, 'Creó su cuenta en la página web.', JSON.stringify({ fechaNacimiento: fechaNacimiento || null }), p.id, nuevo, ip]);
+  await w.notificarRecepcion(c.id, { tipo: 'registro_web', titulo: `${nuevo ? 'Paciente nuevo' : 'Cuenta nueva'} en la web: ${p.nombre} ${p.apellido}`, mensaje: nuevo ? 'Se creó la ficha. Verificá su identidad cuando venga (cédula).' : 'Un paciente activó su cuenta en la página web.', entidad: 'web_solicitud', entidadId: sol.rows[0].id, ruta: 'web' });
+}
+
+// "Crear mi cuenta" para personas que todavía no son pacientes: se crea la
+// ficha (sin verificar) y la cuenta al instante, sin email ni SMS. Ven y
+// reservan turnos; pagos y comprobantes, cuando recepción verifica su cédula.
+// Si la cédula ya es paciente, no se puede tomar su ficha desde la web: tiene
+// que pedir un código a la clínica.
+async function registrarse(d, ip) {
+  if (d.sitio) throw new ApiError(400, 'No se pudo enviar');
+  w.limitar(ip, 'portal-registro', 5, 30);
+  const { c } = await clinicaConCuentas();
+  const persona = w.validarPersona(d);
+  const clave = validarClave(d.clave);
+  const res = await conCandado([`web:ci:${c.id}:${persona.ci}`], async () => {
+    if (await fichaPorCi(c.id, persona.ci)) {
+      throw new ApiError(409, 'Esa cédula ya está registrada en la clínica. Para entrar, pedí tu código de activación por WhatsApp o en recepción.', { codigo: 'YA_PACIENTE' });
+    }
+    const r = await w.pacientePorCi(c.id, persona);
+    const p = (await query('SELECT id, nombre, apellido FROM pacientes WHERE id=$1', [r.id])).rows[0];
+    const cuenta = await guardarCuenta(c.id, p.id, persona.email, clave);
+    return { p, cuenta };
+  });
+  await auditoria.registrar({ clinicaId: c.id, usuarioId: null, usuarioNombre: 'Página web', accion: 'crear_cuenta_paciente', modulo: 'web', entidadId: res.p.id, detalle: { ip, pacienteNuevo: true } });
+  await avisarCuentaNueva(c, res.p, { ...persona, nuevo: true }, ip);
+  return sesion(res.cuenta, res.p);
+}
+
+// Pacientes de la clínica (o quien se olvidó la contraseña): entran con el
+// código que les da recepción desde DOVA.
 async function activar({ ci, codigo, clave }, ip) {
   w.limitar(ip, 'portal-activar', 10, 30);
-  const { c } = await contextoClinica();
+  const { c } = await clinicaConCuentas();
   const doc = ciLimpia(ci); const cod = String(codigo || '').replace(/\D/g, '');
   const nueva = validarClave(clave);
-  const error = new ApiError(400, 'El código no es correcto o ya venció. Pedí uno nuevo.');
-  if (!/^\d{6}$/.test(cod)) throw error;
-  const p = (await query('SELECT id, nombre, apellido, email, activo, web_verificado FROM pacientes WHERE clinica_id=$1 AND ci=$2 ORDER BY activo DESC, id LIMIT 1', [c.id, doc])).rows[0];
-  if (!p || !p.activo || !p.web_verificado || !p.email) throw error;
-  const cuenta = await conCandado([`portal:pac:${p.id}`], async () => {
-    const k = (await query('SELECT * FROM web_codigos WHERE paciente_id=$1 AND NOT usado AND expira_en > now() ORDER BY id DESC LIMIT 1', [p.id])).rows[0];
+  const error = new ApiError(400, 'El código no es correcto o ya venció. Pedí uno nuevo a la clínica.');
+  if (!/^\d{6}$/.test(cod) || !/^[0-9A-Za-z-]{4,20}$/.test(doc)) throw error;
+  const res = await conCandado([`web:ci:${c.id}:${doc}`], async () => {
+    const k = (await query('SELECT * FROM web_codigos WHERE clinica_id=$1 AND ci=$2 AND NOT usado AND expira_en > now() AND paciente_id IS NOT NULL ORDER BY id DESC LIMIT 1', [c.id, doc])).rows[0];
     if (!k) throw error;
-    if (k.intentos >= 5) { await query('UPDATE web_codigos SET usado=true WHERE id=$1', [k.id]); throw new ApiError(429, 'Demasiados intentos con ese código. Pedí uno nuevo.'); }
-    if (k.codigo_hash !== hashCodigo(p.id, cod)) { await query('UPDATE web_codigos SET intentos=intentos+1 WHERE id=$1', [k.id]); throw error; }
+    if (k.intentos >= 5) { await query('UPDATE web_codigos SET usado=true WHERE id=$1', [k.id]); throw new ApiError(429, 'Demasiados intentos con ese código. Pedí uno nuevo a la clínica.'); }
+    if (k.codigo_hash !== hashCodigo(`${c.id}:${doc}`, cod)) { await query('UPDATE web_codigos SET intentos=intentos+1 WHERE id=$1', [k.id]); throw error; }
     await query('UPDATE web_codigos SET usado=true WHERE id=$1', [k.id]);
-    const claveHash = await bcrypt.hash(nueva, 10);
-    const r = await query(`INSERT INTO web_cuentas (clinica_id, paciente_id, email, clave_hash) VALUES ($1,$2,$3,$4)
-                           ON CONFLICT (paciente_id) DO UPDATE SET clave_hash=EXCLUDED.clave_hash, email=EXCLUDED.email, version_token=web_cuentas.version_token+1,
-                             intentos_fallidos=0, bloqueada_hasta=NULL, activa=true RETURNING *, (xmax = 0) AS nueva`, [c.id, p.id, p.email, claveHash]);
-    return r.rows[0];
+    const p = (await query('SELECT id, nombre, apellido, email, telefono, activo FROM pacientes WHERE id=$1 AND clinica_id=$2', [k.paciente_id, c.id])).rows[0];
+    if (!p || !p.activo) throw error;
+    const cuenta = await guardarCuenta(c.id, p.id, p.email, nueva);
+    return { p, cuenta };
   });
+  const { cuenta, p } = res;
   await auditoria.registrar({ clinicaId: c.id, usuarioId: null, usuarioNombre: 'Página web', accion: cuenta.nueva ? 'crear_cuenta_paciente' : 'cambiar_clave_paciente', modulo: 'web', entidadId: p.id, detalle: { ip } });
+  if (cuenta.nueva) await avisarCuentaNueva(c, p, { ci: doc, telefono: p.telefono, email: p.email, nuevo: false }, ip);
   return sesion(cuenta, p);
+}
+
+// ---------------------------------------------------------------- recepción: accesos a la web
+async function listarAccesos(clinicaId, { buscar }) {
+  const b = String(buscar || '').trim();
+  if (b.length < 2) return [];
+  const r = await query(`SELECT p.id, p.nombre, p.apellido, p.ci, p.telefono, p.whatsapp, p.web_verificado,
+                                wc.id AS cuenta_id, wc.activa AS cuenta_activa, wc.ultimo_ingreso
+                           FROM pacientes p LEFT JOIN web_cuentas wc ON wc.paciente_id=p.id
+                          WHERE p.clinica_id=$1 AND p.activo AND (p.ci ILIKE $2 OR (p.nombre || ' ' || p.apellido) ILIKE $3)
+                          ORDER BY p.apellido, p.nombre LIMIT 20`, [clinicaId, `${b.replace(/[.\s]/g, '')}%`, `%${b}%`]);
+  return r.rows;
+}
+
+// Genera un código de 6 números (vale 48 h, 5 intentos) para que el paciente
+// cree su cuenta o cambie la contraseña. Recepción se lo pasa por WhatsApp.
+async function generarCodigo(clinicaId, pacienteId, usuario) {
+  const p = (await query('SELECT id, nombre, apellido, ci, telefono, whatsapp, activo FROM pacientes WHERE clinica_id=$1 AND id=$2', [clinicaId, Number(pacienteId)])).rows[0];
+  if (!p || !p.activo) throw new ApiError(404, 'Paciente no encontrado');
+  const doc = ciLimpia(p.ci);
+  if (!/^[0-9A-Za-z-]{4,20}$/.test(doc)) throw new ApiError(400, 'El paciente no tiene cédula cargada en la ficha. Cargala primero: con la cédula entra a la web.');
+  const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  await query('UPDATE web_codigos SET usado=true WHERE clinica_id=$1 AND ci=$2 AND NOT usado', [clinicaId, doc]);
+  const r = await query(`INSERT INTO web_codigos (clinica_id, paciente_id, ci, codigo_hash, expira_en, usuario_id)
+                         VALUES ($1,$2,$3,$4, now() + interval '48 hours', $5) RETURNING expira_en`, [clinicaId, p.id, doc, hashCodigo(`${clinicaId}:${doc}`, codigo), usuario.id]);
+  const tieneCuenta = (await query('SELECT 1 FROM web_cuentas WHERE paciente_id=$1', [p.id])).rowCount > 0;
+  await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre || usuario.username, accion: 'codigo_web_paciente', modulo: 'web', entidadId: p.id, detalle: { tieneCuenta } });
+  return { codigo, expira: r.rows[0].expira_en, ci: doc, nombre: p.nombre, apellido: p.apellido, telefono: p.whatsapp || p.telefono, tieneCuenta };
+}
+
+async function desactivarCuenta(clinicaId, pacienteId, usuario) {
+  const r = await query('UPDATE web_cuentas SET activa=false, version_token=version_token+1 WHERE clinica_id=$1 AND paciente_id=$2 RETURNING id', [clinicaId, Number(pacienteId)]);
+  if (!r.rowCount) throw new ApiError(404, 'Ese paciente no tiene cuenta en la web');
+  await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre || usuario.username, accion: 'desactivar_cuenta_web', modulo: 'web', entidadId: Number(pacienteId) });
+  return { ok: true };
 }
 
 function sesion(cuenta, p) {
@@ -133,10 +187,10 @@ async function autenticar(req, res, next) {
     if (esquema !== 'Bearer' || !token) throw new ApiError(401, 'Iniciá sesión para continuar');
     let pl;
     try { pl = jwt.verify(token, CLAVE_PORTAL(), { audience: AUD }); } catch (_e) { throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.'); }
-    const r = (await query(`SELECT wc.id, wc.paciente_id, wc.clinica_id, wc.version_token, wc.activa, p.activo, p.nombre, p.apellido, p.ci
+    const r = (await query(`SELECT wc.id, wc.paciente_id, wc.clinica_id, wc.version_token, wc.activa, p.activo, p.nombre, p.apellido, p.ci, p.web_verificado
                               FROM web_cuentas wc JOIN pacientes p ON p.id=wc.paciente_id WHERE wc.id=$1`, [pl.sub])).rows[0];
     if (!r || !r.activa || !r.activo || r.version_token !== pl.v || r.paciente_id !== pl.pid) throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.');
-    req.portal = { cuentaId: r.id, pacienteId: r.paciente_id, clinicaId: r.clinica_id, nombre: r.nombre, apellido: r.apellido, ci: r.ci };
+    req.portal = { cuentaId: r.id, pacienteId: r.paciente_id, clinicaId: r.clinica_id, nombre: r.nombre, apellido: r.apellido, ci: r.ci, verificado: r.web_verificado };
     next();
   } catch (e) { next(e); }
 }
@@ -152,7 +206,7 @@ async function cambiarClave(pt, { actual, nueva }) {
 // ---------------------------------------------------------------- datos y turnos
 async function yo(pt) {
   const p = (await query('SELECT nombre, apellido, ci, telefono, email, direccion, ciudad, fecha_nacimiento::text AS fecha_nacimiento FROM pacientes WHERE id=$1', [pt.pacienteId])).rows[0];
-  return { ...p };
+  return { ...p, verificado: pt.verificado !== false };
 }
 
 async function turnos(pt) {
@@ -208,6 +262,10 @@ async function reservar(pt, d) {
 // ---------------------------------------------------------------- estado de cuenta
 async function cuenta(pt) {
   const { cfg } = await contextoClinica();
+  // Identidad sin confirmar (se registró solo en la web): todavía no ve datos de pagos.
+  if (pt.verificado === false) {
+    return { sinVerificar: true, resumen: { pendiente: 0, cuotasVencidas: 0, enRevision: 0 }, presupuestos: [], cuotas: [], pagos: [], facturas: [], enviados: [], pagosActivos: false, datosPago: null };
+  }
   const fac = require('../facturacion/facturacion.service');
   const [press, cuotas, pagos, facturas, enviados] = await Promise.all([
     query("SELECT id, fecha::text AS fecha, total, estado FROM presupuestos WHERE clinica_id=$1 AND paciente_id=$2 AND estado IN ('aceptado','enviado') ORDER BY fecha DESC", [pt.clinicaId, pt.pacienteId]),
@@ -243,11 +301,13 @@ async function cuenta(pt) {
 }
 
 async function reciboPdf(pt, pagoId, res) {
+  if (pt.verificado === false) throw SIN_VERIFICAR();
   const p = (await query("SELECT id FROM pagos WHERE id=$1 AND clinica_id=$2 AND paciente_id=$3 AND estado='pagado'", [Number(pagoId), pt.clinicaId, pt.pacienteId])).rows[0];
   if (!p) throw new ApiError(404, 'Pago no encontrado');
   return require('../comprobantes/comprobantes.service').pago(pt.clinicaId, p.id, res);
 }
 async function facturaPdf(pt, facturaId, res) {
+  if (pt.verificado === false) throw SIN_VERIFICAR();
   const f = (await query("SELECT id FROM facturas WHERE id=$1 AND clinica_id=$2 AND paciente_id=$3 AND estado<>'anulada'", [Number(facturaId), pt.clinicaId, pt.pacienteId])).rows[0];
   if (!f) throw new ApiError(404, 'Comprobante no encontrado');
   const fac = require('../facturacion/facturacion.service'); const pdf = require('../facturacion/facturacion.pdf');
@@ -266,6 +326,7 @@ function tipoArchivo(buf) {
 }
 
 async function informarPago(pt, d, archivo) {
+  if (pt.verificado === false) throw SIN_VERIFICAR();
   const { cfg } = await contextoClinica();
   if (!cfg.pagos_activos) throw new ApiError(409, 'Los pagos online no están activos. Consultá en recepción.');
   const metodo = ['transferencia', 'qr'].includes(d.metodo) ? d.metodo : null;
@@ -360,6 +421,6 @@ async function verificarPaciente(clinicaId, pacienteId, usuario) {
 }
 
 module.exports = {
-  pedirCodigo, activar, ingresar, autenticar, cambiarClave, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
+  registrarse, activar, listarAccesos, generarCodigo, desactivarCuenta, ingresar, autenticar, cambiarClave, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
   listarPagos, comprobante, aprobarPago, rechazarPago, verificarPaciente, tipoArchivo,
 };

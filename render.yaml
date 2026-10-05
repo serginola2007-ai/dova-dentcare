@@ -34,18 +34,15 @@ services:
         value: 7d
       - key: DOVA_TZ
         value: America/Asuncion
-      # Email para las cuentas de pacientes de la página web (ver README).
-      # Se completan a mano en Render → dova → Environment.
-      - key: SMTP_HOST
+      # Email OPCIONAL (solo avisos de pagos a pacientes; las cuentas no lo necesitan).
+      # El plan gratis de Render BLOQUEA el SMTP: se usa Brevo (brevo.com) por su API web.
+      # BREVO_API_KEY y MAIL_REMITENTE se completan a mano en Render → dova → Environment.
+      - key: BREVO_API_KEY
         sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
+      - key: MAIL_REMITENTE
         sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: SMTP_FROM
-        sync: false
+      - key: MAIL_NOMBRE
+        value: DentCare
 
 databases:
   - name: dova-db

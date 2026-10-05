@@ -40,10 +40,10 @@
     let r;
     try { r = await fetch(`/api/web/cuenta${ruta}`, { method, headers: h, body: form || (body ? JSON.stringify(body) : undefined) }); }
     catch (_e) { throw new Error('No hay conexión. Revisá tu internet y probá de nuevo.'); }
-    if (r.status === 401 && s && !ruta.startsWith('/ingresar') && !ruta.startsWith('/activar')) { cerrarSesion(); location.href = `ingresar.html?volver=${encodeURIComponent(location.pathname.split('/').pop() + location.hash)}`; throw new Error('Tu sesión venció'); }
+    if (r.status === 401 && s && !ruta.startsWith('/ingresar') && !ruta.startsWith('/activar') && !ruta.startsWith('/registro')) { cerrarSesion(); location.href = `ingresar.html?volver=${encodeURIComponent(location.pathname.split('/').pop() + location.hash)}`; throw new Error('Tu sesión venció'); }
     if (blob && r.ok) return r.blob();
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error((j.error && j.error.message) || 'No se pudo completar. Probá de nuevo.');
+    if (!r.ok) throw Object.assign(new Error((j.error && j.error.message) || 'No se pudo completar. Probá de nuevo.'), { codigo: j.error && j.error.details && j.error.details.codigo });
     return j;
   }
   async function bajarPdf(ruta, nombre) {
@@ -465,7 +465,21 @@
       c.innerHTML = `<div class="tarjeta-turno"><h1 class="acceso-titulo">Mi cuenta</h1><p style="margin-top:10px">Las cuentas online todavía no están disponibles. Mientras tanto podés <a href="reservar.html">reservar tu turno</a> sin cuenta o escribirnos desde <a href="contacto.html">Contacto</a>.</p></div>`;
       return;
     }
-    const vista = (modo) => {
+    const pedirCodigoHtml = () => {
+      const wa = linkWa(`Hola, quiero mi código para entrar a mi cuenta de ${info.nombre}. Mi cédula es: `);
+      return wa ? `<a class="boton boton-claro boton-chico" href="${esc(wa)}" target="_blank" rel="noopener">Pedir mi código por WhatsApp</a>` : '<span>Pedilo en recepción o llamando a la clínica.</span>';
+    };
+    const entrar = (r) => { guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); };
+    const claveOk = (f, m) => {
+      if (f.clave.value.length < 8 || !/[A-Za-z]/.test(f.clave.value) || !/\d/.test(f.clave.value)) { m('La contraseña tiene que tener al menos 8 caracteres, con letras y números'); return false; }
+      if (f.clave.value !== f.clave2.value) { m('Las dos contraseñas no coinciden'); return false; }
+      return true;
+    };
+    const camposClave = (pref) => `<div class="campo-fila">
+        <div class="campo"><label for="${pref}-c1">Elegí una contraseña</label><input id="${pref}-c1" name="clave" type="password" autocomplete="new-password" maxlength="100" required /><span class="ayuda">Al menos 8 caracteres, con letras y números.</span></div>
+        <div class="campo"><label for="${pref}-c2">Repetila</label><input id="${pref}-c2" name="clave2" type="password" autocomplete="new-password" maxlength="100" required /></div>
+      </div>`;
+    const vista = (modo, extra = {}) => {
       if (modo === 'ingresar') {
         c.innerHTML = `<div class="tarjeta-turno acceso-caja">
           <h1 class="acceso-titulo">Ingresá a tu cuenta</h1>
@@ -477,68 +491,86 @@
             <button class="boton" type="submit">Ingresar</button>
           </form>
           <div class="acceso-otros">
-            <p><strong>¿Es la primera vez?</strong> Creá tu cuenta con tu cédula: te mandamos un código al email que tenemos en tu ficha.</p>
+            <p><strong>¿Es la primera vez?</strong> Creá tu cuenta en un minuto.</p>
             <button type="button" class="boton boton-claro" data-crear>Crear mi cuenta</button>
-            <p style="margin-top:14px"><button type="button" class="boton-texto" data-olvido>Me olvidé la contraseña</button></p>
+            <p style="margin-top:18px"><strong>¿Ya sos paciente o te olvidaste la contraseña?</strong> Entrá con el código que te da la clínica.</p>
+            <button type="button" class="boton-texto" data-codigo>Tengo un código de la clínica</button>
           </div></div>`;
-        $('[data-crear]', c).addEventListener('click', () => vista('codigo'));
-        $('[data-olvido]', c).addEventListener('click', () => vista('codigo'));
+        $('[data-crear]', c).addEventListener('click', () => vista('crear'));
+        $('[data-codigo]', c).addEventListener('click', () => vista('codigo'));
         const f = $('[data-f-ingresar]', c);
         f.addEventListener('submit', async (ev) => {
           ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
           if (!f.usuario.value.trim() || !f.clave.value) { err.textContent = 'Escribí tu cédula o email y tu contraseña'; err.hidden = false; return; }
           const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Ingresando…';
-          try { const r = await cuentaApi('/ingresar', { method: 'POST', body: { usuario: f.usuario.value, clave: f.clave.value } }); guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); }
+          try { entrar(await cuentaApi('/ingresar', { method: 'POST', body: { usuario: f.usuario.value, clave: f.clave.value } })); }
           catch (e) { err.textContent = e.message; err.hidden = false; b.disabled = false; b.textContent = 'Ingresar'; }
         });
-      } else if (modo === 'codigo') {
-        c.innerHTML = `<div class="tarjeta-turno acceso-caja">
-          <h1 class="acceso-titulo">Tu código</h1>
-          <p class="ayuda">Escribí tu cédula. Te mandamos un código de 6 números al email que la clínica tiene en tu ficha.</p>
-          <form class="formulario" data-f-codigo novalidate>
-            <div class="campo"><label for="k-ci">Cédula</label><input id="k-ci" name="ci" inputmode="numeric" maxlength="20" autocomplete="off" required /></div>
-            <p class="error" data-error role="alert" hidden></p>
-            <button class="boton" type="submit">Enviarme el código</button>
+      } else if (modo === 'crear') {
+        c.innerHTML = `<div class="tarjeta-turno acceso-caja acceso-ancha">
+          <h1 class="acceso-titulo">Creá tu cuenta</h1>
+          <p class="ayuda">Para personas que todavía no se atendieron en la clínica. Si ya sos paciente, <button type="button" class="boton-texto" data-ir-codigo>entrá con el código de la clínica</button>.</p>
+          <form class="formulario" data-f-crear novalidate>
+            ${camposPersona('n')}
+            ${camposClave('n')}
+            <label class="check"><input type="checkbox" name="acepta" /> Acepto que ${esc(info.nombre)} guarde estos datos en mi ficha de paciente.</label>
+            <div class="trampa" aria-hidden="true"><label>Sitio <input name="sitio" tabindex="-1" autocomplete="off" /></label></div>
+            <div class="error" data-error role="alert" hidden></div>
+            <button class="boton" type="submit">Crear mi cuenta</button>
           </form>
-          <p class="ayuda" style="margin-top:16px">¿No tenés email cargado o cambiaste de email? Pedí en recepción que lo actualicen.</p>
+          <p class="ayuda" style="margin-top:16px">Para ver tus pagos y comprobantes, en tu primera visita mostrá tu cédula en recepción.</p>
           <p style="margin-top:14px"><button type="button" class="boton-texto" data-volver>Ya tengo cuenta</button></p></div>`;
         $('[data-volver]', c).addEventListener('click', () => vista('ingresar'));
-        const f = $('[data-f-codigo]', c);
+        $('[data-ir-codigo]', c).addEventListener('click', () => vista('codigo'));
+        const f = $('[data-f-crear]', c);
         f.addEventListener('submit', async (ev) => {
           ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
-          const ci = f.ci.value.trim(); if (ci.replace(/\D/g, '').length < 4) { err.textContent = 'Escribí tu número de cédula'; err.hidden = false; return; }
-          const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Enviando…';
-          try { const r = await cuentaApi('/codigo', { method: 'POST', body: { ci } }); vista({ paso: 'activar', ci, mensaje: r.mensaje }); }
-          catch (e) { err.textContent = e.message; err.hidden = false; b.disabled = false; b.textContent = 'Enviarme el código'; }
+          const m = (t, html) => { if (html) err.innerHTML = html; else err.textContent = t; err.hidden = false; };
+          const d = leer(f);
+          const falta = !d.nombre.trim() ? 'Escribí tu nombre' : !d.apellido.trim() ? 'Escribí tu apellido' : d.ci.replace(/\D/g, '').length < 4 ? 'Escribí tu número de cédula'
+            : d.telefono.replace(/\D/g, '').length < 6 ? 'Escribí tu celular o WhatsApp' : d.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()) ? 'El email no es válido' : null;
+          if (falta) return m(falta);
+          if (!claveOk(f, m)) return;
+          if (!f.acepta.checked) return m('Marcá la casilla para aceptar que guardemos tus datos');
+          const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Creando…';
+          try { entrar(await cuentaApi('/registro', { method: 'POST', body: { ...d, email: d.email.trim(), acepta: true } })); }
+          catch (e) {
+            b.disabled = false; b.textContent = 'Crear mi cuenta';
+            if (e.codigo === 'YA_PACIENTE') m('', `<p>${esc(e.message)}</p><p style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">${pedirCodigoHtml()} <button type="button" class="boton boton-chico" data-ya-tengo>Ya tengo el código</button></p>`);
+            else m(e.message);
+            const y = $('[data-ya-tengo]', err); if (y) y.addEventListener('click', () => vista('codigo', { ci: d.ci.trim() }));
+          }
         });
       } else {
         c.innerHTML = `<div class="tarjeta-turno acceso-caja">
-          <h1 class="acceso-titulo">Revisá tu email</h1>
-          <p class="ayuda">${esc(modo.mensaje)}</p>
+          <h1 class="acceso-titulo">Entrar con el código</h1>
+          <p class="ayuda">Si ya sos paciente de la clínica (o te olvidaste la contraseña), pedí tu código de 6 números. Vale por 48 horas.</p>
+          <p style="margin-top:12px">${pedirCodigoHtml()}</p>
           <form class="formulario" data-f-activar novalidate>
+            <div class="campo"><label for="a-ci">Cédula</label><input id="a-ci" name="ci" inputmode="numeric" maxlength="20" autocomplete="off" required value="${esc(extra.ci || '')}" /></div>
             <div class="campo"><label for="a-cod">Código de 6 números</label><input id="a-cod" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="codigo" required /></div>
-            <div class="campo"><label for="a-c1">Elegí una contraseña</label><input id="a-c1" name="clave" type="password" autocomplete="new-password" maxlength="100" required /><span class="ayuda">Al menos 8 caracteres, con letras y números.</span></div>
-            <div class="campo"><label for="a-c2">Repetí la contraseña</label><input id="a-c2" name="clave2" type="password" autocomplete="new-password" maxlength="100" required /></div>
+            ${camposClave('a')}
             <p class="error" data-error role="alert" hidden></p>
             <button class="boton" type="submit">Listo, entrar</button>
           </form>
-          <p style="margin-top:14px"><button type="button" class="boton-texto" data-reenviar>No me llegó: pedir otro código</button></p></div>`;
-        $('[data-reenviar]', c).addEventListener('click', () => vista('codigo'));
+          <p style="margin-top:14px"><button type="button" class="boton-texto" data-volver>Volver</button></p></div>`;
+        $('[data-volver]', c).addEventListener('click', () => vista('ingresar'));
         const f = $('[data-f-activar]', c);
         f.addEventListener('submit', async (ev) => {
           ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;
           const m = (t) => { err.textContent = t; err.hidden = false; };
+          if (f.ci.value.replace(/\D/g, '').length < 4) return m('Escribí tu número de cédula');
           if (!/^\d{6}$/.test(f.codigo.value.trim())) return m('Escribí los 6 números del código');
-          if (f.clave.value.length < 8 || !/[A-Za-z]/.test(f.clave.value) || !/\d/.test(f.clave.value)) return m('La contraseña tiene que tener al menos 8 caracteres, con letras y números');
-          if (f.clave.value !== f.clave2.value) return m('Las dos contraseñas no coinciden');
+          if (!claveOk(f, m)) return;
           const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Guardando…';
-          try { const r = await cuentaApi('/activar', { method: 'POST', body: { ci: modo.ci, codigo: f.codigo.value.trim(), clave: f.clave.value } }); guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); }
+          try { entrar(await cuentaApi('/activar', { method: 'POST', body: { ci: f.ci.value.trim(), codigo: f.codigo.value.trim(), clave: f.clave.value } })); }
           catch (e) { m(e.message); b.disabled = false; b.textContent = 'Listo, entrar'; }
         });
       }
-      const primero = $('input', c); if (primero) primero.focus();
+      const primero = extra.ci ? $('#a-cod', c) : $('input', c); if (primero) primero.focus();
     };
-    vista(params.get('modo') === 'crear' ? 'codigo' : 'ingresar');
+    const modo = params.get('modo');
+    vista(modo === 'crear' ? 'crear' : modo === 'codigo' ? 'codigo' : 'ingresar');
   }
 
   // =================================================================== mi cuenta
@@ -570,6 +602,7 @@
     const r = $('[data-resumen]'); if (!r) return;
     try {
       const e = await cuentaApi('/estado');
+      if (e.sinVerificar) { r.innerHTML = `<div class="cuenta-verificar"><span>Cuenta lista</span><p>${esc(SIN_VERIFICAR)}</p></div>`; return; }
       r.innerHTML = `<div><span>Te queda por pagar</span><strong>${gs(e.resumen.pendiente)}</strong></div>
         <div><span>Cuotas vencidas</span><strong class="${e.resumen.cuotasVencidas ? 'alerta' : ''}">${e.resumen.cuotasVencidas}</strong></div>
         ${e.resumen.enRevision ? `<div><span>Pagos en revisión</span><strong>${gs(e.resumen.enRevision)}</strong></div>` : ''}`;
@@ -595,8 +628,11 @@
     }));
   }
 
+  const SIN_VERIFICAR = 'Ya podés reservar y ver tus turnos. Para ver tus pagos y comprobantes y pagar desde acá, mostrá tu cédula en recepción en tu próxima visita.';
+  const panelSinVerificar = (p, titulo) => { p.innerHTML = `<h2>${titulo}</h2><p class="vacio">${esc(SIN_VERIFICAR)}</p>`; };
   async function panelPagos(p) {
     const e = await cuentaApi('/estado');
+    if (e.sinVerificar) return panelSinVerificar(p, 'Pagos');
     const deudas = [
       ...e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.cantidad_cuotas}`, detalle: `Vence el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: e.enviados.some((x) => x.cuota_id === q.id && x.estado === 'pendiente') })),
       ...e.presupuestos.filter((x) => x.estado === 'aceptado' && x.pendiente > 0 && !x.enCuotas).map((x) => ({ tipo: 'presupuesto', id: x.id, titulo: `Presupuesto del ${fechaCorta(x.fecha)}`, detalle: `Total ${gs(x.total)} · pagado ${gs(x.pagado)}`, monto: x.pendiente, aCuenta: true })),
@@ -664,6 +700,7 @@
 
   async function panelComprobantes(p) {
     const e = await cuentaApi('/estado');
+    if (e.sinVerificar) return panelSinVerificar(p, 'Comprobantes');
     p.innerHTML = `<h2>Pagos realizados</h2>
       ${e.pagos.length ? `<ul class="lista-cuenta lista-simple">${e.pagos.map((x) => `<li><span>${esc(fechaCorta(x.fecha))}</span><span><strong>${gs(x.monto)}</strong> ${x.concepto ? `· ${esc(x.concepto)}` : ''}</span>
           <span class="docs"><button type="button" class="boton-texto" data-recibo="${x.id}">Recibo</button>${x.factura_id ? `<button type="button" class="boton-texto" data-factura="${x.factura_id}" data-num="${esc(x.factura_numero)}">Comprobante ${esc(x.factura_numero)}</button>` : ''}</span></li>`).join('')}</ul>`
