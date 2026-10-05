@@ -114,6 +114,7 @@ funcione de una.
 
 - `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
 - `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
+- **Tiempo real**: no necesita configuración. DOVA escucha la base (LISTEN/NOTIFY) y avisa a las pantallas abiertas por `GET /api/eventos` (Server-Sent Events). Ver CORRECCIONES.md → Tiempo real.
 - **Cuentas de pacientes en la web**: no necesitan email. Las personas nuevas se registran solas; los pacientes con ficha entran con un código que se genera en DOVA → Página web → "Cuentas de pacientes" y se manda por WhatsApp.
 - **Email (opcional, solo avisos de pagos)**: el plan gratis de Render bloquea el SMTP, así que se usa **Brevo** por su API web: `BREVO_API_KEY` y `MAIL_REMITENTE` (email verificado en Brevo), `MAIL_NOMBRE` opcional. Con un plan pago también sirve SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`). Para pruebas locales: `MAIL_TRANSPORTE=archivo` y `MAIL_ARCHIVO=/ruta/emails.jsonl`.
 

@@ -54,6 +54,7 @@ publico.get('/qr', async (req, res, next) => {
 const cuenta = express.Router();
 cuenta.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 cuenta.post('/registro', h((req) => portal.registrarse(req.body || {}, ip(req))));
+cuenta.post('/pedir-codigo', h((req) => portal.pedirCodigoClinica(req.body || {}, ip(req))));
 cuenta.post('/activar', h((req) => portal.activar(req.body || {}, ip(req))));
 cuenta.post('/ingresar', h((req) => portal.ingresar(req.body || {}, ip(req))));
 cuenta.use(portal.autenticar);

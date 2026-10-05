@@ -3,13 +3,14 @@
 const DovaWeb = (() => {
   const X = DovaExt;
   const { esc, fmtFecha, fmtFechaHora, toast, puede, badge, cargando } = X;
-  const TIPO = { turno: ['Turno', 'info'], registro: ['Ficha', 'ok'], consulta: ['Consulta', 'atencion'] };
+  const TIPO = { turno: ['Turno', 'info'], registro: ['Ficha', 'ok'], consulta: ['Consulta', 'atencion'], codigo: ['Pide código', 'atencion'] };
   const ESTADO = { pendiente: ['Pendiente', 'atencion'], resuelta: ['Atendida', 'ok'], descartada: ['Descartada', 'critica'] };
   const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [0, 'Domingo']];
   const SALUD = { alergias: 'Alergias', medicacion: 'Medicación', anticoagulantes: 'Anticoagulantes o aspirina', corazon: 'Corazón o presión', diabetes: 'Diabetes', enfermedades: 'Otras enfermedades', embarazo: 'Embarazo' };
   const urlWeb = () => `${location.origin}/web/`;
 
-  async function seccion(root, navegar) {
+  let buscarAcceso = '';
+  async function seccion(root, navegar, params) {
     root.innerHTML = `<h2 class="dova-view-title">Página web</h2>
       <p class="dova-nota">La página de la clínica está en <a href="${urlWeb()}" target="_blank" rel="noopener">${esc(urlWeb())}</a>. Los turnos que se reservan ahí entran directo a la Agenda.</p>
       <div data-subs></div>`;
@@ -18,20 +19,21 @@ const DovaWeb = (() => {
       { id: 'pagos', texto: 'Pagos para revisar', visible: puede('web.ver'), render: (c) => pagosWeb(c, navegar, { estado: 'pendiente' }) },
       { id: 'accesos', texto: 'Cuentas de pacientes', visible: puede('web.ver'), render: (c) => accesos(c, navegar) },
       { id: 'config', texto: 'Configurar la página', visible: puede('web.configurar'), render: (c) => configuracion(c) },
-    ]);
+    ], { inicial: ['pagos', 'accesos', 'config'].includes(params) ? params : undefined });
   }
 
 
   // ---------------- Cuentas de pacientes (código para entrar a la web) ----------------
   const telWa = (t) => { const n = String(t || '').replace(/\D/g, ''); if (n.length < 6) return null; return n.startsWith('0') ? `595${n.slice(1)}` : n; };
-  async function accesos(c, navegar, buscar = '') {
+  async function accesos(c, navegar) {
+    const buscar = buscarAcceso;
     c.innerHTML = `<p class="dova-nota">Los pacientes que ya tienen ficha entran a la página con un <strong>código de 6 números</strong> que les das desde acá (vale 48 horas). También sirve si se olvidaron la contraseña. Las personas nuevas crean su cuenta solas desde la página.</p>
       <div class="dova-fac-filtros-form"><div style="flex:1;min-width:240px;max-width:520px"><label>Buscar paciente (nombre, apellido o cédula)</label><input style="width:100%" data-buscar value="${esc(buscar)}" placeholder="Ej.: Benítez o 4567890" /></div>
         <div class="dova-fac-f-botones"><button type="button" class="dova-btn-primary" data-ir>Buscar</button></div></div>
       <div data-res></div>`;
     const inp = c.querySelector('[data-buscar]'); const out = c.querySelector('[data-res]');
     const buscarAhora = async () => {
-      const b = inp.value.trim();
+      const b = inp.value.trim(); buscarAcceso = b;
       if (b.length < 2) { out.innerHTML = '<p class="dova-nota">Escribí al menos 2 letras o números.</p>'; return; }
       out.innerHTML = cargando;
       try {
@@ -65,6 +67,7 @@ const DovaWeb = (() => {
     c.querySelector('[data-ir]').addEventListener('click', buscarAhora);
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buscarAhora(); } });
     if (buscar) buscarAhora(); else inp.focus();
+    X.vivo(out, ['web_cuentas', 'pacientes'], () => (inp.value.trim().length >= 2 ? buscarAhora() : null));
   }
   // Confirmación sin ventanas del navegador: segundo clic dentro de 4 s.
   const pendientes = new Map();
@@ -95,11 +98,22 @@ const DovaWeb = (() => {
     const filtro = (k, v, t) => `<button class="dova-ext-subtab ${fl[k] === v ? 'activo' : ''}" data-f="${k}" data-v="${v}">${t}</button>`;
     c.innerHTML = `
       <div class="dova-web-filtros">${filtro('estado', 'pendiente', `Pendientes (${r.pendientes})`)}${filtro('estado', '', 'Todas')}
-        <span class="dova-web-sep"></span>${filtro('tipo', '', 'Todo')}${filtro('tipo', 'turno', 'Turnos')}${filtro('tipo', 'registro', 'Fichas')}${filtro('tipo', 'consulta', 'Consultas')}</div>
+        <span class="dova-web-sep"></span>${filtro('tipo', '', 'Todo')}${filtro('tipo', 'turno', 'Turnos')}${filtro('tipo', 'registro', 'Fichas')}${filtro('tipo', 'consulta', 'Consultas')}${filtro('tipo', 'codigo', 'Códigos')}</div>
       ${r.items.length ? `<div class="dova-web-lista">${r.items.map(tarjeta).join('')}</div>`
         : `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">📭</div><h3>${fl.estado === 'pendiente' ? 'No hay nada pendiente' : 'Todavía no llegó nada'}</h3>
            <p class="dova-nota">Cuando alguien reserve un turno, complete su ficha o mande una consulta desde la página, aparece acá y te llega un aviso.</p></div>`}`;
     const recargar = (cambio) => solicitudes(c, navegar, { ...fl, ...cambio });
+    X.vivo(c, ['web_solicitudes', 'pacientes', 'web_cuentas'], () => recargar({}));
+    c.querySelectorAll('[data-dar-sol]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        const r2 = await DOVA.post(`/web/pacientes/${b.dataset.darSol}/codigo`, {});
+        if (b.dataset.tel) r2.telefono = b.dataset.tel; // el número que dejó al pedirlo
+        mostrarCodigo(r2);
+        await DOVA.patch(`/web/solicitudes/${b.dataset.sol}`, { estado: 'resuelta' }).catch(() => {});
+      } catch (e) { toast(e.message, 'error'); b.disabled = false; }
+    }));
+    c.querySelectorAll('[data-buscar-acceso]').forEach((b) => b.addEventListener('click', () => { buscarAcceso = b.dataset.buscarAcceso; navegar('web', 'accesos'); }));
     c.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => recargar({ [b.dataset.f]: b.dataset.v })));
     c.querySelectorAll('[data-pac]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.pac)));
     c.querySelectorAll('[data-agenda]').forEach((b) => b.addEventListener('click', () => navegar('agenda')));
@@ -133,6 +147,7 @@ const DovaWeb = (() => {
   // ---------------- Pagos informados desde la web ----------------
   const EST_PAGO = { pendiente: ['Para revisar', 'atencion'], aprobado: ['Aprobado', 'ok'], rechazado: ['Rechazado', 'critica'] };
   async function pagosWeb(c, navegar, fl) {
+    X.vivo(c, ['web_pagos'], () => pagosWeb(c, navegar, fl));
     const r = await DOVA.get(`/web/pagos?${new URLSearchParams(Object.entries(fl).filter(([, v]) => v))}`);
     const f = (v, t) => `<button class="dova-ext-subtab ${fl.estado === v ? 'activo' : ''}" data-f="${v}">${t}</button>`;
     c.innerHTML = `<p class="dova-nota">Pagos que los pacientes hicieron por transferencia o QR desde su cuenta. <strong>Mirá el comprobante y fijate que la plata haya entrado al banco</strong> antes de aprobar: al aprobar se registra el cobro y entra a la caja.</p>
@@ -194,6 +209,8 @@ const DovaWeb = (() => {
         ${d.direccion || d.ciudad ? `<p class="dova-nota">${esc([d.direccion, d.ciudad].filter(Boolean).join(', '))}</p>` : ''}
         ${d.comoNosConocio ? `<p class="dova-nota">Nos conoció por: ${esc(d.comoNosConocio)}</p>` : ''}
         ${s.mensaje ? `<p class="dova-nota">“${esc(s.mensaje)}”</p>` : ''}`;
+    } else if (s.tipo === 'codigo') {
+      cuerpo = `<p class="dova-web-msg">${esc(s.mensaje)}</p>`;
     } else cuerpo = `<p class="dova-web-msg">${esc(s.mensaje)}</p>`;
     return `<article class="dova-web-card ${s.estado !== 'pendiente' ? 'cerrada' : ''}">
       <header>${badge(TIPO[s.tipo][0], TIPO[s.tipo][1])} <strong>${esc(s.nombre)}</strong> ${s.paciente_nuevo ? badge('Paciente nuevo', 'ok') : s.paciente_id ? badge('Ya era paciente', 'info') : ''} ${s.paciente_id && s.web_verificado === false ? badge('Identidad sin verificar', 'atencion') : ''}
@@ -201,6 +218,8 @@ const DovaWeb = (() => {
       ${cuerpo}
       <p class="dova-nota">${contacto}</p>
       <div class="dova-web-acciones">
+        ${s.tipo === 'codigo' && s.estado === 'pendiente' && s.paciente_id ? `<button class="dova-btn-primary" data-dar-sol="${s.paciente_id}" data-sol="${s.id}" data-tel="${esc(s.telefono || '')}">Dar código</button>` : ''}
+        ${s.tipo === 'codigo' && s.estado === 'pendiente' && !s.paciente_id ? `<button class="dova-btn-primary" data-buscar-acceso="${esc(s.ci || '')}">Buscar paciente</button>` : ''}
         ${s.paciente_id ? `<button class="dova-btn-secundario" data-pac="${s.paciente_id}">Ver ficha</button>` : ''}
         ${s.paciente_id && s.web_verificado === false && puede('pacientes.edit') ? `<button class="dova-btn-secundario" data-verificar="${s.paciente_id}" title="Hacelo cuando el paciente venga en persona y muestre su cédula">Verificar identidad</button>` : ''}
         ${s.turno_id ? '<button class="dova-btn-secundario" data-agenda>Ver agenda</button>' : ''}

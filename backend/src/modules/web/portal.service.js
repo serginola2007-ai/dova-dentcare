@@ -120,6 +120,27 @@ async function activar({ ci, codigo, clave }, ip) {
   return sesion(cuenta, p);
 }
 
+// "Pedir mi código": el pedido llega a recepción al instante (Lo que llegó +
+// aviso). La respuesta es siempre la misma (no revela si la cédula existe).
+async function pedirCodigoClinica(d, ip) {
+  if (d.sitio) throw new ApiError(400, 'No se pudo enviar');
+  w.limitar(ip, 'portal-pedido', 4, 30);
+  const { c } = await clinicaConCuentas();
+  const doc = ciLimpia(d.ci); const tel = txt(d.telefono, 60);
+  if (!/^[0-9A-Za-z-]{4,20}$/.test(doc)) throw new ApiError(400, 'Escribí tu número de cédula');
+  if (!tel || tel.replace(/\D/g, '').length < 6) throw new ApiError(400, 'Escribí tu celular o WhatsApp: ahí te mandamos el código');
+  const respuesta = { ok: true, mensaje: 'Listo, ya le avisamos a la clínica. Te mandan el código por WhatsApp a ese número (en horario de atención).' };
+  const repetido = (await query("SELECT 1 FROM web_solicitudes WHERE clinica_id=$1 AND tipo='codigo' AND ci=$2 AND estado='pendiente' AND creado_en > now() - interval '2 hours'", [c.id, doc])).rowCount;
+  if (repetido) return respuesta;
+  let p = await fichaPorCi(c.id, doc); if (p && !p.activo) p = null;
+  const nombre = p ? `${p.nombre} ${p.apellido}` : `C.I. ${doc}`;
+  const sol = await query(`INSERT INTO web_solicitudes (clinica_id, tipo, nombre, ci, telefono, mensaje, paciente_id, ip)
+                           VALUES ($1,'codigo',$2,$3,$4,$5,$6,$7) RETURNING id`,
+  [c.id, nombre, doc, tel, p ? 'Pide su código para entrar a la página web.' : 'Pide su código para entrar a la página web. No hay ninguna ficha con esa cédula: buscalo por nombre o pedile que cree su cuenta.', p ? p.id : null, ip]);
+  await w.notificarRecepcion(c.id, { tipo: 'codigo_web', titulo: `Pide su código para la web: ${nombre}`, mensaje: `Celular: ${tel}. Tocá para darle el código.`, entidad: 'web_solicitud', entidadId: sol.rows[0].id, ruta: 'web' });
+  return respuesta;
+}
+
 // ---------------------------------------------------------------- recepción: accesos a la web
 async function listarAccesos(clinicaId, { buscar }) {
   const b = String(buscar || '').trim();
@@ -352,7 +373,7 @@ async function informarPago(pt, d, archivo) {
                           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, monto, metodo, estado, creado_en`,
   [pt.clinicaId, pt.pacienteId, monto, metodo, txt(d.referencia, 100), txt(d.nota, 500), cuotaId, presupuestoId, archivo.buffer, mime])).rows[0];
   await auditoria.registrar({ clinicaId: pt.clinicaId, usuarioId: null, usuarioNombre: 'Página web (cuenta del paciente)', accion: 'informar_pago_web', modulo: 'pagos', entidadId: r.id, detalle: { pacienteId: pt.pacienteId, monto, metodo } });
-  await w.notificarRecepcion(pt.clinicaId, { tipo: 'pago_web', titulo: `Pago para revisar: ${pt.nombre} ${pt.apellido}`, mensaje: `Gs. ${monto.toLocaleString('es-PY')} por ${NOMBRE_METODO[metodo]}. Revisá el comprobante.`, entidad: 'web_pago', entidadId: r.id, ruta: 'web' });
+  await w.notificarRecepcion(pt.clinicaId, { tipo: 'pago_web', titulo: `Pago para revisar: ${pt.nombre} ${pt.apellido}`, mensaje: `Gs. ${monto.toLocaleString('es-PY')} por ${NOMBRE_METODO[metodo]}. Revisá el comprobante.`, entidad: 'web_pago', entidadId: r.id, ruta: 'web/pagos' });
   return { ...r, monto: Number(r.monto) };
 }
 
@@ -421,6 +442,6 @@ async function verificarPaciente(clinicaId, pacienteId, usuario) {
 }
 
 module.exports = {
-  registrarse, activar, listarAccesos, generarCodigo, desactivarCuenta, ingresar, autenticar, cambiarClave, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
+  registrarse, activar, pedirCodigoClinica, listarAccesos, generarCodigo, desactivarCuenta, ingresar, autenticar, cambiarClave, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
   listarPagos, comprobante, aprobarPago, rechazarPago, verificarPaciente, tipoArchivo,
 };

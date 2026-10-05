@@ -48,3 +48,8 @@
   .dova-submenu { border: 0; background: transparent; }
   .dova-submenu .dova-menu-item { border-bottom: none; }
 }
+.dova-campana-btn { border-color: rgba(247,243,236,0.3); color: var(--on-dark); }
+.dova-vivo-punto { box-shadow: 0 0 0 2px var(--barra); }
+@media (max-width: 768px) {
+  .dova-topbar .dova-campana, .dova-topbar .dova-theme-toggle, .dova-topbar:has(.dova-campana) .dova-logout { order: 4; }
+}

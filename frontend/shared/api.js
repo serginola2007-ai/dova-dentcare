@@ -165,6 +165,10 @@ const DOVA = (() => {
     setApiBase: (b) => { apiBase = b; },
     // Al abrir DOVA: trae los permisos vigentes (módulos nuevos o cambios de rol) sin cerrar sesión.
     actualizarSesion: () => refrescarToken().then(() => true).catch(() => false),
+    // Para la conexión en tiempo real (ver tiempo-real.js).
+    tokenActual: () => (getSession() || {}).accessToken || null,
+    refrescar: () => refrescarToken(),
+    apiBase: () => apiBase,
     request, login, logout, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),

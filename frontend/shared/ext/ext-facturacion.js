@@ -168,6 +168,7 @@ const DovaFacturacion = (() => {
 
   // ---------------- Tablero ----------------
   async function tablero(c, navegar) {
+    X.vivo(c, ['facturas', 'pagos'], () => tablero(c, navegar));
     const e = await DOVA.get('/facturacion/estadisticas');
     const kpi = (v, t, sub, alerta) => `<div class="dova-ext-kpi ${alerta ? 'alerta' : ''}"><div class="dova-ext-kpi-valor">${v}</div><div class="dova-ext-kpi-label">${esc(t)}</div>${sub ? `<div class="dova-ext-kpi-sub">${sub}</div>` : ''}</div>`;
     if (!e.emitidas && !e.anuladas) {
@@ -219,6 +220,7 @@ const DovaFacturacion = (() => {
     const res = c.querySelector('[data-res]');
     const form = c.querySelector('[data-filtros]');
     const recargar = (cambios) => listado(c, navegar, { ...fl, ...cambios });
+    X.vivo(c, ['facturas'], () => recargar({}));
     form.addEventListener('submit', (ev) => {
       ev.preventDefault();
       const d = Object.fromEntries(new FormData(form).entries());

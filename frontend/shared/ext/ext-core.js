@@ -378,7 +378,11 @@ const DovaExt = (() => {
     try { const l = await catalogo('odontologos', '/odontologos'); return l.filter((o) => o.activo !== false).map((o) => [o.id, o.nombre]); } catch (_e) { return []; }
   }
 
+  // Tiempo real: la pantalla se vuelve a dibujar sola cuando cambian esas tablas.
+  const vivo = (cont, tablas, fn) => { if (window.DovaVivo) DovaVivo.vivo(cont, tablas, fn); };
+
   return {
+    vivo,
     esc, fmtFecha, fmtFechaHora, fmtGs, toast, puede, hoy, sumarDias, etiqueta, cargando,
     formHtml, leerForm, modal, modalForm, cerrarModal, tablaCrud, subPestanas, badge, badgeFecha, linkWhatsapp,
     bannerAlertas, grafico, activarGraficos, descargarJson, descargarCsv, imprimir, catalogo, olvidarCatalogo, opcionesOdontologos,

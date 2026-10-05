@@ -212,6 +212,7 @@ const DovaOperativo = (() => {
     const activos = turnos.filter((t) => !OCULTOS.includes(t.estado)).length;
     const puedeCrear = puede('agenda.create');
     const recargar = (cambios = {}) => agendaVista(c, navegar, { ...e, ...cambios });
+    X.vivo(c, ['turnos', 'pacientes', 'odontologos'], () => recargar());
 
     c.innerHTML = `
       <div class="dova-toolbar dova-op-toolbar">
@@ -421,6 +422,7 @@ const DovaOperativo = (() => {
       </tr>`).join('') || '<tr><td colspan="8">La lista de espera está vacía.</td></tr>'}
       </tbody></table></div>`;
     const recargar = () => listaEspera(c, navegar);
+    X.vivo(c, ['lista_espera', 'turnos'], recargar);
     c.querySelectorAll('[data-ficha]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.ficha)));
     c.querySelector('[data-nuevo]').addEventListener('click', () => {
       const form = X.modalForm('Agregar a la lista de espera', [
@@ -463,6 +465,7 @@ const DovaOperativo = (() => {
   }
 
   async function cajaActual(c) {
+    X.vivo(c, ['caja_aperturas', 'caja_movimientos', 'pagos', 'facturas'], () => cajaActual(c));
     const e = await DOVA.get('/caja/estado');
     const maneja = puede('caja.manage');
     if (!e.abierta) {
@@ -663,6 +666,7 @@ const DovaOperativo = (() => {
           ${p.estado === 'aceptado' && conPlan.has(p.id) ? badge('con plan de pago', 'info') : ''}</td></tr>`).join('') || '<tr><td colspan="5">Sin presupuestos.</td></tr>'}
       </tbody></table></div>`;
     const recargar = () => presupuestos(c, pid);
+    X.vivo(c, ['presupuestos', 'pagos', 'planes_pago', 'cuotas'], recargar);
     c.querySelectorAll('[data-pdf]').forEach((b) => b.addEventListener('click', () => DOVA.descargarPdf(`/comprobantes/presupuesto/${b.dataset.pdf}`, `presupuesto-${b.dataset.pdf}.pdf`).catch((e) => toast(e.message, 'error'))));
     c.querySelectorAll('[data-est]').forEach((b) => b.addEventListener('click', async () => {
       const p = lista[Number(b.dataset.i)];
@@ -792,6 +796,7 @@ const DovaOperativo = (() => {
       <h3 class="dova-section-title">Historial de turnos</h3>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Hora</th><th>Odontólogo</th><th>Tratamiento</th><th>Estado</th><th></th></tr></thead><tbody>${filasHtml(pasados.slice(0, 50)) || '<tr><td colspan="6">Sin turnos anteriores.</td></tr>'}</tbody></table></div>`;
     const recargar = () => turnosPaciente(c, pid, navegar);
+    X.vivo(c, ['turnos'], recargar);
     const bn = c.querySelector('[data-nuevo-turno]');
     if (bn) bn.addEventListener('click', () => modalTurno({ fijo: { pacienteId: pid, pacienteNombre: nombre ? nombre.textContent.trim() : '' }, alGuardar: recargar }));
     c.querySelectorAll('[data-repro]').forEach((b) => b.addEventListener('click', () => modalTurno({ turno: turnos.find((t) => String(t.id) === b.dataset.repro), alGuardar: recargar })));

@@ -528,6 +528,7 @@ const Vistas = (() => {
       } catch (e) { toast(e.message, 'error'); }
     };
     buscar.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(cargar, 250); });
+    if (window.DovaVivo) DovaVivo.vivo(tbody, ['pacientes'], cargar);
     if (btnElim) btnElim.addEventListener('click', () => {
       eliminados = !eliminados;
       btnElim.textContent = eliminados ? 'Ver activos' : 'Ver eliminados';

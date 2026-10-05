@@ -86,7 +86,8 @@ app.use(cors((req, cb) => {
   if (!permitido) return cb(new Error('Origen no permitido por CORS'));
   cb(null, { origin: !!origin, credentials: true });
 }));
-app.use(compression());
+// Los eventos en tiempo real (/api/eventos) no se comprimen: se tienen que enviar al instante.
+app.use(compression({ filter: (req, res) => (req.path === '/api/eventos' ? false : compression.filter(req, res)) }));
 app.use(express.json({ limit: '2mb' }));
 if (env.nodeEnv !== 'test') {
   app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
@@ -110,6 +111,12 @@ app.use('/api/pagos', pagosRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/helpdesk', helpdeskRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+{
+  const tiempoReal = require('./utils/tiempoReal');
+  const { authMiddleware } = require('./middlewares/auth.middleware');
+  const { resolverClinicaMiddleware } = require('./middlewares/clinica.middleware');
+  app.get('/api/eventos', authMiddleware, resolverClinicaMiddleware, tiempoReal.suscribir);
+}
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/clinico', extrasRoutes);
 app.use('/api/reportes', reportesRoutes);

@@ -49,6 +49,7 @@ async function authMiddleware(req, res, next) {
       odontologoId: payload.odontologoId || null,
       permisos: est.permisos,
     };
+    req.tokenExp = payload.exp;
     next();
   } catch (err) {
     next(err);

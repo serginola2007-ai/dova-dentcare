@@ -465,10 +465,6 @@
       c.innerHTML = `<div class="tarjeta-turno"><h1 class="acceso-titulo">Mi cuenta</h1><p style="margin-top:10px">Las cuentas online todavía no están disponibles. Mientras tanto podés <a href="reservar.html">reservar tu turno</a> sin cuenta o escribirnos desde <a href="contacto.html">Contacto</a>.</p></div>`;
       return;
     }
-    const pedirCodigoHtml = () => {
-      const wa = linkWa(`Hola, quiero mi código para entrar a mi cuenta de ${info.nombre}. Mi cédula es: `);
-      return wa ? `<a class="boton boton-claro boton-chico" href="${esc(wa)}" target="_blank" rel="noopener">Pedir mi código por WhatsApp</a>` : '<span>Pedilo en recepción o llamando a la clínica.</span>';
-    };
     const entrar = (r) => { guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); };
     const claveOk = (f, m) => {
       if (f.clave.value.length < 8 || !/[A-Za-z]/.test(f.clave.value) || !/\d/.test(f.clave.value)) { m('La contraseña tiene que tener al menos 8 caracteres, con letras y números'); return false; }
@@ -536,16 +532,34 @@
           try { entrar(await cuentaApi('/registro', { method: 'POST', body: { ...d, email: d.email.trim(), acepta: true } })); }
           catch (e) {
             b.disabled = false; b.textContent = 'Crear mi cuenta';
-            if (e.codigo === 'YA_PACIENTE') m('', `<p>${esc(e.message)}</p><p style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">${pedirCodigoHtml()} <button type="button" class="boton boton-chico" data-ya-tengo>Ya tengo el código</button></p>`);
-            else m(e.message);
-            const y = $('[data-ya-tengo]', err); if (y) y.addEventListener('click', () => vista('codigo', { ci: d.ci.trim() }));
+            if (e.codigo === 'YA_PACIENTE') {
+              m('', `<p>Ya estás registrado en la clínica con esa cédula. Para entrar necesitás un código que te da la clínica.</p><p style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="boton boton-chico" data-pedir-ya>Pedir mi código</button> <button type="button" class="boton boton-chico boton-claro" data-ya-tengo>Ya tengo el código</button></p>`);
+              $('[data-pedir-ya]', err).addEventListener('click', async (ev2) => {
+                const bb = ev2.currentTarget; bb.disabled = true; bb.textContent = 'Enviando…';
+                try { const r = await cuentaApi('/pedir-codigo', { method: 'POST', body: { ci: d.ci.trim(), telefono: d.telefono.trim() } }); m('', `<p class="ok-msg">${esc(r.mensaje)}</p><p style="margin-top:10px"><button type="button" class="boton boton-chico" data-ya-tengo>Ya tengo el código</button></p>`); }
+                catch (e3) { m(e3.message); }
+                const y2 = $('[data-ya-tengo]', err); if (y2) y2.addEventListener('click', () => vista('codigo', { ci: d.ci.trim() }));
+              });
+            } else m(e.message);
+            const y = $('[data-ya-tengo]', err); if (y) y.addEventListener('click', () => vista('codigo', { ci: d.ci.trim(), telefono: d.telefono.trim() }));
           }
         });
       } else {
         c.innerHTML = `<div class="tarjeta-turno acceso-caja">
           <h1 class="acceso-titulo">Entrar con el código</h1>
-          <p class="ayuda">Si ya sos paciente de la clínica (o te olvidaste la contraseña), pedí tu código de 6 números. Vale por 48 horas.</p>
-          <p style="margin-top:12px">${pedirCodigoHtml()}</p>
+          <p class="ayuda">Si ya sos paciente de la clínica (o te olvidaste la contraseña), entrá con el código de 6 números que te da la clínica. Vale por 48 horas.</p>
+          <details class="pedir-codigo" ${extra.ci ? '' : 'open'}><summary>¿Todavía no tenés el código? Pedilo acá</summary>
+            <form class="formulario" data-f-pedir novalidate>
+              <div class="campo-fila">
+                <div class="campo"><label for="p-ci">Tu cédula</label><input id="p-ci" name="ci" inputmode="numeric" maxlength="20" autocomplete="off" value="${esc(extra.ci || '')}" /></div>
+                <div class="campo"><label for="p-tel">Tu celular o WhatsApp</label><input id="p-tel" name="telefono" type="tel" maxlength="60" placeholder="0981 123 456" value="${esc(extra.telefono || '')}" /></div>
+              </div>
+              <div class="trampa" aria-hidden="true"><label>Sitio <input name="sitio" tabindex="-1" autocomplete="off" /></label></div>
+              <p class="error" data-error role="alert" hidden></p>
+              <p class="ok-msg" data-ok role="status" hidden></p>
+              <button class="boton boton-claro" type="submit">Pedir mi código</button>
+            </form>
+          </details>
           <form class="formulario" data-f-activar novalidate>
             <div class="campo"><label for="a-ci">Cédula</label><input id="a-ci" name="ci" inputmode="numeric" maxlength="20" autocomplete="off" required value="${esc(extra.ci || '')}" /></div>
             <div class="campo"><label for="a-cod">Código de 6 números</label><input id="a-cod" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="codigo" required /></div>
@@ -555,6 +569,18 @@
           </form>
           <p style="margin-top:14px"><button type="button" class="boton-texto" data-volver>Volver</button></p></div>`;
         $('[data-volver]', c).addEventListener('click', () => vista('ingresar'));
+        const fp = $('[data-f-pedir]', c);
+        fp.addEventListener('submit', async (ev) => {
+          ev.preventDefault(); const err = $('[data-error]', fp); const ok = $('[data-ok]', fp); err.hidden = true; ok.hidden = true;
+          if (fp.ci.value.replace(/\D/g, '').length < 4) { err.textContent = 'Escribí tu número de cédula'; err.hidden = false; return; }
+          if (fp.telefono.value.replace(/\D/g, '').length < 6) { err.textContent = 'Escribí tu celular o WhatsApp: ahí te mandamos el código'; err.hidden = false; return; }
+          const b = $('button[type=submit]', fp); b.disabled = true; b.textContent = 'Enviando…';
+          try {
+            const r = await cuentaApi('/pedir-codigo', { method: 'POST', body: { ci: fp.ci.value.trim(), telefono: fp.telefono.value.trim(), sitio: fp.sitio.value } });
+            ok.textContent = r.mensaje; ok.hidden = false; b.textContent = 'Pedido enviado';
+            const ci = $('#a-ci', c); if (ci && !ci.value) ci.value = fp.ci.value.trim();
+          } catch (e2) { err.textContent = e2.message; err.hidden = false; b.disabled = false; b.textContent = 'Pedir mi código'; }
+        });
         const f = $('[data-f-activar]', c);
         f.addEventListener('submit', async (ev) => {
           ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;

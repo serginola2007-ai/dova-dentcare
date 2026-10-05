@@ -183,7 +183,20 @@ const DovaApp = (() => {
     return PERMISO_RUTA_EXTRA[ruta] || null;
   }
 
+  async function dibujarInicio() {
+    const html = await Vistas.vistaDashboard();
+    elMain.innerHTML = html;
+    if (DOVA.usuarioActual() && DOVA.usuarioActual().odontologoId) {
+      Vistas.initDashboardOdontologo((pacienteId) => navegar('consulta', pacienteId), (pacienteId) => navegar('paciente', pacienteId));
+    } else if (!DOVA.tienePermiso('reportes.view')) {
+      Vistas.initDashboardSinReportes((rutaDestino) => navegar(rutaDestino));
+    }
+    conExtension(() => DovaSecciones.extenderDashboard(elMain, navegar));
+    aplicarDataThATablas();
+  }
+
   async function navegar(ruta, params) {
+    if (window.DovaVivo) DovaVivo.olvidar(elMain);
     const permiso = permisoRequerido(ruta);
     if (permiso && !tieneAcceso(permiso)) {
       Vistas.toast('No tenés permiso para acceder a esa sección', 'error');
@@ -198,13 +211,9 @@ const DovaApp = (() => {
     try {
       switch (ruta) {
         case 'dashboard':
-          elMain.innerHTML = await Vistas.vistaDashboard();
-          if (DOVA.usuarioActual() && DOVA.usuarioActual().odontologoId) {
-            Vistas.initDashboardOdontologo((pacienteId) => navegar('consulta', pacienteId), (pacienteId) => navegar('paciente', pacienteId));
-          } else if (!DOVA.tienePermiso('reportes.view')) {
-            Vistas.initDashboardSinReportes((rutaDestino) => navegar(rutaDestino));
-          }
-          conExtension(() => DovaSecciones.extenderDashboard(elMain, navegar));
+          await dibujarInicio();
+          // Inicio en vivo: turnos del día, cobros y lo que llega de la web.
+          if (window.DovaVivo) DovaVivo.vivo(elMain, ['turnos', 'pagos', 'caja_movimientos', 'caja_aperturas', 'web_solicitudes', 'web_pagos', 'pacientes', 'cuotas'], () => (location.hash.replace('#', '').split('/')[0] || 'dashboard') === 'dashboard' && dibujarInicio());
           break;
         case 'pacientes':
           elMain.innerHTML = await Vistas.vistaPacientes();
@@ -235,7 +244,7 @@ const DovaApp = (() => {
           break;
         case 'web':
           elMain.innerHTML = '<div></div>';
-          await DovaWeb.seccion(elMain.firstElementChild, navegar);
+          await DovaWeb.seccion(elMain.firstElementChild, navegar, params);
           break;
         case 'facturacion':
           elMain.innerHTML = '<div></div>';
@@ -361,6 +370,12 @@ const DovaApp = (() => {
     elShell.style.display = '';
     renderMenu();
     renderMarca();
+    // Tiempo real: campanita de avisos y pantallas que se actualizan solas.
+    if (window.DovaVivo) {
+      DovaVivo.iniciar();
+      const ref = document.getElementById('theme-toggle-btn') || document.getElementById('logout-btn');
+      if (ref) DovaVivo.montarCampana(ref, navegar);
+    }
     {
       const hashActual = location.hash.replace('#', '');
       const [rutaInicial, ...restoInicial] = hashActual.split('/');
@@ -442,6 +457,7 @@ const DovaApp = (() => {
 
     if (elLogout) {
       elLogout.addEventListener('click', async () => {
+        if (window.DovaVivo) DovaVivo.detener();
         await DOVA.logout();
         location.reload();
       });
