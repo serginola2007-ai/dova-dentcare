@@ -60,12 +60,16 @@
   }
 
   function pintarDatos() {
-    document.title = `${info.nombre} — Reservá tu turno`;
+    document.title = `${info.nombre} — Odontología humanizada`;
     $$('[data-nombre]').forEach((e) => { e.textContent = info.nombre; });
-    $('[data-titulo]').textContent = `Tu turno en ${info.nombre}, en un minuto.`;
+    // Nombre como en la marca: "Dent" + "Care" en terracota (+ lo que siga, ej. "RC").
+    const m = info.nombre.match(/^(dent)(care)(.*)$/i);
+    $('[data-marca]').innerHTML = m ? `${esc(m[1])}<span class="care">${esc(m[2])}</span>${m[3] ? `<span class="rc">${esc(m[3].trim())}</span>` : ''}` : esc(info.nombre);
+    $('[data-titulo]').textContent = 'Tu turno, a un toque.';
     if (info.eslogan) $('[data-eslogan]').textContent = info.eslogan;
     if (info.presentacion) $('[data-presentacion]').textContent = info.presentacion;
-    if (info.tieneLogo) { const l = $('[data-logo]'); l.src = `${API}/logo`; l.hidden = false; l.alt = info.nombre; }
+    // Logo cargado en DOVA (Facturación → Configuración); si no hay, el diente de la marca.
+    if (info.tieneLogo) { const l = $('[data-logo]'); l.src = `${API}/logo`; l.hidden = false; l.alt = ''; $('[data-diente]').hidden = true; }
     const wa = linkWa('Hola, quería hacer una consulta.');
     if (wa) { const b = $('[data-wa]'); b.href = wa; b.hidden = false; }
 
@@ -79,7 +83,7 @@
       || '<p class="cargando">Pronto vas a ver acá los tratamientos.</p>';
 
     // Equipo (el color es el mismo que usa la agenda de DOVA)
-    $('[data-equipo]').innerHTML = info.odontologos.map((o) => `<li><span class="inicial" style="background:${/^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : '#2B45D4'}">${esc((o.nombre.replace(/^(Dra?\.|Lic\.)\s*/i, '')[0] || '?').toUpperCase())}</span>
+    $('[data-equipo]').innerHTML = info.odontologos.map((o) => `<li><span class="inicial" style="background:${/^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : '#B96A47'}">${esc((o.nombre.replace(/^(Dra?\.|Lic\.)\s*/i, '')[0] || '?').toUpperCase())}</span>
       <div><strong>${esc(o.nombre)}</strong><small>${esc(o.especialidad || 'Odontología general')}</small></div></li>`).join('');
 
     // Horarios de atención
@@ -179,7 +183,7 @@
     const [y, m] = st.mes.split('-').map(Number);
     const primerDia = new Date(Date.UTC(y, m - 1, 1)); const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const offset = (primerDia.getUTCDay() + 6) % 7;
-    const nombreMes = new Intl.DateTimeFormat('es-PY', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(primerDia);
+    const nombreMes = mayus(new Intl.DateTimeFormat('es-PY', { month: 'long', timeZone: 'UTC' }).format(primerDia)) + ` ${y}`;
     const celdas = [];
     for (let i = 0; i < offset; i++) celdas.push('<span></span>');
     for (let d = 1; d <= diasMes; d++) {

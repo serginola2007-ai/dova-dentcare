@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DentCareRC — Reservá tu turno</title>
+  <title>dentcarerc — Odontología humanizada</title>
   <meta name="description" content="Reservá tu turno en DentCareRC desde el celular: elegí el tratamiento, el día y el horario que te queden bien." />
-  <meta name="theme-color" content="#16213E" />
+  <meta name="theme-color" content="#2B241E" />
   <link rel="icon" href="/iconos/icono-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="web.css" />
 </head>
 <body>
   <a class="saltar" href="#contenido">Ir al contenido</a>
 
   <header class="cabecera">
-    <a class="marca" href="#inicio" data-ir="inicio"><img data-logo alt="" hidden /><span data-nombre>DentCareRC</span></a>
+    <a class="marca" href="#inicio" aria-label="Inicio"><img data-logo alt="" hidden /><span class="marca-diente" data-diente style="color:var(--cobalto-osc)"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 18c-7 0-11 5-15 5s-8-4-13-3c-6 1-9 8-8 16 1 9 6 18 10 25 3 5 5 9 9 9 4 0 4-6 8-6s4 6 8 6c4 0 6-4 9-9 4-7 9-16 10-25 1-8-2-15-8-16-5-1-9 3-13 3s-8-5-15-5z"/></svg></span><span data-marca>Dent<span class="care">Care</span><span class="rc">RC</span></span></a>
     <nav class="cabecera-nav" aria-label="Secciones">
       <a href="#tratamientos">Tratamientos</a>
       <a href="#equipo">Equipo</a>
@@ -36,6 +36,7 @@
     <div data-vista-sitio>
       <section class="portada" id="inicio">
         <div class="portada-texto">
+          <p class="lema" data-lema>Odontología humanizada</p>
           <h1 data-titulo>Tu turno en DentCareRC, en un minuto.</h1>
           <p class="portada-bajada" data-eslogan>Elegí el día y el horario que te queden bien. Te esperamos.</p>
           <div class="portada-botones">
@@ -44,6 +45,7 @@
           </div>
         </div>
         <aside class="libres" aria-labelledby="libres-titulo">
+          <span class="libres-diente" style="color:var(--tinta)"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 18c-7 0-11 5-15 5s-8-4-13-3c-6 1-9 8-8 16 1 9 6 18 10 25 3 5 5 9 9 9 4 0 4-6 8-6s4 6 8 6c4 0 6-4 9-9 4-7 9-16 10-25 1-8-2-15-8-16-5-1-9 3-13 3s-8-5-15-5z"/></svg></span>
           <h2 id="libres-titulo">Próximos horarios libres</h2>
           <p class="libres-nota">Tocá uno para reservarlo.</p>
           <div data-libres class="libres-dias"><p class="cargando">Buscando horarios…</p></div>
@@ -115,7 +117,7 @@
   </main>
 
   <footer class="pie">
-    <p>Los turnos que reservás acá entran directo a la agenda de <span data-nombre>DentCareRC</span>.</p>
+    <p class="pie-marca"><span style="color:var(--cobalto-osc)"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 18c-7 0-11 5-15 5s-8-4-13-3c-6 1-9 8-8 16 1 9 6 18 10 25 3 5 5 9 9 9 4 0 4-6 8-6s4 6 8 6c4 0 6-4 9-9 4-7 9-16 10-25 1-8-2-15-8-16-5-1-9 3-13 3s-8-5-15-5z"/></svg></span> <span><span data-nombre>dentcarerc</span>, odontología humanizada</span></p>
     <a class="pie-personal" href="/moderno/">Ingreso del personal</a>
   </footer>
 
