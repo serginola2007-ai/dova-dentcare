@@ -362,3 +362,13 @@ body.dova-menu-abierto .dova-menu-overlay {
   /* El menú ocupa todo el ancho debajo de la barra */
   .dova-menu { flex: 0 0 100% !important; width: 100% !important; order: 10 !important; }
 }
+
+/* Eliminar pacientes */
+.dova-ficha-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dova-btn-link.dova-btn-peligro { color: var(--rust); margin-left: 10px; }
+.dova-btn-secundario.dova-btn-peligro { color: var(--rust); border-color: color-mix(in srgb, var(--rust) 45%, transparent); }
+.dova-btn-primary.dova-btn-peligro-fondo { background: var(--rust); }
+.dova-btn-primary.dova-btn-peligro-fondo:disabled { opacity: .45; cursor: not-allowed; }
+.dova-lista-avisos { margin: 10px 0 12px 18px; display: grid; gap: 4px; }
+.dova-alerta-eliminado { margin: 12px 0; padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--rust) 40%, transparent); background: color-mix(in srgb, var(--rust) 8%, transparent); color: var(--ink); }
+.dova-toolbar #btn-ver-eliminados[aria-pressed="true"] { border-color: var(--rust); color: var(--rust); }

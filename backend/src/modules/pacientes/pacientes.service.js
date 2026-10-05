@@ -1,6 +1,8 @@
 const { ApiError } = require('../../middlewares/error.middleware');
 const repo = require('./pacientes.repository');
 const auditoria = require('../../utils/auditoria');
+const { query, conCandado: candado } = require('../../config/db');
+const { hoyIso: hoy } = require('../../utils/recurso');
 
 async function listar(clinicaId, filtros) {
   return repo.listar(clinicaId, filtros);
@@ -47,7 +49,7 @@ async function crear(clinicaId, datos, usuario) {
   let paciente = await conCandado(datos.ci && `paciente:ci:${clinicaId}:${String(datos.ci).trim()}`, async () => {
     if (datos.ci) {
       const existente = await repo.obtenerPorCi(clinicaId, datos.ci);
-      if (existente) throw new ApiError(409, 'Ya existe un paciente con esa cédula en esta clínica');
+      if (existente) throw new ApiError(409, existente.activo ? 'Ya existe un paciente con esa cédula en esta clínica' : 'Hay un paciente eliminado con esa cédula. Restauralo desde Pacientes → "Ver eliminados".');
     }
     return repo.crear(clinicaId, datos);
   });
@@ -81,14 +83,50 @@ async function actualizar(clinicaId, id, datos, usuario) {
   return paciente;
 }
 
-async function eliminar(clinicaId, id, usuario) {
-  const eliminado = await repo.eliminarLogico(clinicaId, id);
-  if (!eliminado) throw new ApiError(404, 'Paciente no encontrado');
-  await auditoria.registrar({
-    clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
-    accion: 'eliminar', modulo: 'pacientes', entidadId: id,
-  });
-  return eliminado;
+// Qué tiene el paciente antes de eliminarlo (para avisar en la confirmación).
+async function resumenBaja(clinicaId, id) {
+  const p = await repo.obtenerPorId(clinicaId, id);
+  if (!p) throw new ApiError(404, 'Paciente no encontrado');
+  const n = async (sql) => Number((await query(sql, sql.includes('$3') ? [clinicaId, Number(id), hoy()] : [clinicaId, Number(id)])).rows[0].n);
+  return {
+    turnosFuturos: await n("SELECT count(*) n FROM turnos WHERE clinica_id=$1 AND paciente_id=$2 AND fecha >= $3 AND estado NOT IN ('cancelado','no_asistio','atendido')"),
+    pagos: await n("SELECT count(*) n FROM pagos WHERE clinica_id=$1 AND paciente_id=$2"),
+    facturas: await n("SELECT count(*) n FROM facturas WHERE clinica_id=$1 AND paciente_id=$2 AND estado <> 'anulada'"),
+    cuotasPendientes: await n("SELECT count(*) n FROM cuotas c JOIN planes_pago pp ON pp.id=c.plan_pago_id WHERE pp.clinica_id=$1 AND pp.paciente_id=$2 AND pp.estado <> 'cancelado' AND c.estado <> 'pagada'"),
+    cuentaWeb: (await n('SELECT count(*) n FROM web_cuentas WHERE clinica_id=$1 AND paciente_id=$2 AND activa')) > 0,
+  };
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+// Eliminar = dar de baja: deja de aparecer en pacientes, buscadores, agenda y
+// web, pero su historia clínica, pagos y facturas se conservan (son
+// obligatorios por ley y la caja depende de ellos). Se puede restaurar.
+async function eliminar(clinicaId, id, usuario) {
+  const r = await candado([`paciente:baja:${clinicaId}:${Number(id)}`], async () => {
+    const eliminado = await repo.eliminarLogico(clinicaId, id);
+    if (!eliminado) throw new ApiError(404, 'Paciente no encontrado');
+    const t = await query(`UPDATE turnos SET estado='cancelado', actualizado_en=now()
+                            WHERE clinica_id=$1 AND paciente_id=$2 AND fecha >= $3 AND estado NOT IN ('cancelado','no_asistio','atendido') RETURNING id`, [clinicaId, Number(id), hoy()]);
+    await query('UPDATE web_cuentas SET activa=false, version_token=version_token+1 WHERE clinica_id=$1 AND paciente_id=$2', [clinicaId, Number(id)]);
+    return { turnosCancelados: t.rowCount };
+  });
+  await auditoria.registrar({
+    clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
+    accion: 'eliminar', modulo: 'pacientes', entidadId: id, detalle: r,
+  });
+  return r;
+}
+
+async function restaurar(clinicaId, id, usuario) {
+  const p = (await query('SELECT id, ci, activo FROM pacientes WHERE clinica_id=$1 AND id=$2', [clinicaId, Number(id)])).rows[0];
+  if (!p) throw new ApiError(404, 'Paciente no encontrado');
+  if (p.activo) return { ok: true };
+  if (p.ci) {
+    const otro = (await query('SELECT 1 FROM pacientes WHERE clinica_id=$1 AND ci=$2 AND activo AND id<>$3', [clinicaId, p.ci, p.id])).rowCount;
+    if (otro) throw new ApiError(409, 'Ya hay otro paciente activo con esa cédula. Revisá cuál es el correcto antes de restaurar.');
+  }
+  await query('UPDATE pacientes SET activo=true, actualizado_en=now() WHERE id=$1', [p.id]);
+  await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'restaurar', modulo: 'pacientes', entidadId: id });
+  return { ok: true };
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, resumenBaja, restaurar };

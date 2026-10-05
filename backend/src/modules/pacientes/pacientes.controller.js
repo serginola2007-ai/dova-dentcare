@@ -12,11 +12,12 @@ function checkValidation(req) {
 async function listar(req, res, next) {
   try {
     checkValidation(req);
-    const { q, page, pageSize, incluirInactivos } = req.query;
+    const { q, page, pageSize, incluirInactivos, eliminados } = req.query;
     const resultado = await service.listar(req.clinicaId, {
       q, page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
       incluirInactivos: incluirInactivos === 'true',
+      soloEliminados: eliminados === 'true',
     });
     res.json(resultado);
   } catch (err) { next(err); }
@@ -47,9 +48,16 @@ async function actualizar(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
-    await service.eliminar(req.clinicaId, req.params.id, req.usuario);
-    res.json({ ok: true });
+    const r = await service.eliminar(req.clinicaId, req.params.id, req.usuario);
+    res.json({ ok: true, ...r });
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+async function resumenBaja(req, res, next) {
+  try { res.json(await service.resumenBaja(req.clinicaId, req.params.id)); } catch (err) { next(err); }
+}
+async function restaurar(req, res, next) {
+  try { res.json(await service.restaurar(req.clinicaId, req.params.id, req.usuario)); } catch (err) { next(err); }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, resumenBaja, restaurar };

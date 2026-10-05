@@ -315,3 +315,10 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
   - **Pacientes con ficha** (o quien se olvidó la contraseña): entran con un **código de 6 números** que genera recepción en DOVA → Página web → "Cuentas de pacientes" (vale 48 horas, 5 intentos, se usa una vez). El botón "Enviar por WhatsApp" abre WhatsApp con el mensaje y el enlace listos. Desde ahí también se puede verificar la identidad o desactivar una cuenta.
   - Una cédula que ya tiene ficha no se puede registrar desde la web (evita que alguien tome la ficha de otro): la página ofrece pedir el código por WhatsApp.
 - El email queda opcional (solo avisos de pagos aprobados/rechazados): Brevo por API web (`BREVO_API_KEY`, `MAIL_REMITENTE`) o SMTP en planes pagos.
+
+## Eliminar pacientes (admin)
+- Pacientes: botón "Eliminar" en cada fila y "Eliminar paciente" en la ficha, solo para quien tiene el permiso `pacientes.delete` (el admin).
+- La confirmación avisa qué pasa (turnos que se cancelan, cuotas sin pagar, cuenta web que se cierra) y pide escribir ELIMINAR.
+- Es una baja: deja de aparecer en Pacientes, buscadores y agenda; se cancelan sus turnos próximos y se cierra su cuenta web. La historia clínica, pagos y facturas se conservan (obligación legal y la caja depende de ellos).
+- "Ver eliminados" lista los dados de baja con "Restaurar". Si se intenta crear otro paciente con la misma cédula, avisa que hay uno eliminado para restaurar.
+- De paso: el buscador de la pantalla Pacientes no hacía nada; ahora filtra mientras se escribe.

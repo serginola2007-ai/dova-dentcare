@@ -10,13 +10,12 @@ const COLUMNAS = `
   acepta_whatsapp, acepta_recordatorios, grupo_sanguineo, lista_precio_id
 `;
 
-async function listar(clinicaId, { q, page = 1, pageSize = 20, incluirInactivos = false }) {
+async function listar(clinicaId, { q, page = 1, pageSize = 20, incluirInactivos = false, soloEliminados = false }) {
   const condiciones = ['clinica_id = $1'];
   const params = [clinicaId];
 
-  if (!incluirInactivos) {
-    condiciones.push('activo = true');
-  }
+  if (soloEliminados) condiciones.push('activo = false');
+  else if (!incluirInactivos) condiciones.push('activo = true');
   if (q) {
     params.push(`%${q.toLowerCase()}%`);
     condiciones.push(`(LOWER(nombre) LIKE $${params.length} OR LOWER(apellido) LIKE $${params.length} OR ci LIKE $${params.length})`);
@@ -50,7 +49,7 @@ async function obtenerPorId(clinicaId, id) {
 async function obtenerPorCi(clinicaId, ci) {
   if (!ci) return null;
   const res = await query(
-    `SELECT id FROM pacientes WHERE clinica_id = $1 AND ci = $2`,
+    `SELECT id, activo FROM pacientes WHERE clinica_id = $1 AND ci = $2 ORDER BY activo DESC LIMIT 1`,
     [clinicaId, ci]
   );
   return res.rows[0] || null;
