@@ -126,7 +126,39 @@ async function derivacionesRecibidasPendientes(clinicaId, odontologoId) {
   return res.rows;
 }
 
+// Consultas recientes (30 días) que indicaron medicación pero todavía no tienen receta emitida.
+async function recetasPendientes(clinicaId, odontologoId) {
+  const params = [clinicaId];
+  let cond = "h.clinica_id=$1 AND h.firmada AND h.medicacion IS NOT NULL AND btrim(h.medicacion) <> '' AND h.fecha >= CURRENT_DATE - 30";
+  if (odontologoId) { params.push(odontologoId); cond += ` AND h.odontologo_id=$${params.length}`; }
+  const res = await query(
+    `SELECT h.id, h.fecha, h.medicacion, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
+       FROM historia_clinica h JOIN pacientes p ON p.id = h.paciente_id
+      WHERE ${cond} AND p.activo
+        AND NOT EXISTS (SELECT 1 FROM recetas r WHERE r.historia_clinica_id = h.id AND r.estado = 'emitida')
+        AND NOT EXISTS (SELECT 1 FROM recetas r WHERE r.paciente_id = h.paciente_id AND r.estado = 'emitida' AND r.fecha >= h.fecha)
+      ORDER BY h.fecha DESC LIMIT 50`,
+    params
+  );
+  return res.rows;
+}
+
+// Presupuestos en borrador o enviados que el paciente todavía no aceptó.
+async function presupuestosPendientes(clinicaId, odontologoId) {
+  const params = [clinicaId];
+  let cond = "pr.clinica_id=$1 AND pr.estado IN ('borrador','enviado')";
+  if (odontologoId) { params.push(odontologoId); cond += ` AND pr.odontologo_id=$${params.length}`; }
+  const res = await query(
+    `SELECT pr.id, pr.estado, pr.fecha, pr.total, pr.vencimiento, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
+       FROM presupuestos pr JOIN pacientes p ON p.id = pr.paciente_id
+      WHERE ${cond} AND p.activo ORDER BY pr.fecha ASC LIMIT 50`,
+    params
+  );
+  return res.rows;
+}
+
 module.exports = {
+  recetasPendientes, presupuestosPendientes,
   tratamientosAbiertos, pacientesSinProximaCita, estudiosPendientes,
   evolucionesSinFirmar, consentimientosPendientes, controlesVencidos,
   pacientesParaRevisar, derivacionesRecibidasPendientes,

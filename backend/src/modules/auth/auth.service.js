@@ -5,6 +5,7 @@ const env = require('../../config/env');
 const { ApiError } = require('../../middlewares/error.middleware');
 const authRepo = require('./auth.repository');
 const clinicaRepo = require('../clinica/clinica.repository');
+const auditoria = require('../../utils/auditoria');
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -42,7 +43,10 @@ async function login({ username, password, clinicaSlug = 'dentcarerc', ip }) {
   // 30 desde una misma IP) bloquean el ingreso 15 minutos.
   const clave = String(username).trim().toLowerCase().slice(0, 200);
   const est = await authRepo.estadoIntentosLogin(clave, ip);
+  const clinicaLog = async () => { try { return (await clinicaRepo.findBySlug(clinicaSlug)) || {}; } catch (_e) { return {}; } };
   if (est.fallidos_usuario >= MAX_FALLIDOS_USUARIO || est.fallidos_ip >= MAX_FALLIDOS_IP) {
+    const c = await clinicaLog();
+    if (c.id) await auditoria.registrar({ clinicaId: c.id, accion: 'login_bloqueado', modulo: 'seguridad', resultado: 'denegado', ip, detalle: { usuario: clave } });
     const desde = est.ultimo_fallido ? new Date(est.ultimo_fallido).getTime() : Date.now();
     const min = Math.max(1, Math.ceil((desde + est.ventanaMin * 60000 - Date.now()) / 60000));
     throw new ApiError(429, `Demasiados intentos fallidos. Por seguridad, esperá ${min} minuto${min === 1 ? '' : 's'} y volvé a intentar.`);
@@ -50,10 +54,13 @@ async function login({ username, password, clinicaSlug = 'dentcarerc', ip }) {
   try {
     const r = await loginVerificado({ username, password, clinicaSlug });
     await authRepo.registrarIntentoLogin(clave, ip, true);
+    await auditoria.registrar({ clinicaId: r.clinica.id, usuarioId: r.usuario.id, usuarioNombre: r.usuario.nombre, accion: 'login', modulo: 'seguridad', ip });
     return r;
   } catch (e) {
     if (e.status === 401) {
       await authRepo.registrarIntentoLogin(clave, ip, false);
+      const c = await clinicaLog();
+      if (c.id) await auditoria.registrar({ clinicaId: c.id, accion: 'login_fallido', modulo: 'seguridad', resultado: 'fallido', ip, detalle: { usuario: clave } });
       const restantes = MAX_FALLIDOS_USUARIO - (est.fallidos_usuario + 1);
       if (restantes > 0 && restantes <= 2) e.message += `. Te quedan ${restantes} intento${restantes === 1 ? '' : 's'} antes de un bloqueo de 15 minutos.`;
     }
@@ -132,7 +139,12 @@ async function refresh(refreshTokenRaw) {
 
 async function logout(refreshTokenRaw) {
   if (!refreshTokenRaw) return;
+  const reg = await authRepo.findRefreshToken(hashToken(refreshTokenRaw));
   await authRepo.revocarRefreshToken(hashToken(refreshTokenRaw));
+  if (reg) {
+    const u = await authRepo.findUsuarioById(reg.usuario_id);
+    if (u) await auditoria.registrar({ clinicaId: u.clinica_id, usuarioId: u.id, usuarioNombre: u.nombre, accion: 'logout', modulo: 'seguridad' });
+  }
 }
 
 /* Cambio de la contraseña propia (y obligatorio en el primer ingreso con la
@@ -149,6 +161,8 @@ async function cambiarClavePropia(usuarioId, { actual, nueva } = {}) {
     throw new ApiError(400, 'Esa contraseña es demasiado fácil de adivinar');
   }
   await authRepo.marcarClaveCambiada(usuarioId, await bcrypt.hash(n, 10));
+  const yo = await authRepo.findUsuarioById(usuarioId);
+  if (yo) await auditoria.registrar({ clinicaId: yo.clinica_id, usuarioId, usuarioNombre: yo.nombre, accion: 'cambiar_clave_propia', modulo: 'seguridad' });
   return { ok: true };
 }
 

@@ -35,7 +35,32 @@ function crearUpload(subcarpeta, mimePermitidos, maxSizeMb = 15) {
   });
 }
 
+// Subida a memoria (el archivo se guarda en la base, no en el disco, que en
+// Render se borra en cada actualización).
+function crearUploadMemoria(mimePermitidos, maxSizeMb = 15) {
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: maxSizeMb * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => {
+      if (!mimePermitidos.includes(file.mimetype)) return cb(new Error(`Tipo de archivo no permitido: ${file.mimetype}`));
+      cb(null, true);
+    },
+  });
+}
+
+// Tipo REAL del archivo según sus primeros bytes (no se confía en la extensión
+// ni en lo que diga el navegador).
+function tipoReal(buf) {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+  if (buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))) return 'image/png';
+  if (buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP') return 'image/webp';
+  if (buf.slice(0, 5).toString('latin1') === '%PDF-') return 'application/pdf';
+  if (buf.length > 132 && buf.slice(128, 132).toString('latin1') === 'DICM') return 'application/dicom';
+  return null;
+}
+
 const MIME_IMAGENES = ['image/jpeg', 'image/png', 'image/webp'];
 const MIME_ESTUDIOS = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/dicom'];
 
-module.exports = { RAIZ_UPLOADS, crearUpload, MIME_IMAGENES, MIME_ESTUDIOS };
+module.exports = { RAIZ_UPLOADS, crearUpload, crearUploadMemoria, tipoReal, MIME_IMAGENES, MIME_ESTUDIOS };

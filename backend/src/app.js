@@ -49,6 +49,8 @@ const app = express();
 // sin esto todos los usuarios "tendrían" la IP del proxy y el freno de
 // intentos de login por IP bloquearía a toda la clínica junta.
 app.set('trust proxy', 1);
+// IP del pedido disponible para la auditoría (utils/contexto.js).
+app.use(require('./utils/contexto').middleware);
 // Cabeceras de seguridad. La política de contenido permite lo que usan las
 // pantallas de DOVA cuando las sirve este mismo servidor (scripts propios,
 // estilos en línea y las fuentes de Google).

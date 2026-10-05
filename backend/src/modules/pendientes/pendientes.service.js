@@ -14,6 +14,8 @@ async function obtener(clinicaId, odontologoId) {
     controlesVencidos,
     pacientesParaRevisar,
     derivacionesRecibidas,
+    recetasPendientes,
+    presupuestosPendientes,
   ] = await Promise.all([
     repo.tratamientosAbiertos(clinicaId, odontologoId),
     repo.pacientesSinProximaCita(clinicaId, odontologoId),
@@ -23,11 +25,13 @@ async function obtener(clinicaId, odontologoId) {
     repo.controlesVencidos(clinicaId, odontologoId),
     repo.pacientesParaRevisar(clinicaId, odontologoId),
     repo.derivacionesRecibidasPendientes(clinicaId, odontologoId),
+    repo.recetasPendientes(clinicaId, odontologoId),
+    repo.presupuestosPendientes(clinicaId, odontologoId),
   ]);
 
   const total = tratamientosAbiertos.length + pacientesSinProximaCita.length + estudiosPendientes.length
     + evolucionesSinFirmar.length + consentimientosPendientes.length + controlesVencidos.length
-    + pacientesParaRevisar.length + derivacionesRecibidas.length;
+    + pacientesParaRevisar.length + derivacionesRecibidas.length + recetasPendientes.length + presupuestosPendientes.length;
 
   return {
     total,
@@ -39,6 +43,8 @@ async function obtener(clinicaId, odontologoId) {
     controlesVencidos,
     pacientesParaRevisar,
     derivacionesRecibidas,
+    recetasPendientes,
+    presupuestosPendientes,
   };
 }
 

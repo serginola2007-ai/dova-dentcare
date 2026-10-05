@@ -17,5 +17,7 @@ router.put('/:id', requirePermiso('pacientes.edit'), actualizarPacienteValidator
 router.get('/:id/baja-resumen', requirePermiso('pacientes.delete'), controller.resumenBaja);
 router.delete('/:id', requirePermiso('pacientes.delete'), controller.eliminar);
 router.post('/:id/restaurar', requirePermiso('pacientes.delete'), controller.restaurar);
+// Notas internas del equipo.
+router.use('/', require('./pacientes.notas'));
 
 module.exports = router;

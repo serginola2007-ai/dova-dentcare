@@ -10,6 +10,7 @@ router.use(authMiddleware, resolverClinicaMiddleware);
 router.get('/pago/:id', requirePermiso('pagos.view'), controller.pago);
 router.get('/presupuesto/:id', requirePermiso('presupuestos.view'), controller.presupuesto);
 router.get('/consentimiento/:id', requirePermiso('consentimientos.manage', 'pacientes.clinical.view'), controller.consentimiento);
+router.get('/receta/:id', requirePermiso('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view'), controller.receta);
 router.get('/plan-tratamiento/:id', requirePermiso('planes_tratamiento.view'), controller.planTratamiento);
 
 module.exports = router;

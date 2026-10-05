@@ -81,6 +81,43 @@ async function reabrirEtapa(clinicaId, planId, etapaId, usuario) {
   return actualizada;
 }
 
+const ESTADOS_ETAPA = ['pendiente', 'en_progreso', 'completado', 'cancelado'];
+async function actualizarEtapa(clinicaId, planId, etapaId, datos, usuario) {
+  const plan = await repo.obtenerPorId(clinicaId, planId);
+  if (!plan) throw new ApiError(404, 'Plan de tratamiento no encontrado');
+  const etapa = await etapasRepo.obtener(etapaId);
+  if (!etapa || etapa.plan_id !== Number(planId)) throw new ApiError(404, 'Etapa no encontrada en este plan');
+  const estado = datos.estado || etapa.estado;
+  if (!ESTADOS_ETAPA.includes(estado)) throw new ApiError(400, 'Estado inválido (pendiente, en progreso, completado o cancelado)');
+  if (['finalizado', 'cancelado'].includes(plan.estado) && estado !== etapa.estado) throw new ApiError(409, `El tratamiento está ${plan.estado}: no se pueden cambiar sus etapas`);
+  let piezas = datos.piezas !== undefined ? datos.piezas : etapa.piezas;
+  if (typeof piezas === 'string') piezas = piezas.split(/[\s,;]+/).filter(Boolean);
+  if (Array.isArray(piezas)) {
+    const malas = piezas.filter((x) => !/^[1-8][1-8]$/.test(String(x)));
+    if (malas.length) throw new ApiError(400, `Pieza inválida: ${malas.join(', ')}`);
+    piezas = piezas.length ? [...new Set(piezas.map(String))] : null;
+  }
+  for (const k of ['fecha', 'fechaInicio']) if (datos[k] && !/^\d{4}-\d{2}-\d{2}$/.test(datos[k])) throw new ApiError(400, 'Fecha inválida');
+  const odontologoId = datos.odontologoId !== undefined ? (Number(datos.odontologoId) || null) : (etapa.odontologo_id || usuario.odontologoId || null);
+  if (odontologoId) {
+    const od = await odontologosRepo.obtenerPorId(clinicaId, odontologoId);
+    if (!od) throw new ApiError(400, 'Profesional no encontrado');
+  }
+  const actualizada = await etapasRepo.actualizarEtapa(etapaId, {
+    estado, fechaInicio: datos.fechaInicio, fecha: datos.fecha !== undefined ? datos.fecha : (etapa.fecha ? String(etapa.fecha).slice(0, 10) : null),
+    odontologoId, observaciones: datos.observaciones !== undefined ? String(datos.observaciones || '').slice(0, 2000) : etapa.observaciones, piezas,
+  });
+  // El tratamiento arranca cuando arranca su primera etapa.
+  if (['en_progreso', 'completado'].includes(estado) && plan.estado === 'pendiente') {
+    await require('../../config/db').query("UPDATE planes_tratamiento SET estado='en_proceso', fecha_inicio=COALESCE(fecha_inicio, CURRENT_DATE), actualizado_en=now() WHERE id=$1", [plan.id]);
+  }
+  await auditoria.registrar({
+    clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'editar_etapa', modulo: 'planes_tratamiento', entidadId: planId,
+    detalle: { etapaId: Number(etapaId), nombre: etapa.nombre, antes: { estado: etapa.estado, observaciones: etapa.observaciones }, despues: { estado: actualizada.estado, observaciones: actualizada.observaciones } },
+  });
+  return { etapa: actualizada, progreso: await etapasRepo.contarProgreso(planId) };
+}
+
 async function crear(clinicaId, datos, usuario) {
   if (!datos.pacienteId || !datos.nombre) throw new ApiError(400, 'Paciente y nombre del tratamiento son obligatorios');
   const paciente = await pacientesRepo.obtenerPorId(clinicaId, datos.pacienteId);
@@ -234,6 +271,7 @@ async function generarPresupuesto(clinicaId, planId, usuario) {
 }
 
 module.exports = {
+  actualizarEtapa,
   listarPorPaciente, obtener, crear, actualizar, registrarSesion, completar, cancelar,
   crearEtapa, aplicarEtapas, completarEtapa, reabrirEtapa,
   registrarMaterialEtapa, registrarMaterialSesion, generarPresupuesto, listarInsumosParaConsumo,

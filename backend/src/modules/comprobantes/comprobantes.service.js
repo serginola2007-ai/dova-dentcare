@@ -49,4 +49,12 @@ async function planTratamiento(clinicaId, id, res) {
   pdf.comprobantePlanTratamiento(res, { clinica, plan: planRow, sesiones, paciente });
 }
 
-module.exports = { pago, presupuesto, consentimiento, planTratamiento };
+async function receta(clinicaId, id, res) {
+  const extrasRepo = require('../clinico-extras/extras.repository');
+  const r = await extrasRepo.obtenerReceta(clinicaId, id);
+  if (!r) throw new ApiError(404, 'Receta no encontrada');
+  const [clinica, paciente] = await Promise.all([clinicaRepo.findById(clinicaId), pacientesRepo.obtenerPorId(clinicaId, r.paciente_id)]);
+  pdf.comprobanteReceta(res, { clinica, receta: r, paciente });
+}
+
+module.exports = { pago, presupuesto, consentimiento, planTratamiento, receta };

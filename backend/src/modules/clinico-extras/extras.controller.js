@@ -5,10 +5,31 @@ async function listarFotos(req, res, next) {
   try { res.json(await service.listarFotos(req.clinicaId, Number(req.params.pacienteId))); } catch (e) { next(e); }
 }
 async function crearFoto(req, res, next) {
-  try {
-    const storagePath = req.file ? req.file.path : undefined;
-    res.status(201).json(await service.crearFoto(req.clinicaId, { ...req.body, storagePath }, req.usuario));
-  } catch (e) { next(e); }
+  try { res.status(201).json(await service.crearFoto(req.clinicaId, req.body || {}, req.file, req.usuario)); } catch (e) { next(e); }
+}
+async function actualizarFoto(req, res, next) {
+  try { res.json(await service.actualizarFoto(req.clinicaId, Number(req.params.id), req.body || {}, req.usuario)); } catch (e) { next(e); }
+}
+async function archivoFoto(req, res, next) {
+  try { enviarArchivo(res, await service.archivo(req.clinicaId, 'fotos_clinicas', Number(req.params.id)), req.query.descargar); } catch (e) { next(e); }
+}
+async function archivoEstudio(req, res, next) {
+  try { enviarArchivo(res, await service.archivo(req.clinicaId, 'estudios', Number(req.params.id)), req.query.descargar); } catch (e) { next(e); }
+}
+async function actualizarEstudio(req, res, next) {
+  try { res.json(await service.actualizarEstudio(req.clinicaId, Number(req.params.id), req.body || {}, req.usuario)); } catch (e) { next(e); }
+}
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf', 'application/dicom': 'dcm' };
+function enviarArchivo(res, a, descargar) {
+  const nombre = (a.nombre || `archivo.${EXT[a.mime] || 'bin'}`).replace(/[^\w.\- ]/g, '_');
+  res.set({
+    'Content-Type': a.mime,
+    'Content-Length': a.datos.length,
+    'Cache-Control': 'private, max-age=600',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Disposition': `${descargar || a.mime === 'application/dicom' ? 'attachment' : 'inline'}; filename="${nombre}"`,
+  });
+  res.end(a.datos);
 }
 async function eliminarFoto(req, res, next) {
   try { res.json(await service.eliminarFoto(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
@@ -19,10 +40,7 @@ async function listarEstudios(req, res, next) {
   try { res.json(await service.listarEstudios(req.clinicaId, Number(req.params.pacienteId))); } catch (e) { next(e); }
 }
 async function crearEstudio(req, res, next) {
-  try {
-    const storagePath = req.file ? req.file.path : undefined;
-    res.status(201).json(await service.crearEstudio(req.clinicaId, { ...req.body, storagePath }, req.usuario));
-  } catch (e) { next(e); }
+  try { res.status(201).json(await service.crearEstudio(req.clinicaId, req.body || {}, req.file, req.usuario)); } catch (e) { next(e); }
 }
 async function eliminarEstudio(req, res, next) {
   try { res.json(await service.eliminarEstudio(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
@@ -51,6 +69,9 @@ async function listarRecetas(req, res, next) {
 }
 async function obtenerReceta(req, res, next) {
   try { res.json(await service.obtenerReceta(req.clinicaId, Number(req.params.id))); } catch (e) { next(e); }
+}
+async function anularReceta(req, res, next) {
+  try { res.json(await service.anularReceta(req.clinicaId, Number(req.params.id), req.body || {}, req.usuario)); } catch (e) { next(e); }
 }
 async function crearReceta(req, res, next) {
   try { res.status(201).json(await service.crearReceta(req.clinicaId, req.body, req.usuario)); } catch (e) { next(e); }
@@ -99,10 +120,10 @@ async function listarHistorialWhatsapp(req, res, next) {
 }
 
 module.exports = {
-  listarFotos, crearFoto, eliminarFoto,
-  listarEstudios, crearEstudio, eliminarEstudio,
+  listarFotos, crearFoto, eliminarFoto, actualizarFoto, archivoFoto,
+  listarEstudios, crearEstudio, eliminarEstudio, actualizarEstudio, archivoEstudio,
   listarConsentimientos, plantillasConsentimiento, crearConsentimiento, firmarConsentimiento, anularConsentimiento,
-  listarRecetas, obtenerReceta, crearReceta,
+  listarRecetas, obtenerReceta, crearReceta, anularReceta,
   listarListaEspera, crearListaEspera, actualizarEstadoListaEspera,
   listarLaboratorio, crearLaboratorio, actualizarLaboratorio,
   listarPlantillasWhatsapp, prepararMensajeWhatsapp, listarHistorialWhatsapp,

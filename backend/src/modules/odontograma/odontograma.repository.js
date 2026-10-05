@@ -83,7 +83,7 @@ async function planesPorPieza(clinicaId, pacienteId, pieza) {
 
 async function fotosPorPieza(clinicaId, pacienteId, pieza) {
   const res = await query(
-    `SELECT id, categoria, storage_path, observacion, fecha FROM fotos_clinicas
+    `SELECT id, categoria, observacion, fecha, (archivo IS NOT NULL OR storage_path IS NOT NULL) AS tiene_archivo FROM fotos_clinicas
      WHERE clinica_id=$1 AND paciente_id=$2 AND pieza=$3 ORDER BY fecha DESC`,
     [clinicaId, pacienteId, pieza]
   );
@@ -92,7 +92,7 @@ async function fotosPorPieza(clinicaId, pacienteId, pieza) {
 
 async function estudiosPorPieza(clinicaId, pacienteId, pieza) {
   const res = await query(
-    `SELECT id, tipo, descripcion, storage_path, fecha FROM estudios
+    `SELECT id, tipo, descripcion, fecha, mime, (archivo IS NOT NULL OR storage_path IS NOT NULL) AS tiene_archivo FROM estudios
      WHERE clinica_id=$1 AND paciente_id=$2 AND pieza=$3 ORDER BY fecha DESC`,
     [clinicaId, pacienteId, pieza]
   );

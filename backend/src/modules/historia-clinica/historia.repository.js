@@ -141,4 +141,22 @@ async function timelinePaciente(clinicaId, pacienteId) {
   return res.rows;
 }
 
-module.exports = { listarPorPaciente, obtenerPorId, listarPorPieza, crear, firmar, crearEnmienda, timelinePaciente };
+// Borrador (sin firmar): se puede corregir libremente; firmado, nunca.
+const CAMPOS_BORRADOR = {
+  motivoConsulta: 'motivo_consulta', anamnesis: 'anamnesis', diagnostico: 'diagnostico', diagnosticoDiferencial: 'diagnostico_diferencial',
+  procedimiento: 'procedimiento', tratamientoId: 'tratamiento_id', anestesia: 'anestesia', materiales: 'materiales', evolucion: 'evolucion',
+  indicaciones: 'indicaciones', observaciones: 'observaciones', proximaConsulta: 'proxima_consulta', planId: 'plan_id', piezas: 'piezas',
+  complicaciones: 'complicaciones', medicacion: 'medicacion', proximaAccion: 'proxima_accion',
+};
+async function actualizarBorrador(clinicaId, id, d) {
+  const sets = []; const vals = [clinicaId, id];
+  for (const [k, col] of Object.entries(CAMPOS_BORRADOR)) {
+    if (d[k] === undefined) continue;
+    vals.push(d[k] === '' ? null : d[k]); sets.push(`${col}=$${vals.length}`);
+  }
+  if (!sets.length) return obtenerPorId(clinicaId, id);
+  const r = await query(`UPDATE historia_clinica SET ${sets.join(', ')} WHERE clinica_id=$1 AND id=$2 AND firmada=false RETURNING id`, vals);
+  return r.rowCount ? obtenerPorId(clinicaId, id) : null;
+}
+
+module.exports = { listarPorPaciente, obtenerPorId, listarPorPieza, crear, firmar, crearEnmienda, timelinePaciente, actualizarBorrador, CAMPOS_BORRADOR };

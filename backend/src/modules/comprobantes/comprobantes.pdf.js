@@ -178,4 +178,52 @@ function comprobantePlanTratamiento(res, { clinica, plan, sesiones, paciente }) 
   doc.end();
 }
 
-module.exports = { comprobantePago, comprobantePresupuesto, comprobanteConsentimiento, comprobantePlanTratamiento };
+// Receta: datos reales de la receta, del paciente y del profesional.
+function comprobanteReceta(res, { clinica, receta, paciente }) {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="receta-${receta.id}.pdf"`);
+  doc.pipe(res);
+  encabezado(doc, clinica);
+  doc.fontSize(16).fillColor('#000000').text('Receta', { align: 'center' });
+  doc.moveDown(0.8);
+  doc.fontSize(10);
+  const edad = (() => {
+    if (!paciente.fecha_nacimiento) return null;
+    const n = new Date(`${String(paciente.fecha_nacimiento).slice(0, 10)}T12:00:00Z`); const h = new Date();
+    let a = h.getUTCFullYear() - n.getUTCFullYear(); if (h.getUTCMonth() < n.getUTCMonth() || (h.getUTCMonth() === n.getUTCMonth() && h.getUTCDate() < n.getUTCDate())) a -= 1;
+    return a >= 0 ? a : null;
+  })();
+  doc.text(`Paciente: ${paciente.nombre} ${paciente.apellido}${paciente.ci ? `   C.I.: ${paciente.ci}` : ''}${edad !== null ? `   Edad: ${edad} años` : ''}`);
+  doc.text(`Fecha: ${fmtDia(receta.fecha)}   N.º ${receta.id}`);
+  doc.moveDown(1);
+  doc.fontSize(12).text('Rp/', { continued: false });
+  doc.moveDown(0.4);
+  (receta.items || []).forEach((it, i) => {
+    doc.fontSize(11).fillColor('#000000').text(`${i + 1}. ${[it.medicamento, it.concentracion, it.presentacion].filter(Boolean).join(' ')}`);
+    const uso = [it.dosis, it.frecuencia, it.duracion ? `durante ${it.duracion}` : null, it.via ? `vía ${it.via}` : null].filter(Boolean).join(' · ');
+    doc.fontSize(10).fillColor('#333333');
+    if (uso) doc.text(`   ${uso}`);
+    if (it.indicaciones) doc.text(`   ${it.indicaciones}`);
+    doc.moveDown(0.5);
+  });
+  if (receta.indicaciones) {
+    doc.moveDown(0.5).fontSize(11).fillColor('#000000').text('Indicaciones');
+    doc.fontSize(10).fillColor('#333333').text(receta.indicaciones);
+  }
+  // Firma del profesional
+  const y = Math.max(doc.y + 60, 640);
+  doc.moveTo(330, y).lineTo(545, y).strokeColor('#999999').stroke();
+  doc.fontSize(10).fillColor('#000000').text(receta.odontologo_nombre || 'Profesional', 330, y + 6, { width: 215, align: 'center' });
+  doc.fontSize(9).fillColor('#555555');
+  if (receta.odontologo_matricula) doc.text(`Matrícula ${receta.odontologo_matricula}`, 330, doc.y, { width: 215, align: 'center' });
+  if (receta.odontologo_especialidad) doc.text(receta.odontologo_especialidad, 330, doc.y, { width: 215, align: 'center' });
+  if (receta.estado === 'anulada') {
+    doc.save().rotate(-30, { origin: [300, 400] }).fontSize(72).fillColor('#C62828').opacity(0.25).text('ANULADA', 80, 360, { width: 450, align: 'center' }).restore();
+    doc.opacity(1).fontSize(9).fillColor('#C62828').text(`Anulada: ${receta.anulada_motivo || ''}`, 50, 740, { width: 495 });
+  }
+  pie(doc);
+  doc.end();
+}
+
+module.exports = { comprobantePago, comprobantePresupuesto, comprobanteConsentimiento, comprobantePlanTratamiento, comprobanteReceta };

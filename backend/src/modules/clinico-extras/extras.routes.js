@@ -3,22 +3,28 @@ const controller = require('./extras.controller');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
 const { resolverClinicaMiddleware } = require('../../middlewares/clinica.middleware');
 const { requirePermiso } = require('../../middlewares/rbac.middleware');
-const { crearUpload, MIME_IMAGENES, MIME_ESTUDIOS } = require('../../utils/upload');
+const { crearUploadMemoria, MIME_IMAGENES, MIME_ESTUDIOS } = require('../../utils/upload');
 
-const uploadFotos = crearUpload('fotos-clinicas', MIME_IMAGENES, 10);
-const uploadEstudios = crearUpload('estudios', MIME_ESTUDIOS, 25);
+// Los archivos se guardan en la base (ver migración 0030).
+const uploadFotos = crearUploadMemoria(MIME_IMAGENES, 10);
+const uploadEstudios = crearUploadMemoria([...MIME_ESTUDIOS, 'application/octet-stream'], 25);
+const VER_CLINICO = ['fotos_clinicas.manage', 'estudios.manage', 'pacientes.clinical.view', 'historia_clinica.view'];
 
 const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
 
 // Fotos clínicas
-router.get('/fotos/paciente/:pacienteId', requirePermiso('fotos_clinicas.manage', 'pacientes.clinical.view'), controller.listarFotos);
+router.get('/fotos/paciente/:pacienteId', requirePermiso('fotos_clinicas.manage', 'pacientes.clinical.view', 'historia_clinica.view'), controller.listarFotos);
+router.get('/fotos/:id/archivo', requirePermiso(...VER_CLINICO), controller.archivoFoto);
 router.post('/fotos', requirePermiso('fotos_clinicas.manage'), uploadFotos.single('archivo'), controller.crearFoto);
+router.patch('/fotos/:id', requirePermiso('fotos_clinicas.manage'), controller.actualizarFoto);
 router.delete('/fotos/:id', requirePermiso('fotos_clinicas.manage'), controller.eliminarFoto);
 
 // Estudios
-router.get('/estudios/paciente/:pacienteId', requirePermiso('estudios.manage', 'pacientes.clinical.view'), controller.listarEstudios);
+router.get('/estudios/paciente/:pacienteId', requirePermiso('estudios.manage', 'pacientes.clinical.view', 'historia_clinica.view'), controller.listarEstudios);
+router.get('/estudios/:id/archivo', requirePermiso(...VER_CLINICO), controller.archivoEstudio);
 router.post('/estudios', requirePermiso('estudios.manage'), uploadEstudios.single('archivo'), controller.crearEstudio);
+router.patch('/estudios/:id', requirePermiso('estudios.manage'), controller.actualizarEstudio);
 router.delete('/estudios/:id', requirePermiso('estudios.manage'), controller.eliminarEstudio);
 
 // Consentimientos
@@ -32,6 +38,7 @@ router.post('/consentimientos/:id/anular', requirePermiso('consentimientos.manag
 router.get('/recetas/paciente/:pacienteId', requirePermiso('recetas.manage', 'pacientes.clinical.view'), controller.listarRecetas);
 router.get('/recetas/:id', requirePermiso('recetas.manage', 'pacientes.clinical.view'), controller.obtenerReceta);
 router.post('/recetas', requirePermiso('recetas.manage'), controller.crearReceta);
+router.post('/recetas/:id/anular', requirePermiso('recetas.manage'), controller.anularReceta);
 
 // Lista de espera
 router.get('/lista-espera', requirePermiso('lista_espera.manage', 'agenda.view'), controller.listarListaEspera);

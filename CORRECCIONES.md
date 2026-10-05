@@ -330,3 +330,11 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Si se corta internet o el servidor se reinicia, se reconecta solo y se pone al día. La conexión se renueva sola cuando vence el token.
 - **"Pedir mi código"** en la página (Mi cuenta → Tengo un código, y cuando alguien intenta registrarse con una cédula que ya es paciente): deja cédula y celular; el pedido aparece al instante en "Lo que llegó" con el botón "Dar código" (que abre WhatsApp al número que dejó y marca el pedido como atendido).
 - De paso: el botón de tema en el celular quedaba solo arriba; ahora avisos, tema y salir van juntos a la derecha.
+
+## Fase 1 — clínica integral (migración 0030) — ver también la auditoría
+- Fotos y estudios: el archivo se guarda en la base (antes iba al disco de Render, que se borra en cada actualización, y no había forma de verlos). Tipo validado por contenido (JPG/PNG/WEBP/PDF/DICOM), descarga solo con permiso, vínculo a consulta/pieza/tratamiento del mismo paciente, reclasificar y eliminar auditados.
+- Historia clínica: borradores editables (`PUT /historia-clinica/:id`), firmadas inmutables (409 → enmienda), piezas FDI validadas, contexto de consulta en un pedido.
+- Modo Consulta nuevo (`frontend/shared/ext/ext-clinica.js`): ligado al turno (pasa a "en consulta"), datos clínicos del paciente a la vista, consulta con autoguardado en la base, "Finalizar consulta" (firma + odontograma de las piezas + turno atendido) y accesos rápidos reales (incluye presupuesto, pago y próxima cita).
+- Ficha 360°: pestañas Fotos y estudios (galería, visor, antes/después), Recetas y Notas internas; resumen con última consulta, próxima cita, alergias y notas importantes.
+- Auditoría con IP y resultado: login, login fallido, bloqueo, logout, cambio de clave y accesos denegados (403).
+- Odontólogo: permiso `agenda.create` para dar la próxima cita.

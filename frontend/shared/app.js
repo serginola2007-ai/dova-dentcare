@@ -225,12 +225,14 @@ const DovaApp = (() => {
           // manejador de pestañas existente también las controla.
           conExtension(() => DovaFicha.extender(params));
           conExtension(() => DovaOperativo.extenderFicha(params, navegar));
+          conExtension(() => DovaClinica.extenderFicha(params));
           Vistas.initFichaPaciente(params, () => navegar('pacientes'), (pacienteId) => navegar('consulta', pacienteId));
           break;
         case 'consulta':
-          elMain.innerHTML = await Vistas.vistaModoConsulta(params);
-          Vistas.initModoConsulta(params, (pacienteId) => navegar('paciente', pacienteId));
-          conExtension(() => DovaSecciones.extenderConsulta(elMain, params));
+          // Modo Consulta (ext-clinica.js): consulta guardada en la base, con
+          // el turno (consulta/<paciente>/t<turno>) y accesos rápidos reales.
+          elMain.innerHTML = '<div></div>';
+          await DovaClinica.consulta(elMain.firstElementChild, params, navegar);
           break;
         // Agenda, caja, inventario y catálogo con todas las operaciones del
         // día (ver shared/ext/ext-operativo.js).

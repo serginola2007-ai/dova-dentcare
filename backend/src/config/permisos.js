@@ -127,7 +127,8 @@ const PERMISOS_POR_ROL = {
   admin: '*', // especial: todos los permisos
   odontologo: [
     'pacientes.view', 'pacientes.clinical.view', 'pacientes.clinical.edit',
-    'agenda.view',
+    // Agenda: ve la suya y programa la próxima cita al terminar la consulta.
+    'agenda.view', 'agenda.create',
     'tratamientos.view',
     'planes_tratamiento.view', 'planes_tratamiento.manage',
     'odontograma.view', 'odontograma.edit',

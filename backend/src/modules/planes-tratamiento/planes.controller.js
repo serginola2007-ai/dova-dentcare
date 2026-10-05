@@ -14,7 +14,11 @@ async function registrarMaterialEtapa(req, res, next) { try { res.status(201).js
 async function registrarMaterialSesion(req, res, next) { try { res.status(201).json(await service.registrarMaterialSesion(req.clinicaId, req.params.id, req.params.sesionId, req.body, req.usuario)); } catch (e) { next(e); } }
 async function generarPresupuesto(req, res, next) { try { res.status(201).json(await service.generarPresupuesto(req.clinicaId, req.params.id, req.usuario)); } catch (e) { next(e); } }
 async function listarInsumosParaConsumo(req, res, next) { try { res.json(await service.listarInsumosParaConsumo(req.clinicaId)); } catch (e) { next(e); } }
+async function actualizarEtapa(req, res, next) {
+  try { res.json(await service.actualizarEtapa(req.clinicaId, Number(req.params.id), Number(req.params.etapaId), req.body || {}, req.usuario)); } catch (e) { next(e); }
+}
 module.exports = {
+  actualizarEtapa,
   listarPorPaciente, obtener, crear, actualizar, registrarSesion, completar, cancelar,
   crearEtapa, aplicarEtapas, completarEtapa, reabrirEtapa,
   registrarMaterialEtapa, registrarMaterialSesion, generarPresupuesto, listarInsumosParaConsumo,

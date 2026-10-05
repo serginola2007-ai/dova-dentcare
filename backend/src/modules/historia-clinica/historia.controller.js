@@ -17,4 +17,10 @@ async function crearEnmienda(req, res, next) {
 async function timelinePaciente(req, res, next) {
   try { res.json(await service.timelinePaciente(req.clinicaId, req.params.pacienteId)); } catch (e) { next(e); }
 }
-module.exports = { listarPorPaciente, listarPorPieza, crear, firmar, crearEnmienda, timelinePaciente };
+async function actualizarBorrador(req, res, next) {
+  try { res.json(await service.actualizarBorrador(req.clinicaId, Number(req.params.id), req.body, req.usuario)); } catch (e) { next(e); }
+}
+async function contextoConsulta(req, res, next) {
+  try { res.json(await service.contextoConsulta(req.clinicaId, req.params.pacienteId, req.query, req.usuario)); } catch (e) { next(e); }
+}
+module.exports = { listarPorPaciente, listarPorPieza, crear, firmar, crearEnmienda, timelinePaciente, actualizarBorrador, contextoConsulta };

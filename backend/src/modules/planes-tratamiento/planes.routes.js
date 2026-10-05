@@ -18,6 +18,7 @@ router.post('/:id/cancelar', requirePermiso('planes_tratamiento.manage'), contro
 // Etapas de tratamiento (checklist)
 router.post('/:id/etapas', requirePermiso('planes_tratamiento.manage'), controller.crearEtapa);
 router.post('/:id/etapas/aplicar-plantilla', requirePermiso('planes_tratamiento.manage'), controller.aplicarEtapas);
+router.patch('/:id/etapas/:etapaId', requirePermiso('planes_tratamiento.manage'), controller.actualizarEtapa);
 router.post('/:id/etapas/:etapaId/completar', requirePermiso('planes_tratamiento.manage'), controller.completarEtapa);
 router.post('/:id/etapas/:etapaId/reabrir', requirePermiso('planes_tratamiento.manage'), controller.reabrirEtapa);
 

@@ -41,8 +41,8 @@ async function crearEtapasBatch(planId, nombres) {
 async function completarEtapa(id, d) {
   const res = await query(
     `UPDATE etapas_tratamiento SET
-       completada = true, fecha = COALESCE($2, CURRENT_DATE), odontologo_id = $3,
-       observaciones = $4, materiales = $5, historia_clinica_id = $6, actualizado_en = now()
+       completada = true, estado = 'completado', fecha = COALESCE($2, CURRENT_DATE), odontologo_id = COALESCE($3, odontologo_id),
+       observaciones = COALESCE($4, observaciones), materiales = COALESCE($5, materiales), historia_clinica_id = COALESCE($6, historia_clinica_id), actualizado_en = now()
      WHERE id = $1 RETURNING *`,
     [id, d.fecha || null, d.odontologoId || null, d.observaciones || null, d.materiales || null, d.historiaClinicaId || null]
   );
@@ -51,7 +51,7 @@ async function completarEtapa(id, d) {
 
 async function reabrirEtapa(id) {
   const res = await query(
-    `UPDATE etapas_tratamiento SET completada = false, actualizado_en = now() WHERE id = $1 RETURNING *`,
+    `UPDATE etapas_tratamiento SET completada = false, estado = 'en_progreso', actualizado_en = now() WHERE id = $1 RETURNING *`,
     [id]
   );
   return res.rows[0] || null;
@@ -59,11 +59,25 @@ async function reabrirEtapa(id) {
 
 async function contarProgreso(planId) {
   const res = await query(
-    `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE completada) AS completadas
+    `SELECT COUNT(*) FILTER (WHERE estado <> 'cancelado') AS total, COUNT(*) FILTER (WHERE completada) AS completadas
      FROM etapas_tratamiento WHERE plan_id = $1`,
     [planId]
   );
   return { total: Number(res.rows[0].total), completadas: Number(res.rows[0].completadas) };
 }
 
-module.exports = { listarPorPlan, obtener, crearEtapa, crearEtapasBatch, completarEtapa, reabrirEtapa, contarProgreso };
+// Estado y datos de una etapa (pendiente / en progreso / completado / cancelado).
+async function actualizarEtapa(id, d) {
+  const res = await query(
+    `UPDATE etapas_tratamiento SET
+       estado = $2, completada = ($2 = 'completado'),
+       fecha_inicio = CASE WHEN $2 IN ('en_progreso','completado') THEN COALESCE(fecha_inicio, $3::date, CURRENT_DATE) ELSE fecha_inicio END,
+       fecha = CASE WHEN $2 = 'completado' THEN COALESCE($4::date, fecha, CURRENT_DATE) ELSE $4::date END,
+       odontologo_id = $5, observaciones = $6, piezas = $7, actualizado_en = now()
+     WHERE id = $1 RETURNING *`,
+    [id, d.estado, d.fechaInicio || null, d.fecha || null, d.odontologoId || null, d.observaciones || null, d.piezas || null]
+  );
+  return res.rows[0] || null;
+}
+
+module.exports = { listarPorPlan, obtener, crearEtapa, crearEtapasBatch, completarEtapa, reabrirEtapa, contarProgreso, actualizarEtapa };

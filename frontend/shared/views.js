@@ -390,7 +390,7 @@ const Vistas = (() => {
               <td>${esc(t.paciente_nombre || '')} ${esc(t.paciente_apellido || '')}</td>
               <td>${esc(t.motivo || '-')}</td>
               <td>${esc(t.estado)}</td>
-              <td><button class="dova-btn-link" data-ir-consulta="${t.paciente_id}">Iniciar consulta</button></td>
+              <td><button class="dova-btn-link" data-ir-consulta="${t.paciente_id}/t${t.id}">Iniciar consulta</button></td>
             </tr>
           `).join('') || '<tr><td colspan="5">No tenés turnos programados para hoy.</td></tr>'}
         </tbody>
@@ -2003,7 +2003,7 @@ const Vistas = (() => {
     vistaAgenda, initAgenda,
     vistaInventario,
     vistaHelpdesk, initHelpdesk,
-    vistaModoConsulta, initModoConsulta,
+    vistaModoConsulta, initModoConsulta, renderPanelConsulta, initPanelConsulta,
     vistaBuscadorGlobal, initBuscadorGlobal,
     vistaUsuariosAdmin, initUsuariosAdmin,
     vistaSelectorDiseno, initSelectorDiseno,

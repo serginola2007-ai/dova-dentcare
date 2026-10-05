@@ -11,6 +11,15 @@ function requirePermiso(...codigosRequeridos) {
     const permisos = (req.usuario && req.usuario.permisos) || [];
     const tieneAlguno = codigosRequeridos.some((codigo) => permisos.includes(codigo));
     if (!tieneAlguno) {
+      // Intento de acceso sin permiso (p. ej. alguien que arma la petición a
+      // mano): queda en la auditoría como "denegado".
+      if (req.usuario) {
+        require('../utils/auditoria').registrar({
+          clinicaId: req.usuario.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
+          accion: 'acceso_denegado', modulo: 'seguridad', resultado: 'denegado',
+          detalle: { metodo: req.method, ruta: (req.originalUrl || '').split('?')[0].slice(0, 200), requiere: codigosRequeridos },
+        });
+      }
       return next(new ApiError(403, 'No tenés permiso para realizar esta acción'));
     }
     next();

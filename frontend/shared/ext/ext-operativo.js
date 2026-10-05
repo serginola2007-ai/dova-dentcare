@@ -335,7 +335,7 @@ const DovaOperativo = (() => {
       </div>
       <div class="dova-modal-actions dova-cal-acciones">
         <button class="dova-btn-secundario" data-d="ficha">Ver ficha</button>
-        ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? '<button class="dova-btn-secundario" data-d="consulta">Consulta</button>' : ''}
+        ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? '<button class="dova-btn-primary" data-d="consulta">Iniciar consulta</button>' : ''}
         ${editable ? `
           ${t.estado === 'reservado' ? '<button class="dova-btn-secundario" data-d="confirmado">Confirmar</button>' : ''}
           <button class="dova-btn-secundario" data-d="reprogramar">Reprogramar</button>
@@ -350,7 +350,7 @@ const DovaOperativo = (() => {
       const a = b.dataset.d;
       X.cerrarModal();
       if (a === 'ficha') return navegar('paciente', t.paciente_id);
-      if (a === 'consulta') return navegar('consulta', t.paciente_id);
+      if (a === 'consulta') return navegar('consulta', `${t.paciente_id}/t${t.id}`);
       if (a === 'reprogramar') return modalTurno({ turno: t, alGuardar: alTerminar });
       return cambiarEstadoTurno(t, a, alTerminar);
     }));
@@ -380,7 +380,7 @@ const DovaOperativo = (() => {
                 <button class="dova-btn-link" data-reprogramar="${i}">Reprogramar</button>
                 <button class="dova-btn-link" data-estado="no_asistio" data-i="${i}">No asistió</button>
                 <button class="dova-btn-link dova-ext-peligro" data-estado="cancelado" data-i="${i}">Cancelar</button>` : ''}
-              ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? `<button class="dova-btn-link" data-consulta="${t.paciente_id}">Consulta</button>` : ''}
+              ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? `<button class="dova-btn-link" data-consulta="${t.paciente_id}/t${t.id}">Iniciar consulta</button>` : ''}
             </td>
           </tr>
           <tr data-ctx="${i}" style="display:none"><td colspan="${e.dias ? 9 : 8}"></td></tr>`).join('') || `<tr><td colspan="${e.dias ? 9 : 8}">Sin turnos ${e.dias ? 'en esos días' : 'ese día'}.</td></tr>`}
@@ -1093,6 +1093,6 @@ const DovaOperativo = (() => {
     });
   }
 
-  return { agenda, caja, inventario, catalogo, extenderFicha, modalTurno, modalCobro };
+  return { agenda, caja, inventario, catalogo, extenderFicha, modalTurno, modalCobro, presupuestos, cobros };
 })();
 window.DovaOperativo = DovaOperativo;

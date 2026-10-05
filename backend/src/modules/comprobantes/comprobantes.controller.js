@@ -13,4 +13,7 @@ async function planTratamiento(req, res, next) {
   try { await service.planTratamiento(req.clinicaId, Number(req.params.id), res); } catch (e) { next(e); }
 }
 
-module.exports = { pago, presupuesto, consentimiento, planTratamiento };
+async function receta(req, res, next) {
+  try { await service.receta(req.clinicaId, Number(req.params.id), res); } catch (e) { next(e); }
+}
+module.exports = { pago, presupuesto, consentimiento, planTratamiento, receta };
