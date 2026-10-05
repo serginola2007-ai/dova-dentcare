@@ -184,3 +184,18 @@ Módulo nuevo en el menú **Facturación** y en la ficha del paciente (pestaña 
 - **Pruebas:**
   - API: 21 de ingresos y 63 de facturación.
   - Pantalla: 68 de facturación, más operativo, calendario, PWA y la simulación de un año, todo OK.
+
+## Menú agrupado (más simple)
+
+Arriba ahora se ven solo tres botones. Cada uno despliega sus opciones, y solo aparecen las que el usuario tiene permitidas. No se eliminó ninguna sección.
+
+| Grupo | Opciones |
+|---|---|
+| **Movimientos** | Inicio · Agenda · Caja · Facturación · Seguimiento · Clínica |
+| **Reportes** | Pacientes · Inventario · Tratamientos · Estadísticas · Finanzas · Reportes generales |
+| **Administración** | Configuración · Usuarios · Historial de cambios · Ayuda técnica |
+
+- **En la compu:** al tocar un grupo se abre el desplegable. Se cierra al elegir una opción, al tocar afuera o con Esc. El grupo donde estás queda resaltado.
+- **En el celular:** dentro del menú ☰, cada grupo se abre como acordeón.
+- **Tocar "DOVA"** (arriba a la izquierda) lleva al Inicio.
+- **Los grupos sin opciones permitidas no se muestran.**

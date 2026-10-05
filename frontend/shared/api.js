@@ -25,12 +25,15 @@ const DOVA = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: sesion.refreshToken }),
     });
-    if (!res.ok) { clearSession(); throw new Error('Sesión expirada'); }
+    if (!res.ok) { const a = getSession(); if (a && a.refreshToken === sesion.refreshToken) clearSession(); throw new Error('Sesión expirada'); }
     const data = await res.json();
-    sesion.accessToken = data.accessToken;
-    if (Array.isArray(data.permisos) && sesion.usuario) sesion.usuario.permisos = data.permisos;
-    setSession(sesion);
-    return sesion.accessToken;
+    // Si mientras tanto se cerró la sesión (o entró otra persona), no se la revive.
+    const actual = getSession();
+    if (!actual || actual.refreshToken !== sesion.refreshToken) throw new Error('Sesión cerrada');
+    actual.accessToken = data.accessToken;
+    if (Array.isArray(data.permisos) && actual.usuario) actual.usuario.permisos = data.permisos;
+    setSession(actual);
+    return actual.accessToken;
   }
 
   async function request(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {

@@ -7,27 +7,30 @@
 const DovaApp = (() => {
   let elMain, elMenu, elMarca;
 
+  /* Menú agrupado: arriba solo se ven Movimientos, Reportes y Administración;
+     cada uno despliega sus opciones (solo las que el usuario tiene permitidas).
+     "permiso" puede ser una lista: alcanza con tener cualquiera. */
+  const GRUPOS = [['movimientos', 'Movimientos'], ['reportes', 'Reportes'], ['administracion', 'Administración']];
   const MENU = [
-    { ruta: 'dashboard', label: 'Inicio', permiso: null },
-    { ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
-    { ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view' },
-    { ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
-    { ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'] },
-    { ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view' },
-    { ruta: 'reportes', label: 'Reportes', permiso: 'reportes.view' },
-    { ruta: 'helpdesk', label: 'Ayuda técnica', permiso: 'helpdesk.view' },
-    // Seguimiento integral (ver shared/ext/). "permiso" puede ser una lista:
-    // alcanza con tener cualquiera de esos permisos.
-    { ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'] },
-    { ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
-    { ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'] },
-    { ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
-    { ruta: 'auditoria', label: 'Historial de cambios', permiso: 'auditoria.view' },
-    { ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'] },
-    { ruta: 'usuarios', label: 'Usuarios', permiso: 'usuarios.manage' },
-    // Self-service: cualquier usuario logueado puede cambiar su propia
-    // preferencia de diseño acá, sin permiso especial (permiso: null).
-    { ruta: 'configuracion', label: 'Configuración', permiso: null },
+    // Movimientos: el trabajo del día
+    { grupo: 'movimientos', ruta: 'dashboard', label: 'Inicio', permiso: null },
+    { grupo: 'movimientos', ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view' },
+    { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
+    { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'] },
+    { grupo: 'movimientos', ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'] },
+    { grupo: 'movimientos', ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
+    // Reportes: consultar y analizar
+    { grupo: 'reportes', ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
+    { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view' },
+    { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'] },
+    { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
+    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'] },
+    { grupo: 'reportes', ruta: 'reportes', label: 'Reportes generales', permiso: 'reportes.view' },
+    // Administración. "Configuración" no pide permiso: cada uno cambia su propio diseño.
+    { grupo: 'administracion', ruta: 'configuracion', label: 'Configuración', permiso: null },
+    { grupo: 'administracion', ruta: 'usuarios', label: 'Usuarios', permiso: 'usuarios.manage' },
+    { grupo: 'administracion', ruta: 'auditoria', label: 'Historial de cambios', permiso: 'auditoria.view' },
+    { grupo: 'administracion', ruta: 'helpdesk', label: 'Ayuda técnica', permiso: 'helpdesk.view' },
   ];
 
   // ---- Selector de diseño (moderno/minimalista/tecnico) ----
@@ -63,18 +66,53 @@ const DovaApp = (() => {
     location.href = nuevaRuta + location.search + location.hash;
   }
 
+  function cerrarGrupos(excepto) {
+    if (!elMenu) return;
+    elMenu.querySelectorAll('.dova-menu-grupo.abierto').forEach((g) => {
+      if (g === excepto) return;
+      g.classList.remove('abierto');
+      g.querySelector('.dova-menu-grupo-btn').setAttribute('aria-expanded', 'false');
+    });
+  }
+  let cierreGlobalListo = false;
   function renderMenu() {
     if (!elMenu) return;
-    elMenu.innerHTML = MENU
-      .filter((m) => tieneAcceso(m.permiso))
-      .map((m) => `<button class="dova-menu-item" data-ruta="${m.ruta}">${m.label}</button>`)
-      .join('');
+    elMenu.innerHTML = GRUPOS.map(([id, nombre]) => {
+      const items = MENU.filter((m) => m.grupo === id && tieneAcceso(m.permiso));
+      if (!items.length) return '';
+      return `<div class="dova-menu-grupo" data-grupo="${id}">
+        <button type="button" class="dova-menu-item dova-menu-grupo-btn" aria-expanded="false" aria-haspopup="true">${nombre}<span class="dova-menu-flecha" aria-hidden="true">▾</span></button>
+        <div class="dova-submenu" role="menu" aria-label="${nombre}">${items.map((m) => `<button type="button" class="dova-menu-item dova-submenu-item" role="menuitem" data-ruta="${m.ruta}">${m.label}</button>`).join('')}</div>
+      </div>`;
+    }).join('');
+    elMenu.querySelectorAll('.dova-menu-grupo-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const g = btn.parentElement;
+        cerrarGrupos(g);
+        const abrir = !g.classList.contains('abierto');
+        g.classList.toggle('abierto', abrir);
+        btn.setAttribute('aria-expanded', String(abrir));
+        if (abrir) { const primero = g.querySelector('.dova-submenu-item'); if (primero && e.detail === 0) primero.focus(); }
+      });
+    });
     elMenu.querySelectorAll('[data-ruta]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        cerrarGrupos();
         navegar(btn.dataset.ruta);
         document.body.classList.remove('dova-menu-abierto');
       });
     });
+    // Tocar afuera o apretar Esc cierra el desplegable (se registra una sola vez).
+    if (!cierreGlobalListo) {
+      cierreGlobalListo = true;
+      document.addEventListener('click', (e) => { if (elMenu && !elMenu.contains(e.target)) cerrarGrupos(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !elMenu) return;
+        const abierto = elMenu.querySelector('.dova-menu-grupo.abierto .dova-menu-grupo-btn');
+        cerrarGrupos(); if (abierto) abierto.focus();
+      });
+    }
   }
 
   // Fase 6 — Responsive: botón hamburguesa para mobile/tablet, oculto en
@@ -101,6 +139,10 @@ const DovaApp = (() => {
     elMenu.querySelectorAll('[data-ruta]').forEach((btn) => {
       btn.classList.toggle('activo', btn.dataset.ruta === ruta);
     });
+    // El grupo que contiene la sección actual también queda resaltado.
+    elMenu.querySelectorAll('.dova-menu-grupo').forEach((g) => {
+      g.querySelector('.dova-menu-grupo-btn').classList.toggle('activo', !!g.querySelector(`[data-ruta="${ruta}"]`));
+    });
   }
 
   async function renderMarca() {
@@ -114,6 +156,12 @@ const DovaApp = (() => {
     `;
     Vistas.initBuscadorGlobal(navegar);
     initMenuMovil();
+    // Tocar "DOVA" lleva al inicio.
+    const logo = elMarca.querySelector('.dova-marca-producto');
+    logo.setAttribute('role', 'link'); logo.setAttribute('tabindex', '0'); logo.title = 'Ir al inicio';
+    const alInicio = () => { navegar('dashboard'); document.body.classList.remove('dova-menu-abierto'); };
+    logo.addEventListener('click', alInicio);
+    logo.addEventListener('keydown', (e) => { if (e.key === 'Enter') alInicio(); });
   }
 
   // Permiso mínimo para entrar a una ruta que no es un ítem de MENU (se

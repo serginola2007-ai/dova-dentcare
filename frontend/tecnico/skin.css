@@ -38,3 +38,13 @@
   .dova-menu-item { border-right: none; border-bottom: 1px solid rgba(247,243,236,0.15); text-align: left; }
   .dova-main { padding: 14px; }
 }
+
+/* Menú agrupado sobre la barra oscura */
+.dova-submenu { background: var(--barra); border: 1px solid rgba(247,243,236,0.2); border-top: 3px solid var(--terracotta); border-radius: 2px; }
+.dova-submenu .dova-menu-item { color: var(--on-dark); font-family: monospace; font-size: 13px; border: none; border-radius: 2px; }
+.dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: rgba(247,243,236,0.1); }
+.dova-submenu .dova-menu-item.activo { background: var(--terracotta); color: #FFFFFF; }
+@media (max-width: 768px) {
+  .dova-submenu { border: 0; background: transparent; }
+  .dova-submenu .dova-menu-item { border-bottom: none; }
+}

@@ -329,3 +329,36 @@ body.dova-menu-abierto .dova-menu-overlay {
 @media (display-mode: standalone) {
   .dova-topbar { padding-top: max(env(safe-area-inset-top), 0px); }
 }
+
+/* ---- Menú agrupado: Movimientos / Reportes / Administración ---- */
+.dova-menu-grupo { position: relative; }
+.dova-menu-grupo-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.dova-menu-flecha { font-size: 0.75em; transition: transform 0.15s ease; }
+.dova-menu-grupo.abierto .dova-menu-flecha { transform: rotate(180deg); }
+.dova-submenu {
+  display: none; flex-direction: column; gap: 2px;
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; z-index: 950;
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14); padding: 6px;
+}
+.dova-menu-grupo.abierto .dova-submenu { display: flex; }
+.dova-submenu .dova-menu-item {
+  display: block; width: 100%; text-align: left; white-space: nowrap;
+  color: var(--ink); background: none; border: none; border-radius: 6px; padding: 10px 12px; font-size: 14px;
+}
+.dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: var(--cream); outline: none; }
+.dova-submenu .dova-menu-item.activo { background: rgba(193,103,63,0.12); color: var(--terracotta-dark, var(--terracotta)); font-weight: 600; }
+
+@media (max-width: 768px) {
+  /* En el celular: acordeón dentro del menú ☰ */
+  body.dova-menu-abierto .dova-menu { max-height: 85vh !important; overflow-y: auto; }
+  .dova-menu-grupo { width: 100%; }
+  .dova-menu-grupo-btn { width: 100%; justify-content: space-between; font-weight: 600; }
+  .dova-submenu { position: static; min-width: 0; box-shadow: none; border: 0; background: transparent; padding: 0 0 6px 14px; }
+  .dova-submenu .dova-menu-item { padding: 11px 12px; }
+}
+.dova-marca-producto { cursor: pointer; }
+@media (max-width: 768px) {
+  /* El menú ocupa todo el ancho debajo de la barra */
+  .dova-menu { flex: 0 0 100% !important; width: 100% !important; order: 10 !important; }
+}
