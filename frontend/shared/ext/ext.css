@@ -303,3 +303,20 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-ext-color input[type=radio]:checked + span, .dova-ext-color input[type=radio]:checked + input[type=color] { border-color: var(--white); box-shadow: 0 0 0 2px var(--ink); }
 .dova-ext-color input[type=radio]:focus-visible + span { outline: 2px solid var(--terracotta); outline-offset: 2px; }
 .dova-ext-punto-color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+
+/* ---------------- Página web (ext-web.js) ---------------- */
+.dova-web-filtros { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 14px; }
+.dova-web-sep { width: 1px; height: 22px; background: var(--border); margin: 0 6px; }
+.dova-web-lista { display: grid; gap: 10px; }
+.dova-web-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 14px 16px; display: grid; gap: 6px; }
+.dova-web-card.cerrada { opacity: .72; }
+.dova-web-card header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dova-web-cuando { margin-left: auto; }
+.dova-web-msg { white-space: pre-wrap; }
+.dova-web-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.dova-web-acciones a.dova-btn-secundario { text-decoration: none; display: inline-flex; align-items: center; }
+.dova-web-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+.dova-web-horario input[type=time] { width: auto; min-width: 104px; }
+.dova-web-horario td { white-space: nowrap; }
+.dova-cal-web { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: var(--dova-ext-info-bg); color: var(--sage-dark); }
+@media (max-width: 700px) { .dova-web-cuando { margin-left: 0; width: 100%; } .dova-web-horario td { display: block; white-space: normal; } }

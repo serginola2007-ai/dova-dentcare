@@ -41,6 +41,7 @@ const operacionesRoutes = require('./modules/operaciones/operaciones.routes');
 const finanzasExtRoutes = require('./modules/finanzas-ext/finanzas.routes');
 const kpisRoutes = require('./modules/kpis/kpis.routes');
 const facturacionRoutes = require('./modules/facturacion/facturacion.routes');
+const webRoutes = require('./modules/web/web.routes');
 
 const app = express();
 
@@ -63,7 +64,7 @@ app.use(helmet({
       connectSrc: ["'self'"],
       // Imprimir/ver PDF: el comprobante se carga como blob en un iframe oculto
       // o en una pestaña; el visor de PDF del navegador necesita estos permisos.
-      frameSrc: ["'self'", 'blob:'],
+      frameSrc: ["'self'", 'blob:', 'https://www.google.com'], // + mapa de Google en la página web
       frameAncestors: ["'self'"],
       objectSrc: ["'self'", 'blob:'],
       baseUri: ["'self'"],
@@ -127,6 +128,9 @@ app.use('/api/operaciones', operacionesRoutes);
 app.use('/api/finanzas', finanzasExtRoutes);
 app.use('/api/kpis', kpisRoutes);
 app.use('/api/facturacion', facturacionRoutes);
+// Página web pública (sin sesión) y su panel en DOVA.
+app.use('/api/web/publico', webRoutes.publico);
+app.use('/api/web', webRoutes.interno);
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en
    Render, una sola dirección, sin CORS). Si la carpeta frontend/ no está
@@ -139,7 +143,9 @@ if (fs.existsSync(path.join(carpetaFrontend, 'moderno', 'index.html'))) {
   app.get('/shared/config.js', (req, res) => {
     res.type('application/javascript').set('Cache-Control', 'no-cache').send('window.DOVA_API_BASE = "/api";\n');
   });
-  app.get('/', (req, res) => res.redirect(302, '/moderno/'));
+  // Página web de la clínica: /web/ (con WEB_EN_INICIO=true también es la página de inicio).
+  app.get('/', (req, res) => res.redirect(302, process.env.WEB_EN_INICIO === 'true' ? '/web/' : '/moderno/'));
+  app.get(/^\/web$/, (req, res) => res.redirect(301, '/web/'));
   app.get(/^\/(moderno|minimalista|tecnico)$/, (req, res) => res.redirect(301, `${req.path}/`));
   app.use(express.static(carpetaFrontend, {
     index: 'index.html',

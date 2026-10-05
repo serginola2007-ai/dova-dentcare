@@ -18,6 +18,7 @@ const DovaApp = (() => {
     { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
     { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'] },
     { grupo: 'movimientos', ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'] },
+    { grupo: 'movimientos', ruta: 'web', label: 'Página web', permiso: ['web.ver', 'web.configurar'] },
     { grupo: 'movimientos', ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
     // Reportes: consultar y analizar
     { grupo: 'reportes', ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
@@ -231,6 +232,10 @@ const DovaApp = (() => {
         case 'caja':
           elMain.innerHTML = '<div></div>';
           await DovaOperativo.caja(elMain.firstElementChild, navegar);
+          break;
+        case 'web':
+          elMain.innerHTML = '<div></div>';
+          await DovaWeb.seccion(elMain.firstElementChild, navegar);
           break;
         case 'facturacion':
           elMain.innerHTML = '<div></div>';

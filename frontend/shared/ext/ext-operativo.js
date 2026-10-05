@@ -195,7 +195,7 @@ const DovaOperativo = (() => {
     const nombre = `${t.paciente_nombre || ''} ${t.paciente_apellido || ''}`.trim();
     const titulo = `${hora5(t.hora_inicio)} · ${nombre} · ${t.tratamiento_nombre || t.motivo || ''} · ${t.odontologo_nombre} · ${etiqueta(t.estado)}`;
     return `<button type="button" class="${clase}" data-turno="${i}" style="--c:${colorOdo(odo)}" title="${esc(titulo)}">
-      <strong>${hora5(t.hora_inicio)}</strong> ${esc(corto ? (t.paciente_nombre || '') : nombre)}${!corto && (t.tratamiento_nombre || t.motivo) ? `<span>${esc(t.tratamiento_nombre || t.motivo)}</span>` : ''}
+      <strong>${hora5(t.hora_inicio)}</strong>${t.origen === 'web' ? ' <em class="dova-cal-web" title="Reservado desde la página web">web</em>' : ''} ${esc(corto ? (t.paciente_nombre || '') : nombre)}${!corto && (t.tratamiento_nombre || t.motivo) ? `<span>${esc(t.tratamiento_nombre || t.motivo)}</span>` : ''}
     </button>`;
   }
 
@@ -324,7 +324,7 @@ const DovaOperativo = (() => {
     const editable = puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado);
     X.modal(`${hora5(t.hora_inicio)} · ${t.paciente_nombre} ${t.paciente_apellido || ''}`, `
       <div class="dova-cal-detalle">
-        <p>${badge(etiqueta(t.estado), ESTADO_NIVEL[t.estado] || 'info')} ${t.primera_vez ? badge('1ª vez', 'info') : ''}</p>
+        <p>${badge(etiqueta(t.estado), ESTADO_NIVEL[t.estado] || 'info')} ${t.primera_vez ? badge('1ª vez', 'info') : ''} ${t.origen === 'web' ? badge('Reservado desde la página web', 'info') : ''}</p>
         <p><strong>${fmtLargo(String(t.fecha).slice(0, 10), { weekday: 'long', day: 'numeric', month: 'long' })}</strong>, ${hora5(t.hora_inicio)} (${t.duracion_minutos} min)</p>
         <p>${esc(t.odontologo_nombre)}${t.sillon_nombre ? ` · ${esc(t.sillon_nombre)}` : ''}</p>
         <p>${esc(t.tratamiento_nombre || t.motivo || 'Sin tratamiento indicado')}</p>

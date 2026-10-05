@@ -112,6 +112,9 @@ Para desarrollo local no hace falta tocar nada: `frontend/shared/config.js`
 ya viene versionado con `http://localhost:4000/api` para que `Iniciar DOVA.bat`
 funcione de una.
 
+- `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
+- `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
+
 ## Sistema de diseños
 
 Cada usuario elige su estilo visual la primera vez que inicia sesión y esa

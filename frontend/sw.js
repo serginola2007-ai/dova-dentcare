@@ -7,11 +7,11 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v9';
+const VERSION = 'dova-v10';
 const PRECARGA = [
   '/moderno/', '/minimalista/', '/tecnico/',
   '/shared/base.css', '/shared/ext/ext.css', '/shared/api.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js',
-  '/shared/ext/ext-core.js', '/shared/ext/ext-ficha.js', '/shared/ext/ext-secciones.js', '/shared/ext/ext-operativo.js', '/shared/ext/ext-facturacion.js',
+  '/shared/ext/ext-core.js', '/shared/ext/ext-ficha.js', '/shared/ext/ext-secciones.js', '/shared/ext/ext-operativo.js', '/shared/ext/ext-facturacion.js', '/shared/ext/ext-web.js',
   '/moderno/skin.css', '/minimalista/skin.css', '/tecnico/skin.css',
   '/manifest.webmanifest', '/iconos/icono-192.png', '/iconos/icono-512.png',
 ];

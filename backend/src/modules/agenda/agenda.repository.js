@@ -4,7 +4,7 @@ const SELECT_TURNO = `
   t.id, t.clinica_id, t.paciente_id, t.odontologo_id, t.fecha, t.hora_inicio,
   t.duracion_minutos, t.motivo, t.tratamiento_id, t.sala, t.estado, t.observaciones,
   t.creado_en, t.actualizado_en,
-  t.sillon_id, t.confirmacion, t.confirmado_en, t.llegada_en, t.en_sillon_en, t.finalizado_en, t.primera_vez,
+  t.sillon_id, t.origen, t.confirmacion, t.confirmado_en, t.llegada_en, t.en_sillon_en, t.finalizado_en, t.primera_vez,
   (SELECT s.nombre FROM sillones s WHERE s.id = t.sillon_id) AS sillon_nombre,
   p.nombre AS paciente_nombre, p.apellido AS paciente_apellido, p.telefono AS paciente_telefono,
   p.whatsapp AS paciente_whatsapp,

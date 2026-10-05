@@ -114,6 +114,9 @@ const PERMISOS = [
   { codigo: 'facturacion.descargar', modulo: 'facturacion', descripcion: 'Descargar facturas en PDF' },
   { codigo: 'facturacion.imprimir', modulo: 'facturacion', descripcion: 'Imprimir facturas' },
   { codigo: 'facturacion.configurar', modulo: 'facturacion', descripcion: 'Configurar datos de facturación, numeración y métodos de pago' },
+  // Página web pública (ver backend/src/modules/web)
+  { codigo: 'web.ver', modulo: 'web', descripcion: 'Ver y atender lo que llega desde la página web (turnos, registros, consultas)' },
+  { codigo: 'web.configurar', modulo: 'web', descripcion: 'Configurar la página web y las reservas online' },
   { codigo: 'facturacion.ver_reportes', modulo: 'facturacion', descripcion: 'Ver reportes de facturación' },
   { codigo: 'pacientes.export', modulo: 'pacientes', descripcion: 'Exportar el expediente completo de un paciente' },
 ];
@@ -149,6 +152,7 @@ const PERMISOS_POR_ROL = {
     'presupuestos.view', 'presupuestos.manage', 'planes_pago.manage', 'tratamientos.view',
     // Facturación: emitir, ver y descargar/imprimir; NO anular ni configurar.
     'facturacion.ver', 'facturacion.crear', 'facturacion.descargar', 'facturacion.imprimir',
+    'web.ver',
     'pagos.view', 'pagos.create',
     'caja.view', 'caja.manage',
     'whatsapp.send',

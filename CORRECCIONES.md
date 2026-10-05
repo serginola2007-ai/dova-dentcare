@@ -199,3 +199,39 @@ Arriba ahora se ven solo tres botones. Cada uno despliega sus opciones, y solo a
 - **En el celular:** dentro del menú ☰, cada grupo se abre como acordeón.
 - **Tocar "DOVA"** (arriba a la izquierda) lleva al Inicio.
 - **Los grupos sin opciones permitidas no se muestran.**
+
+## Página web de la clínica conectada a DOVA (migración 0025)
+
+La página pública está en **/web/** (por ejemplo, https://dova.onrender.com/web/). Si se define `WEB_EN_INICIO=true`, la dirección principal también abre la página.
+
+**Qué puede hacer el paciente (sin crear cuenta):**
+- **Ver horarios libres en vivo** en la portada y tocar uno para reservarlo.
+- **Reservar un turno en 4 pasos:** qué necesita → con quién (o "cualquier profesional") → día y hora → sus datos.
+- **Usar el enlace privado "Mi turno":** ver, confirmar asistencia o cancelar. Cancelar solo se puede hasta X horas antes. El enlace queda guardado en "Mis turnos" del mismo celular.
+- **Completar su ficha antes de la primera visita:** datos y un cuestionario corto de salud.
+- **Mandar una consulta.**
+- Ver tratamientos, equipo (con el color de la agenda), horarios, contacto y mapa.
+
+**En DOVA:**
+- **Movimientos → Página web → "Lo que llegó":** turnos, fichas y consultas, con aviso en las notificaciones. Cada uno se marca como atendido o se descarta.
+- **Si alguien ya era paciente,** sus datos nunca se pisan. Recepción elige cuáles pasar a la ficha con "Pasar datos a la ficha".
+- **"Configurar la página"** (solo admin):
+  - Activar o pausar las reservas.
+  - Horario de atención por día (con mañana y tarde).
+  - Cada cuántos minutos, cuántos días hacia adelante, anticipación mínima, hasta cuándo se puede cancelar y tope de turnos por persona.
+  - Qué tratamientos y profesionales se ofrecen, y si se muestran los precios.
+  - Textos, contacto y mapa de Google.
+- **En la agenda,** los turnos reservados por la web llevan la marca "web".
+- **Permisos:**
+  - `web.ver`: recepción y admin.
+  - `web.configurar`: admin.
+
+**Seguridad:**
+- **Datos de pacientes:** la web solo muestra horarios libres y los datos que la propia persona cargó.
+- **Reservas:**
+  - Se respetan los turnos ya dados, los bloqueos de agenda y los días cerrados.
+  - Se usa el mismo candado que la agenda: probado con 8 reservas simultáneas del mismo horario, entra 1.
+- **Enlace privado:** el código es aleatorio y en la base solo se guarda su huella.
+- **Freno anti-abuso:** límite de intentos por conexión, campo trampa para robots y tope de turnos web por persona.
+
+**Pruebas:** `web-api.js` 51/51 y `ui-web.js` 45/45 (celular y compu, recepción y admin).

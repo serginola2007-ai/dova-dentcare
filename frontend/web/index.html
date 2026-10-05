@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DentCareRC — Reservá tu turno</title>
+  <meta name="description" content="Reservá tu turno en DentCareRC desde el celular: elegí el tratamiento, el día y el horario que te queden bien." />
+  <meta name="theme-color" content="#16213E" />
+  <link rel="icon" href="/iconos/icono-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="web.css" />
+</head>
+<body>
+  <a class="saltar" href="#contenido">Ir al contenido</a>
+
+  <header class="cabecera">
+    <a class="marca" href="#inicio" data-ir="inicio"><img data-logo alt="" hidden /><span data-nombre>DentCareRC</span></a>
+    <nav class="cabecera-nav" aria-label="Secciones">
+      <a href="#tratamientos">Tratamientos</a>
+      <a href="#equipo">Equipo</a>
+      <a href="#ficha">Primera visita</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <div class="cabecera-acciones">
+      <button type="button" class="boton-texto" data-mis-turnos>Mis turnos</button>
+      <a class="boton boton-chico" href="#reservar">Reservar turno</a>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <!-- Mi turno (enlace privado): reemplaza la página cuando hay #turno=… -->
+    <section class="mi-turno" data-vista-turno hidden aria-live="polite"></section>
+
+    <div data-vista-sitio>
+      <section class="portada" id="inicio">
+        <div class="portada-texto">
+          <h1 data-titulo>Tu turno en DentCareRC, en un minuto.</h1>
+          <p class="portada-bajada" data-eslogan>Elegí el día y el horario que te queden bien. Te esperamos.</p>
+          <div class="portada-botones">
+            <a class="boton" href="#reservar">Reservar turno</a>
+            <a class="boton boton-claro" data-wa hidden target="_blank" rel="noopener">Escribinos por WhatsApp</a>
+          </div>
+        </div>
+        <aside class="libres" aria-labelledby="libres-titulo">
+          <h2 id="libres-titulo">Próximos horarios libres</h2>
+          <p class="libres-nota">Tocá uno para reservarlo.</p>
+          <div data-libres class="libres-dias"><p class="cargando">Buscando horarios…</p></div>
+        </aside>
+      </section>
+
+      <section class="bloque reservar" id="reservar" aria-labelledby="reservar-titulo">
+        <div class="bloque-cabeza">
+          <h2 id="reservar-titulo">Reservar turno</h2>
+          <p>Cuatro pasos. No hace falta crear una cuenta.</p>
+        </div>
+        <ol class="pasos" data-pasos aria-label="Pasos de la reserva">
+          <li data-paso-ind="1" class="activo">Qué necesitás</li>
+          <li data-paso-ind="2">Con quién</li>
+          <li data-paso-ind="3">Día y hora</li>
+          <li data-paso-ind="4">Tus datos</li>
+        </ol>
+        <div class="reserva" data-reserva aria-live="polite"></div>
+      </section>
+
+      <section class="bloque" id="tratamientos" aria-labelledby="trat-titulo">
+        <div class="bloque-cabeza">
+          <h2 id="trat-titulo">Tratamientos</h2>
+          <p data-presentacion>Atención odontológica general y especializada.</p>
+        </div>
+        <div class="tratamientos" data-tratamientos></div>
+      </section>
+
+      <section class="bloque" id="equipo" aria-labelledby="equipo-titulo">
+        <div class="bloque-cabeza">
+          <h2 id="equipo-titulo">Equipo</h2>
+          <p>Podés elegir con quién atenderte o dejar que te asignemos el primer horario libre.</p>
+        </div>
+        <ul class="equipo" data-equipo></ul>
+      </section>
+
+      <section class="bloque ficha" id="ficha" aria-labelledby="ficha-titulo">
+        <div class="bloque-cabeza">
+          <h2 id="ficha-titulo">¿Es tu primera visita?</h2>
+          <p>Completá tu ficha desde casa y el día del turno vas directo al sillón. Tus datos de salud solo los ve el equipo de la clínica.</p>
+        </div>
+        <form class="formulario" data-form-ficha novalidate></form>
+      </section>
+
+      <section class="bloque contacto" id="contacto" aria-labelledby="contacto-titulo">
+        <div class="contacto-col">
+          <h2 id="contacto-titulo">Horarios y contacto</h2>
+          <table class="horarios" data-horarios></table>
+          <ul class="datos-contacto" data-contacto></ul>
+          <div class="mapa" data-mapa hidden></div>
+        </div>
+        <div class="contacto-col">
+          <h3>¿Tenés una consulta?</h3>
+          <p>Escribinos y te respondemos por teléfono o email.</p>
+          <form class="formulario" data-form-consulta novalidate>
+            <div class="campo"><label for="c-nombre">Nombre</label><input id="c-nombre" name="nombre" autocomplete="name" maxlength="200" required /></div>
+            <div class="campo-fila">
+              <div class="campo"><label for="c-tel">Teléfono o WhatsApp</label><input id="c-tel" name="telefono" type="tel" autocomplete="tel" maxlength="60" /></div>
+              <div class="campo"><label for="c-mail">Email</label><input id="c-mail" name="email" type="email" autocomplete="email" maxlength="150" /></div>
+            </div>
+            <div class="campo"><label for="c-msg">Consulta</label><textarea id="c-msg" name="mensaje" rows="4" maxlength="2000" required></textarea></div>
+            <div class="trampa" aria-hidden="true"><label>Sitio <input name="sitio" tabindex="-1" autocomplete="off" /></label></div>
+            <p class="error" data-error role="alert" hidden></p>
+            <button class="boton" type="submit">Enviar consulta</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="pie">
+    <p>Los turnos que reservás acá entran directo a la agenda de <span data-nombre>DentCareRC</span>.</p>
+    <a class="pie-personal" href="/moderno/">Ingreso del personal</a>
+  </footer>
+
+  <div class="aviso" data-aviso role="status" aria-live="polite" hidden></div>
+  <script src="web.js"></script>
+</body>
+</html>
