@@ -349,8 +349,26 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: var(--cream); outline: none; }
 .dova-submenu .dova-menu-item.activo { background: rgba(193,103,63,0.12); color: var(--terracotta-dark, var(--terracotta)); font-weight: 600; }
 
+/* Segundo nivel: al pasar por una herramienta (Clínica, Facturación…) se
+   abre al costado un panel con sus pestañas. */
+.dova-submenu-fila { position: relative; }
+.dova-submenu-padre { display: flex !important; align-items: center; justify-content: space-between; gap: 14px; }
+.dova-submenu-flecha { font-size: 1.15em; line-height: 1; opacity: .55; transition: transform .15s ease; }
+.dova-submenu-fila.abierta > .dova-submenu-padre { background: var(--cream); }
+.dova-submenu-fila.abierta .dova-submenu-flecha { opacity: 1; }
+.dova-submenu2 {
+  display: none; flex-direction: column; gap: 2px;
+  position: absolute; top: -6px; left: calc(100% + 2px); min-width: 230px; z-index: 960;
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14); padding: 6px;
+}
+.dova-submenu-fila.a-la-izquierda .dova-submenu2 { left: auto; right: calc(100% + 2px); }
+.dova-submenu-fila.abierta .dova-submenu2 { display: flex; }
+
 @media (max-width: 768px) {
   /* En el celular: acordeón dentro del menú ☰ */
+  .dova-submenu2 { position: static; min-width: 0; box-shadow: none; border: 0; border-left: 2px solid var(--border); border-radius: 0; background: transparent; padding: 0 0 4px 10px; margin-left: 8px; }
+  .dova-submenu-fila.abierta .dova-submenu-flecha { transform: rotate(90deg); }
   body.dova-menu-abierto .dova-menu { max-height: 85vh !important; overflow-y: auto; }
   .dova-menu-grupo { width: 100%; }
   .dova-menu-grupo-btn { width: 100%; justify-content: space-between; font-weight: 600; }

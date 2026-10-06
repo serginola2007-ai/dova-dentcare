@@ -432,3 +432,13 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
   - Rutas de archivos viejos encerradas en la carpeta de subidas.
   - `nodemon` reemplazado por `node --watch`: `npm audit` da 0.
   - `npm run lint` (ESLint) y `npm run build` (verificación de sintaxis).
+
+## Menú con segundo nivel (pestañas de cada herramienta)
+- Dentro de Movimientos y Reportes, las herramientas con pestañas muestran una flecha (›): Agenda, Caja, Facturación, Seguimiento, Página web, Clínica, Inventario, Tratamientos y Finanzas.
+- Al pasar el cursor por una herramienta se abre al costado un panel con sus opciones (por ejemplo, Clínica → Sala de espera, Asistencia del personal, Laboratorio, Esterilización, Equipos…). Al elegir una se entra directo en esa pestaña.
+- El clic sobre la herramienta despliega el panel en vez de entrar. Las secciones sin pestañas (Inicio, Pacientes, Estadísticas…) siguen entrando directo.
+- Se puede llegar al panel en diagonal sin que se cierre. Si no entra a la derecha, se abre a la izquierda.
+- Teclado: → entra al panel, ← vuelve, Esc cierra.
+- En el celular, dentro del menú ☰, funciona como acordeón: tocar la herramienta despliega sus opciones debajo.
+- Cada opción respeta los permisos de la persona. Una prueba (ui-submenu) verifica, para administración, recepción y odontólogo, que el menú ofrezca exactamente las pestañas que dibuja cada sección y que abra la elegida.
+- Archivos: `shared/app.js` (definición `subs` en el menú), `shared/ext/ext-core.js` (pestaña inicial pedida desde el menú), `shared/base.css` y `tecnico/skin.css`.

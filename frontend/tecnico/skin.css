@@ -44,9 +44,12 @@
 .dova-submenu .dova-menu-item { color: var(--on-dark); font-family: monospace; font-size: 13px; border: none; border-radius: 2px; }
 .dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: rgba(247,243,236,0.1); }
 .dova-submenu .dova-menu-item.activo { background: var(--terracotta); color: #FFFFFF; }
+.dova-submenu2 { background: var(--barra); border: 1px solid rgba(247,243,236,0.2); border-top: 3px solid var(--terracotta); border-radius: 2px; }
+.dova-submenu-fila.abierta > .dova-submenu-padre { background: rgba(247,243,236,0.1); }
 @media (max-width: 768px) {
   .dova-submenu { border: 0; background: transparent; }
   .dova-submenu .dova-menu-item { border-bottom: none; }
+  .dova-submenu2 { border: 0; border-left: 2px solid rgba(247,243,236,0.25); background: transparent; }
 }
 .dova-campana-btn { border-color: rgba(247,243,236,0.3); color: var(--on-dark); }
 .dova-vivo-punto { box-shadow: 0 0 0 2px var(--barra); }

@@ -9,23 +9,36 @@ const DovaApp = (() => {
 
   /* Menú agrupado: arriba solo se ven Movimientos, Reportes y Administración;
      cada uno despliega sus opciones (solo las que el usuario tiene permitidas).
-     "permiso" puede ser una lista: alcanza con tener cualquiera. */
+     "permiso" puede ser una lista: alcanza con tener cualquiera.
+     "subs": las pestañas de esa herramienta [id, texto, permiso]. Al pasar el
+     cursor por la herramienta se abre un segundo panel con ellas y se entra
+     directo a la elegida. Los id y permisos son los mismos que usa cada
+     sección en X.subPestanas (lo verifica la prueba ui-submenu). */
   const GRUPOS = [['movimientos', 'Movimientos'], ['reportes', 'Reportes'], ['administracion', 'Administración']];
   const MENU = [
     // Movimientos: el trabajo del día
     { grupo: 'movimientos', ruta: 'dashboard', label: 'Inicio', permiso: null },
-    { grupo: 'movimientos', ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view' },
-    { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'] },
-    { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'] },
-    { grupo: 'movimientos', ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'] },
-    { grupo: 'movimientos', ruta: 'web', label: 'Página web', permiso: ['web.ver', 'web.configurar'] },
-    { grupo: 'movimientos', ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
+    { grupo: 'movimientos', ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view', subs: [['dia', 'Turnos'], ['espera', 'Lista de espera', 'lista_espera.manage']] },
+    { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'], subs: [['hoy', 'Caja del día'], ['hist', 'Cierres anteriores']] },
+    { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'],
+      subs: [['tablero', 'Resumen', ['facturacion.ver', 'facturacion.ver_propias']], ['facturas', 'Facturas', ['facturacion.ver', 'facturacion.ver_propias']], ['nueva', 'Nueva factura', 'facturacion.crear'], ['reportes', 'Reportes', 'facturacion.ver_reportes'], ['config', 'Configuración', 'facturacion.configurar']] },
+    { grupo: 'movimientos', ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'],
+      subs: [['bandeja', 'Para contactar'], ['recalls', 'Controles periódicos', ['recalls.view', 'recalls.manage']], ['controles', 'Controles después de un tratamiento'], ['observacion', 'Piezas en observación'],
+        ['sinturno', 'Tratamientos sin turno', ['planes_tratamiento.view', 'seguimiento.view']], ['presupuestos', 'Presupuestos sin respuesta', 'presupuestos.view'], ['recordatorios', 'Recordatorios de turnos', 'agenda.view'],
+        ['reactivacion', 'Pacientes que no volvieron'], ['cumpleanos', 'Cumpleaños'], ['tareas', 'Tareas', 'tareas.manage'], ['biopsias', 'Biopsias', ['especialidades.edit', 'pacientes.clinical.view']], ['comunicaciones', 'Llamadas y mensajes']] },
+    { grupo: 'movimientos', ruta: 'web', label: 'Página web', permiso: ['web.ver', 'web.configurar'],
+      subs: [['solicitudes', 'Lo que llegó', ['web.ver', 'web.configurar']], ['pagos', 'Pagos para revisar', 'web.ver'], ['accesos', 'Cuentas de pacientes', 'web.ver'], ['config', 'Configurar la página', 'web.configurar']] },
+    { grupo: 'movimientos', ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'],
+      subs: [['sala', 'Sala de espera', 'agenda.view'], ['fichaje', 'Asistencia del personal', ['fichaje.use', 'fichaje.view_all']], ['lab', 'Laboratorio', 'laboratorio.manage'], ['ester', 'Esterilización', 'esterilizacion.manage'],
+        ['equipos', 'Equipos', 'equipos.manage'], ['agendacfg', 'Sillones y días bloqueados', 'agenda.config'], ['alertas', 'Alertas', ['equipos.manage', 'esterilizacion.manage', 'inventario.view', 'laboratorio.manage']]] },
     // Reportes: consultar y analizar
     { grupo: 'reportes', ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
-    { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view' },
-    { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'] },
+    { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores']] },
+    { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'], subs: [['trat', 'Tratamientos y precios', 'tratamientos.manage'], ['odo', 'Odontólogos', 'usuarios.manage']] },
     { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
-    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'] },
+    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'],
+      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
+        ['seguros', 'Seguros y convenios', 'aseguradoras.manage'], ['listas', 'Listas de precios', 'listas_precios.manage'], ['cierre', 'Cerrar meses', 'clinica.config.manage']] },
     { grupo: 'reportes', ruta: 'reportes', label: 'Reportes generales', permiso: 'reportes.view' },
     // Administración. "Configuración" no pide permiso: cada uno cambia su propio diseño.
     { grupo: 'administracion', ruta: 'configuracion', label: 'Configuración', permiso: null },
@@ -69,11 +82,40 @@ const DovaApp = (() => {
 
   function cerrarGrupos(excepto) {
     if (!elMenu) return;
+    elMenu.querySelectorAll('.dova-submenu-fila.abierta').forEach((f) => { f.classList.remove('abierta'); f.querySelector('.dova-submenu-padre').setAttribute('aria-expanded', 'false'); });
     elMenu.querySelectorAll('.dova-menu-grupo.abierto').forEach((g) => {
       if (g === excepto) return;
       g.classList.remove('abierto');
       g.querySelector('.dova-menu-grupo-btn').setAttribute('aria-expanded', 'false');
     });
+  }
+  // Pestañas visibles de una herramienta para el usuario actual.
+  const subsVisibles = (m) => (m.subs || []).filter(([, , permiso]) => tieneAcceso(permiso || null));
+  function itemMenu(m) {
+    const subs = subsVisibles(m);
+    const boton = (extra = '') => `<button type="button" class="dova-menu-item dova-submenu-item${extra}" role="menuitem" data-ruta="${m.ruta}"`;
+    if (subs.length < 2) return `${boton()}>${m.label}</button>`;
+    return `<div class="dova-submenu-fila" data-fila="${m.ruta}">
+      ${boton(' dova-submenu-padre')} aria-haspopup="true" aria-expanded="false">${m.label}<span class="dova-submenu-flecha" aria-hidden="true">›</span></button>
+      <div class="dova-submenu2" role="menu" aria-label="${m.label}">${subs.map(([id, texto]) => `<button type="button" class="dova-menu-item dova-submenu-item" role="menuitem" data-ruta="${m.ruta}" data-sub="${id}">${texto}</button>`).join('')}</div>
+    </div>`;
+  }
+  // Sin mouse (celular/tablet) o con el menú en acordeón, la herramienta se
+  // toca para desplegar sus pestañas en lugar de entrar directo.
+  const sinHover = () => window.matchMedia('(hover: none), (max-width: 768px)').matches;
+  function cerrarFilas(excepto) {
+    elMenu.querySelectorAll('.dova-submenu-fila.abierta').forEach((f) => {
+      if (f === excepto) return;
+      f.classList.remove('abierta'); f.querySelector('.dova-submenu-padre').setAttribute('aria-expanded', 'false');
+    });
+  }
+  function abrirFila(f) {
+    cerrarFilas(f);
+    f.classList.add('abierta'); f.querySelector('.dova-submenu-padre').setAttribute('aria-expanded', 'true');
+    // Si el panel no entra a la derecha, se abre hacia la izquierda.
+    const panel = f.querySelector('.dova-submenu2');
+    f.classList.remove('a-la-izquierda');
+    if (!sinHover() && panel.getBoundingClientRect().right > window.innerWidth - 8) f.classList.add('a-la-izquierda');
   }
   let cierreGlobalListo = false;
   function renderMenu() {
@@ -83,7 +125,7 @@ const DovaApp = (() => {
       if (!items.length) return '';
       return `<div class="dova-menu-grupo" data-grupo="${id}">
         <button type="button" class="dova-menu-item dova-menu-grupo-btn" aria-expanded="false" aria-haspopup="true">${nombre}<span class="dova-menu-flecha" aria-hidden="true">▾</span></button>
-        <div class="dova-submenu" role="menu" aria-label="${nombre}">${items.map((m) => `<button type="button" class="dova-menu-item dova-submenu-item" role="menuitem" data-ruta="${m.ruta}">${m.label}</button>`).join('')}</div>
+        <div class="dova-submenu" role="menu" aria-label="${nombre}">${items.map(itemMenu).join('')}</div>
       </div>`;
     }).join('');
     elMenu.querySelectorAll('.dova-menu-grupo-btn').forEach((btn) => {
@@ -97,10 +139,32 @@ const DovaApp = (() => {
         if (abrir) { const primero = g.querySelector('.dova-submenu-item'); if (primero && e.detail === 0) primero.focus(); }
       });
     });
+    elMenu.querySelectorAll('.dova-submenu-fila').forEach((f) => {
+      const padre = f.querySelector('.dova-submenu-padre');
+      let timer = null;
+      f.addEventListener('mouseenter', () => { if (sinHover()) return; clearTimeout(timer); abrirFila(f); });
+      // Un margen corto al salir: se puede llegar al panel en diagonal sin que se cierre.
+      f.addEventListener('mouseleave', () => { if (sinHover()) return; clearTimeout(timer); timer = setTimeout(() => cerrarFilas(), 220); });
+      padre.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirFila(f); f.querySelector('.dova-submenu2 .dova-submenu-item').focus(); }
+      });
+      f.querySelectorAll('.dova-submenu2 .dova-submenu-item').forEach((b) => b.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); cerrarFilas(); padre.focus(); }
+      }));
+    });
     elMenu.querySelectorAll('[data-ruta]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        const fila = btn.classList.contains('dova-submenu-padre') ? btn.parentElement : null;
+        if (fila) {
+          // La herramienta no navega: despliega sus pestañas para elegir.
+          e.stopPropagation();
+          if (fila.classList.contains('abierta') && sinHover()) cerrarFilas(); else abrirFila(fila);
+          return;
+        }
         cerrarGrupos();
-        navegar(btn.dataset.ruta);
+        // Pestaña elegida en el segundo panel: la sección abre directo en ella.
+        window.DovaSubPendiente = btn.dataset.sub || null;
+        Promise.resolve(navegar(btn.dataset.ruta)).finally(() => { window.DovaSubPendiente = null; });
         document.body.classList.remove('dova-menu-abierto');
       });
     });
@@ -137,7 +201,7 @@ const DovaApp = (() => {
 
   function marcarMenuActivo(ruta) {
     if (!elMenu) return;
-    elMenu.querySelectorAll('[data-ruta]').forEach((btn) => {
+    elMenu.querySelectorAll('[data-ruta]:not([data-sub])').forEach((btn) => {
       btn.classList.toggle('activo', btn.dataset.ruta === ruta);
     });
     // El grupo que contiene la sección actual también queda resaltado.

@@ -208,6 +208,12 @@ const DovaExt = (() => {
   // pestanas: [{ id, texto, visible(bool), render(contenedor) }]
   function subPestanas(root, pestanas, { inicial } = {}) {
     const vis = pestanas.filter((p) => p.visible !== false);
+    // Pestaña elegida desde el segundo panel del menú (app.js): la primera
+    // tanda de pestañas que se dibuja la usa una sola vez.
+    if (window.DovaSubPendiente) {
+      if (!inicial && vis.some((p) => p.id === window.DovaSubPendiente)) inicial = window.DovaSubPendiente;
+      window.DovaSubPendiente = null;
+    }
     root.innerHTML = `
       <div class="dova-ext-subtabs" role="tablist">${vis.map((p, i) => `<button class="dova-ext-subtab ${(inicial ? p.id === inicial : i === 0) ? 'activo' : ''}" data-subtab="${p.id}" role="tab">${esc(p.texto)}</button>`).join('')}</div>
       <div class="dova-ext-subpanel"></div>`;
