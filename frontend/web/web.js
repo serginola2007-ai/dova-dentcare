@@ -605,7 +605,7 @@
   async function paginaCuenta() {
     const c = $('[data-cuenta]'); const ses = sesion();
     if (!ses) { location.replace(`ingresar.html?volver=${encodeURIComponent('mi-cuenta.html' + location.hash)}`); return; }
-    const SECC = [['turnos', 'Turnos'], ['pagos', 'Pagos'], ['comprobantes', 'Comprobantes'], ['datos', 'Mis datos']];
+    const SECC = [['turnos', 'Turnos'], ['salud', 'Mi tratamiento'], ['pagos', 'Pagos'], ['comprobantes', 'Comprobantes'], ['datos', 'Mis datos']];
     c.innerHTML = `<div class="cuenta-cab"><div><p class="lema">Mi cuenta</p><h1>Hola, ${esc(ses.nombre)}</h1></div>
         <div class="cuenta-cab-acc"><a class="boton" href="reservar.html">Reservar turno</a><button type="button" class="boton-texto" data-salir>Cerrar sesión</button></div></div>
       <div class="cuenta-resumen" data-resumen></div>
@@ -617,7 +617,7 @@
       const k = (location.hash.slice(1) || 'turnos'); const sec = SECC.some(([x]) => x === k) ? k : 'turnos';
       $$('[data-tab]', c).forEach((a) => { if (a.dataset.tab === sec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
       const p = $('[data-panel]', c); p.innerHTML = '<p class="cargando">Cargando…</p>';
-      try { await ({ turnos: panelTurnos, pagos: panelPagos, comprobantes: panelComprobantes, datos: panelDatos })[sec](p); }
+      try { await ({ turnos: panelTurnos, salud: panelSalud, pagos: panelPagos, comprobantes: panelComprobantes, datos: panelDatos })[sec](p); }
       catch (e) { p.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
     };
     window.addEventListener('hashchange', mostrar);
@@ -736,18 +736,78 @@
     $$('[data-factura]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/facturas/${b.dataset.factura}`, `comprobante-${b.dataset.num}.pdf`)));
   }
 
+  const EST_PLAN = { pendiente: 'Por empezar', aprobado: 'Aprobado', en_proceso: 'En curso', finalizado: 'Terminado' };
+  const EST_ETAPA = { pendiente: '○', en_progreso: '◐', completado: '●' };
+  const TIPO_EST = { radiografia: 'Radiografía', panoramica: 'Panorámica', periapical: 'Periapical', bitewing: 'Bitewing', tomografia: 'Tomografía', cefalometria: 'Cefalometría', laboratorio: 'Laboratorio', otro: 'Estudio' };
+  const EST_PRES = { enviado: 'Para decidir', aceptado: 'Aceptado', rechazado: 'No aceptado', vencido: 'Vencido' };
+  async function panelSalud(p) {
+    let d;
+    try { d = await cuentaApi('/clinico'); } catch (e) { if (/identidad/.test(e.message)) { p.innerHTML = `<h2>Mi tratamiento</h2><p class="vacio">${esc(e.message)}</p>`; return; } throw e; }
+    const activos = d.tratamientos.filter((t) => t.estado !== 'finalizado'); const terminados = d.tratamientos.filter((t) => t.estado === 'finalizado');
+    const trat = (t) => `<li class="turno-item"><div><strong>${esc(t.nombre)}</strong>${t.pieza ? ` <span class="ayuda">· pieza ${esc(t.pieza)}</span>` : ''}<br>
+        <span class="ayuda">${esc(EST_PLAN[t.estado] || t.estado)}${t.odontologo ? ` · ${esc(t.odontologo)}` : ''}${t.sesiones_totales > 1 ? ` · sesión ${t.sesiones_realizadas} de ${t.sesiones_totales}` : ''}</span>
+        ${t.etapas.length ? `<ol class="etapas-portal">${t.etapas.map((e) => `<li class="${e.estado}"><span aria-hidden="true">${EST_ETAPA[e.estado] || '○'}</span> ${esc(e.nombre)}</li>`).join('')}</ol>` : ''}</div></li>`;
+    p.innerHTML = `<h2>Próximos controles</h2>
+      ${d.controles.length ? `<ul class="lista-cuenta lista-simple">${d.controles.map((c) => `<li><span>${esc(c.nombre)}</span><span>${c.vencido ? `<strong class="alerta">Te correspondía el ${esc(fechaCorta(c.fecha))}</strong>` : esc(fechaCorta(c.fecha))}</span><span><a class="boton-texto" href="reservar.html">Reservar</a></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés controles programados.</p>'}
+      <h2 style="margin-top:32px">Tratamientos en curso</h2>
+      ${activos.length ? `<ul class="lista-cuenta">${activos.map(trat).join('')}</ul>` : '<p class="vacio">No tenés tratamientos en curso.</p>'}
+      ${terminados.length ? `<details style="margin-top:12px"><summary>Tratamientos terminados (${terminados.length})</summary><ul class="lista-cuenta">${terminados.map(trat).join('')}</ul></details>` : ''}
+      <h2 style="margin-top:32px">Presupuestos</h2>
+      ${d.presupuestos.length ? `<ul class="lista-cuenta lista-simple">${d.presupuestos.map((x) => `<li><span>${esc(fechaCorta(x.fecha))}</span><span><strong>${gs(x.total)}</strong> · ${esc(EST_PRES[x.estado] || x.estado)}</span><span class="docs"><button type="button" class="boton-texto" data-pres="${x.id}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés presupuestos.</p>'}
+      <h2 style="margin-top:32px">Recetas</h2>
+      ${d.recetas.length ? `<ul class="lista-cuenta lista-simple">${d.recetas.map((r) => `<li><span>${esc(fechaCorta(r.fecha))}</span><span>${esc(r.items.map((i) => [i.medicamento, i.dosis, i.frecuencia].filter(Boolean).join(' ')).join(' · ') || 'Indicaciones')}${r.odontologo ? ` <span class="ayuda">· ${esc(r.odontologo)}</span>` : ''}</span><span class="docs"><button type="button" class="boton-texto" data-receta="${r.id}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés recetas.</p>'}
+      <h2 style="margin-top:32px">Estudios</h2>
+      ${d.estudios.length ? `<ul class="lista-cuenta lista-simple">${d.estudios.map((e) => `<li><span>${e.fecha ? esc(fechaCorta(e.fecha)) : ''}</span><span>${esc(TIPO_EST[e.tipo] || 'Estudio')}${e.pieza ? ` · pieza ${esc(e.pieza)}` : ''}${e.descripcion ? ` <span class="ayuda">· ${esc(e.descripcion)}</span>` : ''}</span><span class="docs"><button type="button" class="boton-texto" data-estudio="${e.id}" data-ext="${e.mime === 'application/pdf' ? 'pdf' : e.mime === 'image/png' ? 'png' : 'jpg'}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">Tu odontólogo todavía no compartió estudios con vos.</p>'}`;
+    $$('[data-pres]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/presupuestos/${b.dataset.pres}`, `presupuesto-${b.dataset.pres}.pdf`)));
+    $$('[data-receta]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/recetas/${b.dataset.receta}`, `receta-${b.dataset.receta}.pdf`)));
+    $$('[data-estudio]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/estudios/${b.dataset.estudio}`, `estudio-${b.dataset.estudio}.${b.dataset.ext}`)));
+  }
+
   async function panelDatos(p) {
-    const y = await cuentaApi('/yo');
+    const [y, ant] = await Promise.all([cuentaApi('/yo'), cuentaApi('/antecedentes')]);
     const fila = (t, v) => `<div><dt>${t}</dt><dd>${esc(v || '—')}</dd></div>`;
     p.innerHTML = `<h2>Mis datos</h2>
-      <dl class="mis-datos">${fila('Nombre', `${y.nombre} ${y.apellido}`)}${fila('Cédula', y.ci)}${fila('Email', y.email)}${fila('Teléfono', y.telefono)}${fila('Dirección', [y.direccion, y.ciudad].filter(Boolean).join(', '))}${fila('Nacimiento', y.fecha_nacimiento ? fechaCorta(y.fecha_nacimiento) : '')}</dl>
-      <p class="ayuda">¿Algo cambió? <a href="contacto.html">Avisanos</a> y lo actualizamos en tu ficha.</p>
+      <dl class="mis-datos">${fila('Nombre', `${y.nombre} ${y.apellido}`)}${fila('Cédula', y.ci)}${fila('Nacimiento', y.fecha_nacimiento ? fechaCorta(y.fecha_nacimiento) : '')}</dl>
+      <p class="ayuda">Para corregir nombre, cédula o fecha de nacimiento, <a href="contacto.html">avisanos</a>.</p>
+      <form class="formulario" data-f-datos novalidate style="margin-top:20px"><h2>Contacto</h2>
+        <div class="campo-fila"><div class="campo"><label for="d-tel">Celular / WhatsApp</label><input id="d-tel" name="telefono" inputmode="tel" maxlength="40" required value="${esc(y.telefono || '')}" /></div>
+        <div class="campo"><label for="d-mail">Email <span class="opcional">(opcional)</span></label><input id="d-mail" name="email" type="email" maxlength="150" value="${esc(y.email || '')}" /></div></div>
+        <div class="campo-fila"><div class="campo"><label for="d-dir">Dirección <span class="opcional">(opcional)</span></label><input id="d-dir" name="direccion" maxlength="300" value="${esc(y.direccion || '')}" /></div>
+        <div class="campo"><label for="d-ciu">Ciudad <span class="opcional">(opcional)</span></label><input id="d-ciu" name="ciudad" maxlength="100" value="${esc(y.ciudad || '')}" /></div></div>
+        <p class="error" data-error role="alert" hidden></p>
+        <div><button class="boton" type="submit">Guardar contacto</button></div></form>
+      <form class="formulario" data-f-ant novalidate style="margin-top:28px"><h2>Mi salud (antecedentes)</h2>
+        <p class="ayuda">Esto lo ve tu odontólogo antes de atenderte. Si tomás medicación o tenés alergias, es importante que esté al día.</p>
+        <div class="campo"><label for="h-al">Alergias <span class="opcional">(por ej.: penicilina, látex)</span></label><input id="h-al" name="alergias" maxlength="1000" value="${esc(ant.alergias || '')}" placeholder="Ninguna" /></div>
+        <div class="campo"><label for="h-me">Medicación que tomás</label><input id="h-me" name="medicamentos" maxlength="1000" value="${esc(ant.medicamentos || '')}" placeholder="Ninguna" /></div>
+        <div class="campo"><label for="h-an">Enfermedades o tratamientos médicos <span class="opcional">(diabetes, presión, embarazo, cirugías…)</span></label><textarea id="h-an" name="antecedentesMedicos" rows="3" maxlength="3000">${esc(ant.antecedentes_medicos || '')}</textarea></div>
+        <div class="campo-fila"><div class="campo"><label for="h-gs">Grupo sanguíneo <span class="opcional">(si lo sabés)</span></label><select id="h-gs" name="grupoSanguineo"><option value="">No sé</option>${['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map((g) => `<option ${ant.grupo_sanguineo === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
+        <div class="campo"><label for="h-ce">Contacto de emergencia <span class="opcional">(nombre y teléfono)</span></label><input id="h-ce" name="contactoEmergencia" maxlength="200" value="${esc(ant.contacto_emergencia || '')}" /></div></div>
+        <p class="error" data-error role="alert" hidden></p>
+        <div><button class="boton" type="submit">Guardar antecedentes</button></div></form>
       <form class="formulario" data-f-clave novalidate style="margin-top:28px"><h2>Cambiar contraseña</h2>
         <div class="campo"><label for="c-act">Contraseña actual</label><input id="c-act" name="actual" type="password" autocomplete="current-password" required /></div>
         <div class="campo-fila"><div class="campo"><label for="c-n1">Nueva contraseña</label><input id="c-n1" name="nueva" type="password" autocomplete="new-password" required /></div>
         <div class="campo"><label for="c-n2">Repetila</label><input id="c-n2" name="nueva2" type="password" autocomplete="new-password" required /></div></div>
         <p class="error" data-error role="alert" hidden></p>
         <div><button class="boton" type="submit">Cambiar contraseña</button></div></form>`;
+    const fd = $('[data-f-datos]', p);
+    fd.addEventListener('submit', async (ev) => {
+      ev.preventDefault(); const err = $('[data-error]', fd); err.hidden = true;
+      if (fd.telefono.value.replace(/\D/g, '').length < 6) { err.textContent = 'Escribí tu celular'; err.hidden = false; return; }
+      const b = $('button[type=submit]', fd); b.disabled = true;
+      try { await cuentaApi('/yo', { method: 'PUT', body: { telefono: fd.telefono.value, email: fd.email.value, direccion: fd.direccion.value, ciudad: fd.ciudad.value } }); aviso('Datos guardados'); }
+      catch (e) { err.textContent = e.message; err.hidden = false; }
+      b.disabled = false;
+    });
+    const fa = $('[data-f-ant]', p);
+    fa.addEventListener('submit', async (ev) => {
+      ev.preventDefault(); const err = $('[data-error]', fa); err.hidden = true;
+      const b = $('button[type=submit]', fa); b.disabled = true;
+      try { await cuentaApi('/antecedentes', { method: 'PUT', body: { alergias: fa.alergias.value, medicamentos: fa.medicamentos.value, antecedentesMedicos: fa.antecedentesMedicos.value, grupoSanguineo: fa.grupoSanguineo.value, contactoEmergencia: fa.contactoEmergencia.value } }); aviso('Antecedentes guardados. Gracias por mantenerlos al día.'); }
+      catch (e) { err.textContent = e.message; err.hidden = false; }
+      b.disabled = false;
+    });
     const f = $('[data-f-clave]', p);
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault(); const err = $('[data-error]', f); err.hidden = true;

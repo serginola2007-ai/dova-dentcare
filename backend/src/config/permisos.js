@@ -47,6 +47,7 @@ const PERMISOS = [
 
   // Reportes / Auditoría
   { codigo: 'reportes.view', modulo: 'reportes', descripcion: 'Ver reportes' },
+  { codigo: 'reportes.export', modulo: 'reportes', descripcion: 'Exportar reportes a PDF, Excel o CSV (queda en la auditoría)' },
   { codigo: 'auditoria.view', modulo: 'auditoria', descripcion: 'Ver auditoría del sistema' },
 
   // Usuarios y configuración

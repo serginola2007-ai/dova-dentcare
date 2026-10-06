@@ -41,6 +41,7 @@ const DovaSecciones = (() => {
       <div data-subs></div>`;
     const subs = root.querySelector('[data-subs]');
     const pest = [
+      { id: 'bandeja', texto: 'Para contactar', render: subBandeja },
       { id: 'recalls', texto: 'Controles periódicos', visible: puede('recalls.view', 'recalls.manage'), render: subRecalls },
       { id: 'controles', texto: 'Controles después de un tratamiento', render: subControles },
       { id: 'observacion', texto: 'Piezas en observación', render: subObservacion },
@@ -57,6 +58,92 @@ const DovaSecciones = (() => {
     root.querySelectorAll('[data-ir-sub]').forEach((b) => b.addEventListener('click', () => {
       const t = subs.querySelector(`[data-subtab="${b.dataset.irSub}"]`); if (t) { t.click(); t.scrollIntoView({ behavior: 'smooth' }); }
     }));
+  }
+
+  // ------------------------- BANDEJA DE SEGUIMIENTO -------------------------
+  const EST_CASO = { pendiente: ['Pendiente', 'atencion'], en_curso: ['En gestión', 'info'], resuelto: ['Resuelto', 'ok'], descartado: ['Descartado', 'critica'] };
+  const RES_CASO = [['contactado', 'Contactado'], ['no_contesta', 'No contesta'], ['mensaje_dejado', 'Mensaje dejado'], ['agendado', 'Agendó turno'], ['volvera_a_llamar', 'Volverá a llamar'], ['pago', 'Pagó / acordó pago'], ['rechaza', 'No le interesa'], ['numero_erroneo', 'Número equivocado'], ['otro', 'Otro']];
+  async function subBandeja(c, estado = {}) {
+    const st = { vista: 'hoy', tipo: '', meses: 12, ...estado };
+    const maneja = puede('seguimiento.manage', 'recalls.manage');
+    c.innerHTML = X.cargando;
+    const q = new URLSearchParams({ vista: st.vista, meses: st.meses, ...(st.tipo ? { tipo: st.tipo } : {}) }).toString();
+    const [d, resp] = await Promise.all([DOVA.get(`/seguimiento/bandeja?${q}`), DOVA.get('/seguimiento/responsables').catch(() => [])]);
+    const filas = d.filas;
+    const chips = Object.entries(d.tipos).filter(([k]) => d.resumen[k] || st.tipo === k)
+      .map(([k, t]) => `<button type="button" class="dova-ext-chip ${st.tipo === k ? 'activo' : ''}" data-tipo="${k}">${esc(t)} <strong>${d.resumen[k] || 0}</strong></button>`).join('');
+    const cols = [
+      { t: 'Paciente', v: (r) => linkPac(r.paciente_id, r.paciente_nombre, r.paciente_apellido), csv: (r) => `${r.paciente_nombre} ${r.paciente_apellido}` },
+      { t: 'Motivo', v: (r) => `${badge(r.tipo_nombre, r.tipo === 'saldo_pendiente' || r.tipo === 'tratamiento_atrasado' ? 'critica' : 'info')}<br><span class="dova-nota">${esc(r.detalle || '')}</span>${r.yaNoDetectado ? '<br><span class="dova-nota">(ya no se detecta: podés cerrarlo)</span>' : ''}`, csv: (r) => `${r.tipo_nombre}: ${r.detalle || ''}` },
+      { t: 'Desde', v: (r) => (r.fecha ? fmtFecha(r.fecha) : '-'), csv: (r) => (r.fecha ? String(r.fecha).slice(0, 10) : '') },
+      { t: 'Monto', v: (r) => (r.monto ? fmtGs(r.monto) : '-'), csv: (r) => r.monto || '' },
+      { t: 'Gestión', v: (r) => (r.caso ? `${badge(EST_CASO[r.caso.estado][0], EST_CASO[r.caso.estado][1])}${r.caso.responsable_nombre ? ` <span class="dova-nota">${esc(r.caso.responsable_nombre)}</span>` : ''}${r.caso.proximo_contacto ? `<br>Próximo contacto: ${badgeFecha(r.caso.proximo_contacto)}` : ''}${r.caso.intentos ? `<br><span class="dova-nota">${r.caso.intentos} contacto(s) · ${esc(etiqueta(r.caso.ultimo_resultado || ''))}</span>` : ''}` : '<span class="dova-nota">Sin gestionar</span>'),
+        csv: (r) => (r.caso ? `${EST_CASO[r.caso.estado][0]}${r.caso.proximo_contacto ? ` (${String(r.caso.proximo_contacto).slice(0, 10)})` : ''}` : 'Sin gestionar') },
+      { t: 'Teléfono', v: (r) => esc(r.telefono || '-'), csv: (r) => r.telefono || '' },
+    ];
+    c.innerHTML = `<form class="dova-ext-filtros" data-f>
+        <div><label>Mostrar</label><select name="vista"><option value="hoy">Para contactar hoy</option><option value="todos">Todos los casos</option><option value="mios">Asignados a mí</option></select></div>
+        <div><label>"No volvió" después de</label><select name="meses">${[6, 9, 12, 18, 24].map((m) => `<option value="${m}">${m} meses</option>`).join('')}</select></div>
+        <button class="dova-btn-secundario">Actualizar</button>
+        <button type="button" class="dova-btn-link" data-csv>Descargar lista (Excel)</button>
+        ${maneja ? '<button type="button" class="dova-btn-primary" data-nuevo>+ Nuevo seguimiento</button>' : ''}</form>
+      <p class="dova-nota">Se calcula en el momento con los datos de la clínica. Al resolver o descartar un caso deja de aparecer (los resueltos vuelven a evaluarse a los 30 días).</p>
+      <div class="dova-ext-chips">${st.tipo ? '<button type="button" class="dova-ext-chip" data-tipo="">Todos</button>' : ''}${chips}</div>
+      <p class="dova-nota">${d.total} caso(s)${d.total > filas.length ? ` · se muestran los primeros ${filas.length}` : ''}.</p>
+      <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr>${cols.map((x) => `<th>${x.t}</th>`).join('')}<th></th></tr></thead><tbody>
+      ${filas.map((r, i) => `<tr class="${r.caso && r.caso.proximo_contacto && String(r.caso.proximo_contacto).slice(0, 10) < X.hoy() ? 'dova-ext-fila-aviso' : ''}">${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}
+        <td class="dova-ext-acciones">${X.linkWhatsapp(r.whatsapp_link)}${maneja ? `<button class="dova-btn-link" data-gestionar="${i}">Gestionar</button>` : ''}${r.caso ? `<button class="dova-btn-link" data-historial="${r.caso.id}">Historial</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="${cols.length + 1}">No hay pacientes para contactar con estos filtros.</td></tr>`}
+      </tbody></table></div>`;
+    const f = c.querySelector('[data-f]'); f.vista.value = st.vista; f.meses.value = String(st.meses);
+    const recargar = (cambios = {}) => subBandeja(c, { ...st, vista: f.vista.value, meses: Number(f.meses.value), ...cambios });
+    f.addEventListener('submit', (e) => { e.preventDefault(); recargar(); });
+    c.querySelectorAll('[data-tipo]').forEach((b) => b.addEventListener('click', () => recargar({ tipo: b.dataset.tipo })));
+    c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`seguimiento-${X.hoy()}.csv`, filas, cols));
+    const opResp = resp.map((u) => [u.id, u.nombre]);
+    c.querySelectorAll('[data-gestionar]').forEach((b) => b.addEventListener('click', () => {
+      const r = filas[Number(b.dataset.gestionar)];
+      const k = r.caso || {};
+      X.modalForm(`Seguimiento — ${r.paciente_nombre} ${r.paciente_apellido}`, [
+        { k: 'resultado', label: 'Resultado del contacto', tipo: 'select', opciones: RES_CASO },
+        { k: 'canal', label: 'Canal', tipo: 'select', req: true, opciones: [['llamada', 'Llamada'], ['whatsapp', 'WhatsApp'], ['sms', 'SMS'], ['email', 'Email'], ['presencial', 'En persona']] },
+        { k: 'nota', label: 'Nota', tipo: 'textarea', ancho: 'completo' },
+        { k: 'proximoContacto', label: 'Próximo contacto', tipo: 'fecha' },
+        { k: 'responsableId', label: 'Responsable', tipo: 'select', opciones: opResp },
+        { k: 'estado', label: 'Estado', tipo: 'select', req: true, opciones: [['pendiente', 'Pendiente'], ['en_curso', 'En gestión'], ['resuelto', 'Resuelto'], ['descartado', 'Descartado (escribí el motivo en la nota)']] },
+      ], { canal: 'llamada', estado: k.estado === 'pendiente' || !k.estado ? 'en_curso' : k.estado, responsableId: k.responsable_id || (DOVA.usuarioActual() || {}).id, proximoContacto: k.proximo_contacto ? String(k.proximo_contacto).slice(0, 10) : '' }, async (v) => {
+        let caso = r.caso;
+        if (!caso) caso = await DOVA.post('/seguimiento/casos', { pacienteId: r.paciente_id, tipo: r.tipo, referenciaTipo: r.referencia_tipo, referenciaId: r.referencia_id, motivo: `${r.tipo_nombre}: ${r.detalle || ''}` });
+        await DOVA.post(`/seguimiento/casos/${caso.id}/gestion`, { ...v, responsableId: v.responsableId ? Number(v.responsableId) : null, proximoContacto: v.proximoContacto || null });
+        X.toast('Seguimiento registrado', 'ok'); recargar();
+      }, { extraHtml: `<p class="dova-nota"><strong>${esc(r.tipo_nombre)}</strong>: ${esc(r.detalle || '')}</p>` });
+    }));
+    c.querySelectorAll('[data-historial]').forEach((b) => b.addEventListener('click', async () => {
+      const k = await DOVA.get(`/seguimiento/casos/${b.dataset.historial}`);
+      X.modal(`Historial — ${k.paciente_nombre} ${k.paciente_apellido}`, `<p>${badge(k.tipo_nombre, 'info')} ${esc(k.motivo || '')}</p>
+        <p class="dova-nota">Abierto el ${X.fmtFechaHora(k.creado_en)}${k.responsable_nombre ? ` · responsable: ${esc(k.responsable_nombre)}` : ''}</p>
+        <ul class="dova-cli-lista">${k.historial.map((x) => `<li><strong>${X.fmtFechaHora(x.fecha)}</strong> · ${esc(etiqueta(x.canal))}${x.resultado ? ` · ${esc(etiqueta(x.resultado))}` : ''} · ${esc(x.usuario_nombre || '')}${x.contenido ? `<br>${esc(x.contenido)}` : ''}</li>`).join('') || '<li class="dova-nota">Sin gestiones todavía.</li>'}</ul>
+        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>`);
+    }));
+    const bn = c.querySelector('[data-nuevo]');
+    if (bn) bn.addEventListener('click', () => {
+      X.modal('Nuevo seguimiento', `<form data-fn class="dova-ext-form-grid">${DovaOperativo.campoPacienteHtml()}
+        <div class="dova-ext-campo dova-ext-campo-completo"><label>Motivo *</label><textarea name="motivo" rows="2" maxlength="2000" required placeholder="Ej.: avisar que llegó el resultado del estudio"></textarea></div>
+        <div class="dova-ext-campo"><label>Próximo contacto</label><input type="date" name="proximoContacto" value="${X.hoy()}"/></div>
+        <div class="dova-ext-campo"><label>Responsable</label><select name="responsableId"><option value="">—</option>${opResp.map(([i, n]) => `<option value="${i}" ${i === (DOVA.usuarioActual() || {}).id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+        <p class="dova-error-text dova-ext-campo-completo" data-error hidden></p>
+        <div class="dova-modal-actions dova-ext-campo-completo"><button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary">Crear</button></div></form>`);
+      const fn = document.querySelector('.dova-modal-box [data-fn]');
+      DovaOperativo.activarBuscadorPaciente(fn);
+      fn.addEventListener('submit', async (e) => {
+        e.preventDefault(); const err = fn.querySelector('[data-error]'); err.hidden = true;
+        try {
+          if (!fn.pacienteId.value) throw new Error('Elegí el paciente');
+          await DOVA.post('/seguimiento/casos', { pacienteId: Number(fn.pacienteId.value), tipo: 'manual', motivo: fn.motivo.value, proximoContacto: fn.proximoContacto.value || null, responsableId: fn.responsableId.value ? Number(fn.responsableId.value) : null });
+          X.cerrarModal(); X.toast('Seguimiento creado', 'ok'); recargar({ vista: 'todos' });
+        } catch (er) { err.textContent = er.message; err.hidden = false; }
+      });
+    });
+    X.vivo(c, ['seguimiento_casos', 'turnos', 'pagos', 'presupuestos'], () => { if (!document.querySelector('.dova-modal-box')) recargar(); });
   }
 
   async function subRecalls(c) {
@@ -583,25 +670,132 @@ const DovaSecciones = (() => {
   }
 
   // ================================ AUDITORÍA ================================
+  // ================================ REPORTES ================================
+  const FILTRO_UI = {
+    odontologoId: (o) => ['Odontólogo', o.odontologos.map((x) => [x.id, `${x.nombre}${x.activo === false ? ' (inactivo)' : ''}`])],
+    tratamientoId: (o) => ['Tratamiento', o.tratamientos.map((x) => [x.id, x.nombre])],
+    usuarioId: (o) => ['Usuario', o.usuarios.map((x) => [x.id, x.nombre])],
+    metodo: (o) => ['Método de pago', Object.entries(o.metodos)],
+    estadoPlan: () => ['Estado', OPC(['pendiente', 'aprobado', 'en_proceso', 'finalizado', 'cancelado'])],
+    estadoPago: () => ['Estado', [['pagado', 'Cobrado'], ['anulado', 'Anulado']]],
+    estadoFactura: () => ['Estado', [['pendiente', 'Pendiente'], ['pagada', 'Pagada'], ['anulada', 'Anulada']]],
+  };
+  const celda = (v, tipo) => {
+    if (v === null || v === undefined || v === '') return '<span class="dova-nota">—</span>';
+    if (tipo === 'gs') return fmtGs(v);
+    if (tipo === 'pct') return `${String(v).replace('.', ',')} %`;
+    if (tipo === 'num') return Number(v).toLocaleString('es-PY');
+    if (tipo === 'fecha') return fmtFecha(v);
+    return esc(v);
+  };
+  async function reportes(root, nav, inicial) {
+    montar(root, nav);
+    const [lista, op] = await Promise.all([DOVA.get('/reportes/centro'), DOVA.get('/reportes/centro-opciones')]);
+    const grupos = [...new Set(lista.map((r) => r.grupo))];
+    let actual = lista.find((r) => r.clave === inicial) || lista[0];
+    const mes = `${X.hoy().slice(0, 8)}01`;
+    const st = { desde: mes, hasta: X.hoy() };
+    root.innerHTML = `<h2 class="dova-view-title">Reportes</h2>
+      <p class="dova-subtitulo">Calculados en el momento con los datos guardados. Elegí un reporte, ajustá los filtros y exportalo si lo necesitás.</p>
+      <div class="dova-rep">
+        <nav class="dova-rep-menu" aria-label="Reportes">${grupos.map((g) => `<h4>${esc(g)}</h4>${lista.filter((r) => r.grupo === g).map((r) => `<button type="button" data-rep="${r.clave}">${esc(r.titulo)}</button>`).join('')}`).join('')}</nav>
+        <label class="dova-rep-select"><span>Reporte</span><select data-rep-select>${grupos.map((g) => `<optgroup label="${esc(g)}">${lista.filter((r) => r.grupo === g).map((r) => `<option value="${r.clave}">${esc(r.titulo)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+        <section class="dova-rep-cuerpo" data-cuerpo></section>
+      </div>`;
+    const cuerpo = root.querySelector('[data-cuerpo]');
+    const sel = root.querySelector('[data-rep-select]');
+    const pintar = async () => {
+      root.querySelectorAll('[data-rep]').forEach((b) => b.classList.toggle('activo', b.dataset.rep === actual.clave));
+      sel.value = actual.clave;
+      cuerpo.innerHTML = `<h3 class="dova-section-title">${esc(actual.titulo)}</h3><p class="dova-nota">${esc(actual.descripcion)}</p>
+        <form class="dova-ext-filtros" data-f>
+          ${actual.sinPeriodo ? '' : `<div><label>Desde</label><input type="date" name="desde" value="${st.desde}" required/></div><div><label>Hasta</label><input type="date" name="hasta" value="${st.hasta}" required/></div>`}
+          ${actual.filtros.map((k) => { const [t, opc] = FILTRO_UI[k](op); return `<div><label>${t}</label><select name="${k}"><option value="">Todos</option>${opc.map(([v, n]) => `<option value="${esc(v)}" ${String(st[k] || '') === String(v) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`; }).join('')}
+          <button class="dova-btn-primary">Ver</button>
+          ${op.puedeExportar ? '<span class="dova-rep-export"><button type="button" class="dova-btn-secundario" data-exp="pdf">PDF</button><button type="button" class="dova-btn-secundario" data-exp="xlsx">Excel</button><button type="button" class="dova-btn-secundario" data-exp="csv">CSV</button></span>' : ''}
+        </form><div data-res>${X.cargando}</div>`;
+      const f = cuerpo.querySelector('[data-f]');
+      const qs = (extra = {}) => { const o = Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v !== '')); Object.assign(st, o); return new URLSearchParams({ ...o, ...extra }).toString(); };
+      const cargar = async () => {
+        const res = cuerpo.querySelector('[data-res]'); res.innerHTML = X.cargando;
+        try {
+          const r = await DOVA.get(`/reportes/centro/${actual.clave}?${qs()}`);
+          res.innerHTML = `<p class="dova-nota">${r.filas.length} fila(s)${r.sinPeriodo ? '' : ` · ${fmtFecha(r.desde)} al ${fmtFecha(r.hasta)}`}</p>
+            <div class="dova-ext-tabla-wrap"><table class="dova-tabla dova-rep-tabla"><thead><tr>${r.columnas.map((c) => `<th class="${['gs', 'num', 'pct'].includes(c.tipo) ? 'num' : ''}">${esc(c.t)}</th>`).join('')}</tr></thead><tbody>
+            ${r.filas.slice(0, 1000).map((fl) => `<tr>${r.columnas.map((c) => `<td class="${['gs', 'num', 'pct'].includes(c.tipo) ? 'num' : ''}">${celda(fl[c.k], c.tipo)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${r.columnas.length}">No hay datos con estos filtros.</td></tr>`}
+            </tbody>${r.totales && r.filas.length ? `<tfoot><tr>${r.columnas.map((c, i) => `<td class="${['gs', 'num', 'pct'].includes(c.tipo) ? 'num' : ''}">${i === 0 ? '<strong>Total</strong>' : r.totales[c.k] !== undefined ? `<strong>${celda(r.totales[c.k], c.tipo)}</strong>` : ''}</td>`).join('')}</tr></tfoot>` : ''}</table></div>
+            ${r.filas.length > 1000 ? '<p class="dova-nota">En pantalla se muestran las primeras 1000 filas; la exportación incluye todas.</p>' : ''}`;
+        } catch (e) { res.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; }
+      };
+      f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
+      cuerpo.querySelectorAll('[data-exp]').forEach((b) => b.addEventListener('click', async () => {
+        const fmt = b.dataset.exp; b.disabled = true;
+        try {
+          const r = await DOVA.request(`/reportes/centro/${actual.clave}?${qs({ formato: fmt })}`, { raw: true });
+          if (!r.ok) { let m = 'No se pudo exportar'; try { m = (await r.json()).error.message; } catch (_e) { /* */ } throw new Error(m); }
+          const u = URL.createObjectURL(await r.blob());
+          const a = document.createElement('a'); a.href = u; a.download = `${actual.clave}-${st.desde || ''}-${st.hasta || ''}.${fmt}`; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(u), 2000);
+          X.toast('Reporte exportado', 'ok');
+        } catch (e) { X.toast(e.message, 'error'); }
+        b.disabled = false;
+      }));
+      await cargar();
+    };
+    const elegir = (clave) => { actual = lista.find((r) => r.clave === clave) || actual; try { history.replaceState(null, '', `#reportes/${actual.clave}`); } catch (_e) { /* */ } pintar(); };
+    root.querySelectorAll('[data-rep]').forEach((b) => b.addEventListener('click', () => elegir(b.dataset.rep)));
+    sel.addEventListener('change', () => elegir(sel.value));
+    await pintar();
+  }
+
   async function auditoria(root, nav) {
     montar(root, nav);
     const usuarios = await X.catalogo('usuarios', '/seguimiento/equipo').catch(() => []);
-    root.innerHTML = `<h2 class="dova-view-title">Historial de cambios</h2><p class="dova-subtitulo">Quién hizo qué y cuándo. Cada creación, edición, borrado, exportación y cambio de estado queda registrado.</p>
+    root.innerHTML = `<h2 class="dova-view-title">Historial de cambios</h2><p class="dova-subtitulo">Quién hizo qué, cuándo, desde qué IP y con qué resultado. Cada creación, edición, anulación, exportación, ingreso y acceso denegado queda registrado.</p>
       <form class="dova-ext-filtros" data-f><div><label>Desde</label><input type="date" name="desde" value="${X.sumarDias(X.hoy(), -7)}"/></div><div><label>Hasta</label><input type="date" name="hasta" value="${X.hoy()}"/></div>
       <div><label>Usuario</label><select name="usuarioId"><option value="">Todos</option>${usuarios.map((u) => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div>
-      <div><label>Módulo</label><select name="modulo"><option value="">Todos</option></select></div><div><label>ID de paciente</label><input type="number" name="pacienteId"/></div><div><label>Buscar</label><input name="q"/></div><button class="dova-btn-primary">Buscar</button></form><div data-l></div>`;
+      <div><label>Módulo</label><select name="modulo"><option value="">Todos</option></select></div>
+      <div><label>Acción</label><select name="accion"><option value="">Todas</option></select></div>
+      <div><label>Resultado</label><select name="resultado"><option value="">Todos</option><option value="ok">Correcto</option><option value="denegado">Denegado</option><option value="fallido">Fallido</option></select></div>
+      <div><label>ID de paciente</label><input type="number" name="pacienteId"/></div><div><label>Buscar</label><input name="q"/></div>
+      <button class="dova-btn-primary">Buscar</button><button type="button" class="dova-btn-secundario" data-csv>Descargar (CSV)</button></form><div data-l></div>`;
     const f = root.querySelector('[data-f]');
     let primera = true;
+    const qs = () => new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v))).toString();
+    const RES = { ok: ['Correcto', 'ok'], denegado: ['Denegado', 'critica'], fallido: ['Fallido', 'atencion'] };
+    const detalleHtml = (d) => {
+      if (d && d.antes && d.despues && typeof d.antes === 'object') {
+        const claves = [...new Set([...Object.keys(d.antes), ...Object.keys(d.despues)])];
+        const v = (x) => esc(x === null || x === undefined ? '—' : typeof x === 'object' ? JSON.stringify(x) : String(x));
+        const otros = Object.fromEntries(Object.entries(d).filter(([k]) => !['antes', 'despues'].includes(k)));
+        return `<table class="dova-tabla"><thead><tr><th>Dato</th><th>Antes</th><th>Después</th></tr></thead><tbody>${claves.map((k) => `<tr class="${JSON.stringify(d.antes[k]) !== JSON.stringify(d.despues[k]) ? 'dova-ext-fila-aviso' : ''}"><td>${esc(etiqueta(k))}</td><td>${v(d.antes[k])}</td><td>${v(d.despues[k])}</td></tr>`).join('')}</tbody></table>
+          ${Object.keys(otros).length ? `<pre style="white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(otros, null, 2))}</pre>` : ''}`;
+      }
+      return `<pre style="white-space:pre-wrap;font-size:12px;max-height:60vh;overflow:auto">${esc(JSON.stringify(d, null, 2))}</pre>`;
+    };
     const cargar = async () => {
-      const q = new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v))).toString();
-      const r = await DOVA.get(`/kpis/auditoria?${q}`);
-      if (primera) { f.modulo.innerHTML += r.modulos.map((m) => `<option value="${esc(m)}">${esc(etiqueta(m))}</option>`).join(''); primera = false; }
-      root.querySelector('[data-l]').innerHTML = `<p class="dova-nota">${r.registros.length} registro(s)${r.registros.length >= 200 ? ' (se muestran los 200 más recientes)' : ''}.</p>
-        <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>
-        ${r.registros.map((a, i) => `<tr><td>${X.fmtFechaHora(a.creado_en)}</td><td>${esc(a.usuario_nombre || 'sistema')}</td><td>${esc(etiqueta(a.accion))}</td><td>${esc(etiqueta(a.modulo))}</td><td>${esc(a.entidad_id || '-')}</td><td>${a.detalle ? `<button class="dova-btn-link" data-det="${i}">Ver</button>` : '-'}</td></tr>`).join('') || '<tr><td colspan="6">Sin registros.</td></tr>'}</tbody></table></div>`;
-      root.querySelectorAll('[data-det]').forEach((b) => b.addEventListener('click', () => X.modal('Detalle del registro', `<pre style="white-space:pre-wrap;font-size:12px;max-height:60vh;overflow:auto">${esc(JSON.stringify(r.registros[Number(b.dataset.det)].detalle, null, 2))}</pre><div class="dova-modal-actions"><button class="dova-btn-primary" data-cerrar-modal>Cerrar</button></div>`, { ancho: 'ancho' })));
+      const l = root.querySelector('[data-l]'); l.innerHTML = X.cargando;
+      const r = await DOVA.get(`/kpis/auditoria?${qs()}`);
+      if (primera) {
+        f.modulo.innerHTML += r.modulos.map((m) => `<option value="${esc(m)}">${esc(etiqueta(m))}</option>`).join('');
+        f.accion.innerHTML += (r.acciones || []).map((m) => `<option value="${esc(m)}">${esc(etiqueta(m))}</option>`).join('');
+        primera = false;
+      }
+      l.innerHTML = `<p class="dova-nota">${r.registros.length} registro(s)${r.registros.length >= 200 ? ' (se muestran los 200 más recientes; la descarga incluye todos)' : ''}.</p>
+        <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Registro</th><th>Resultado</th><th>IP</th><th>Detalle</th></tr></thead><tbody>
+        ${r.registros.map((a, i) => { const rs = RES[a.resultado || 'ok'] || RES.ok; return `<tr class="${a.resultado && a.resultado !== 'ok' ? 'dova-ext-fila-alerta' : ''}"><td>${X.fmtFechaHora(a.creado_en)}</td><td>${esc(a.usuario_nombre || 'sistema')}</td><td>${esc(etiqueta(a.accion))}</td><td>${esc(etiqueta(a.modulo))}</td><td>${esc(a.entidad_id || '-')}</td><td>${badge(rs[0], rs[1])}</td><td><span class="dova-nota">${esc(a.ip || '-')}</span></td><td>${a.detalle ? `<button class="dova-btn-link" data-det="${i}">Ver</button>` : '-'}</td></tr>`; }).join('') || '<tr><td colspan="8">Sin registros.</td></tr>'}</tbody></table></div>`;
+      l.querySelectorAll('[data-det]').forEach((b) => b.addEventListener('click', () => X.modal('Detalle del registro', `${detalleHtml(r.registros[Number(b.dataset.det)].detalle)}<div class="dova-modal-actions"><button class="dova-btn-primary" data-cerrar-modal>Cerrar</button></div>`, { ancho: 'ancho' })));
     };
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
+    root.querySelector('[data-csv]').addEventListener('click', async (e) => {
+      const b = e.currentTarget; b.disabled = true;
+      try {
+        const r = await DOVA.request(`/kpis/auditoria?${qs()}&formato=csv`, { raw: true });
+        if (!r.ok) throw new Error('No se pudo descargar');
+        const u = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = u; a.download = `auditoria-${X.hoy()}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+      } catch (er) { X.toast(er.message, 'error'); }
+      b.disabled = false;
+    });
     await cargar();
   }
 
@@ -656,6 +850,6 @@ const DovaSecciones = (() => {
     X.bannerAlertas(Number(pacienteId), cont);
   }
 
-  return { seguimiento, operaciones, finanzas, indicadores, auditoria, extenderDashboard, extenderConfiguracion, extenderConsulta, enlazarPacientes };
+  return { seguimiento, operaciones, finanzas, indicadores, auditoria, reportes, extenderDashboard, extenderConfiguracion, extenderConsulta, enlazarPacientes };
 })();
 window.DovaSecciones = DovaSecciones;

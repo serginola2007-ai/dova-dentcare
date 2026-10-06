@@ -356,3 +356,15 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Laboratorio: botón "Archivos" en cada trabajo (ficha y Clínica → Laboratorio) para subir fotos de color, PDF y modelos STL (hasta 30 MB, validados por contenido). Solo quien subió el archivo o un administrador puede quitarlo; todo queda en la auditoría.
 - Consentimientos: no se pueden borrar (solo anular, con permiso), no se firman dos veces y la firma debe ser una imagen válida.
 - Documentos PDF nuevos: historia clínica completa, consulta individual y estado de cuenta. Pestaña "Documentos" en la ficha con todos los PDF reales del paciente (consultas, consentimientos, planes, presupuestos, recetas y recibos) para ver, imprimir o descargar. "Imprimir consulta" en una consulta finalizada. Exportar la historia clínica queda auditado.
+
+## Fase 5 — seguimiento, portal del paciente, reportes y auditoría (migraciones 0035 y 0036)
+- Seguimiento: nueva pestaña "Para contactar" (la primera de Seguimiento). Detecta en el momento tratamientos sin terminar o atrasados, controles pendientes, pacientes que no volvieron (6 a 24 meses), presupuestos sin aceptar, saldos pendientes y citas perdidas. Cada caso se gestiona con resultado, canal, nota, próximo contacto, responsable y estado (pendiente, en gestión, resuelto o descartado con motivo), y tiene su historial. También se pueden crear seguimientos a mano. Incluye WhatsApp con mensaje armado y descarga en Excel. Todo queda auditado.
+- Portal del paciente: nueva sección "Mi tratamiento" con los próximos controles, los tratamientos y sus etapas, presupuestos, recetas y estudios, todos descargables en PDF o imagen. En "Mis datos" el paciente actualiza su contacto y sus antecedentes (alergias, medicación, enfermedades, grupo sanguíneo y contacto de emergencia); recepción recibe un aviso y queda auditado el antes y el después. La información clínica solo se ve con la identidad confirmada.
+- Estudios: casilla "Visible para el paciente" en la ficha. Ningún estudio se comparte por defecto.
+- Reportes: nuevo centro de reportes con 18 reportes reales:
+  - Clínicos: tratamientos realizados y pendientes, procedimientos más realizados, diagnósticos, pacientes nuevos y recurrentes, y producción por odontólogo.
+  - Financieros: resumen con ticket promedio, cobros, facturación, saldos pendientes, cuotas vencidas, métodos de pago, e ingresos por odontólogo y por tratamiento.
+  - Agenda: asistencia, ausencias, cancelaciones, ocupación y horas utilizadas y disponibles.
+  - Filtros por fecha, odontólogo, tratamiento, estado, método de pago y usuario.
+  - Exportación a PDF, Excel y CSV con el permiso nuevo `reportes.export` (el administrador lo tiene). Cada exportación queda auditada.
+- Auditoría: filtros por acción y resultado (correcto, denegado o fallido), columna de IP, detalle con tabla de antes y después, y descarga en CSV (también auditada).

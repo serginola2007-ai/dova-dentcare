@@ -45,7 +45,7 @@ async function eliminarFoto(clinicaId, id) {
 }
 
 // ---- Estudios ----
-const COLS_ESTUDIO = `e.id, e.clinica_id, e.paciente_id, e.tipo, e.pieza, e.descripcion, e.observaciones, e.odontologo_id, e.fecha, e.creado_en,
+const COLS_ESTUDIO = `e.id, e.visible_paciente, e.clinica_id, e.paciente_id, e.tipo, e.pieza, e.descripcion, e.observaciones, e.odontologo_id, e.fecha, e.creado_en,
   e.plan_id, e.historia_clinica_id, e.etapa_id, e.mime, e.tamano, e.nombre_archivo, (e.archivo IS NOT NULL OR e.storage_path IS NOT NULL) AS tiene_archivo`;
 async function listarEstudios(clinicaId, pacienteId) {
   const res = await query(

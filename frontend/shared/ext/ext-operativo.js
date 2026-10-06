@@ -1175,6 +1175,6 @@ const DovaOperativo = (() => {
     });
   }
 
-  return { agenda, caja, inventario, catalogo, extenderFicha, modalTurno, modalCobro, presupuestos, cobros };
+  return { agenda, caja, inventario, catalogo, extenderFicha, modalTurno, modalCobro, presupuestos, cobros, campoPacienteHtml, activarBuscadorPaciente, fijarPaciente };
 })();
 window.DovaOperativo = DovaOperativo;

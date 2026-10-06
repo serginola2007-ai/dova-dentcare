@@ -269,7 +269,8 @@ const DovaApp = (() => {
           Vistas.initUsuariosAdmin(() => navegar('usuarios'));
           break;
         case 'reportes':
-          elMain.innerHTML = await vistaReportes();
+          elMain.innerHTML = '<div></div>';
+          await DovaSecciones.reportes(elMain.firstElementChild, navegar, params);
           break;
         case 'configuracion':
           elMain.innerHTML = await Vistas.vistaConfiguracion();
@@ -329,39 +330,6 @@ const DovaApp = (() => {
         });
       });
     });
-  }
-
-  async function vistaReportes() {
-    const hoy = new Date();
-    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
-    const hastaHoy = hoy.toISOString().slice(0, 10);
-    const [financiero, inventario] = await Promise.all([
-      Vistas.manejarError(() => DOVA.get(`/reportes/financiero?desde=${inicioMes}&hasta=${hastaHoy}`)),
-      Vistas.manejarError(() => DOVA.get(`/reportes/inventario?desde=${inicioMes}&hasta=${hastaHoy}`)).catch(() => null),
-    ]);
-    return `
-      <h2 class="dova-view-title">Reportes — mes actual</h2>
-      <div class="dova-cards-grid">
-        <div class="dova-card"><div class="dova-card-valor">${Vistas.fmtGs(financiero.total)}</div><div class="dova-card-label">Ingresos del mes</div></div>
-        <div class="dova-card"><div class="dova-card-valor">${financiero.cantidad}</div><div class="dova-card-label">Pagos registrados</div></div>
-      </div>
-      <h3 class="dova-section-title">Por método de pago</h3>
-      <table class="dova-tabla">
-        <thead><tr><th>Método</th><th>Cantidad</th><th>Total</th></tr></thead>
-        <tbody>
-          ${financiero.porMetodo.map((m) => `<tr><td>${Vistas.esc(({ efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', qr: 'QR' })[m.metodo] || m.metodo)}</td><td>${m.cantidad}</td><td>${Vistas.fmtGs(m.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos en el período.</td></tr>'}
-        </tbody>
-      </table>
-
-      ${inventario ? `
-      <h3 class="dova-section-title">Insumos usados en tratamientos</h3>
-      <table class="dova-tabla">
-        <thead><tr><th>Insumo</th><th>Categoría</th><th>Cantidad consumida</th><th>Costo estimado</th></tr></thead>
-        <tbody>
-          ${inventario.consumo.map((i) => `<tr><td>${Vistas.esc(i.nombre)}</td><td>${Vistas.esc(i.categoria || '-')}</td><td>${i.cantidadConsumida}</td><td>${Vistas.fmtGs(i.costoEstimado)}</td></tr>`).join('') || '<tr><td colspan="4">Sin consumo de insumos registrado en el período.</td></tr>'}
-        </tbody>
-      </table>` : ''}
-    `;
   }
 
   async function entrarADova(elLogin, elShell) {

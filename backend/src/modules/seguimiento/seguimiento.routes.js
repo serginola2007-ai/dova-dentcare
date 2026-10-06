@@ -237,6 +237,8 @@ r.post('/mensaje', requirePermiso(...EDITAR, 'whatsapp.send'), h(async (req) => 
 }));
 
 // Panel de seguimiento: todos los contadores de un vistazo.
+r.use('/', require('./bandeja').router);
+
 r.get('/panel', requirePermiso(...VER), h(async (req) => {
   const c = req.clinicaId;
   const uno = async (sql, params = [c]) => Number((await query(sql, params)).rows[0].n);

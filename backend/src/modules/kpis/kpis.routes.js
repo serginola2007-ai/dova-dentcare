@@ -11,7 +11,7 @@ const recalls = require('../recalls/recalls.service');
 
 const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
-const h = (fn) => async (req, res, next) => { try { res.json(await fn(req)); } catch (e) { next(e); } };
+const h = (fn) => async (req, res, next) => { try { const out = await fn(req); if (out && out.__csv !== undefined) { res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', 'attachment; filename="auditoria.csv"'); res.send(`\uFEFF${out.__csv}`); return; } res.json(out); } catch (e) { next(e); } };
 
 function rango(q) {
   const hoy = hoyIso();
@@ -124,14 +124,25 @@ router.get('/auditoria', requirePermiso('auditoria.view'), h(async (req) => {
   if (req.query.modulo) add('modulo = ?', String(req.query.modulo));
   if (req.query.accion) add('accion = ?', String(req.query.accion));
   if (req.query.entidadId) add('entidad_id = ?', String(req.query.entidadId));
+  if (['ok', 'fallido', 'denegado'].includes(req.query.resultado)) add("COALESCE(resultado,'ok') = ?", req.query.resultado);
   if (req.query.pacienteId) add("(detalle->>'pacienteId' = ? OR (modulo='pacientes' AND entidad_id = ?))", String(req.query.pacienteId));
   if (req.query.q) add('(detalle::text ILIKE ? OR usuario_nombre ILIKE ?)', `%${String(req.query.q).slice(0, 80)}%`);
   const limite = Math.min(Number(req.query.limite) || 200, 1000);
-  const [filas, modulos] = await Promise.all([
-    query(`SELECT * FROM auditoria WHERE ${cond.join(' AND ')} ORDER BY creado_en DESC LIMIT ${limite}`, params),
+  const csv = req.query.formato === 'csv';
+  const [filas, modulos, acciones] = await Promise.all([
+    query(`SELECT * FROM auditoria WHERE ${cond.join(' AND ')} ORDER BY creado_en DESC LIMIT ${csv ? 20000 : limite}`, params),
     query('SELECT DISTINCT modulo FROM auditoria WHERE clinica_id=$1 ORDER BY 1', [req.clinicaId]),
+    query('SELECT DISTINCT accion FROM auditoria WHERE clinica_id=$1 ORDER BY 1', [req.clinicaId]),
   ]);
-  return { registros: filas.rows, modulos: modulos.rows.map((m) => m.modulo) };
+  if (csv) {
+    const auditoria = require('../../utils/auditoria');
+    await auditoria.registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: 'exportar_auditoria', modulo: 'auditoria', detalle: { filtros: req.query, filas: filas.rowCount } });
+    const e = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const txt = [['Fecha', 'Usuario', 'Acción', 'Módulo', 'Registro', 'Resultado', 'IP', 'Detalle'].map(e).join(';'),
+      ...filas.rows.map((a) => [new Date(a.creado_en).toLocaleString('es-PY', { timeZone: 'America/Asuncion' }), a.usuario_nombre || 'sistema', a.accion, a.modulo, a.entidad_id, a.resultado || 'ok', a.ip, a.detalle ? JSON.stringify(a.detalle) : ''].map(e).join(';'))].join('\r\n');
+    return { __csv: txt };
+  }
+  return { registros: filas.rows, modulos: modulos.rows.map((m) => m.modulo), acciones: acciones.rows.map((m) => m.accion) };
 }));
 
 // ================== EXPORTACIÓN DEL EXPEDIENTE COMPLETO ==================

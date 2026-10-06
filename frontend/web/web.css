@@ -362,3 +362,7 @@ input[type=file] { padding: 10px; background: var(--porcelana); }
 .pedir-codigo .formulario { margin-top: 12px; }
 .ok-msg { color: #2F5D2A; font-weight: 700; background: #E3EEDC; border-radius: 10px; padding: 10px 14px; }
 .error .ok-msg { background: none; padding: 0; }
+.etapas-portal { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--pizarra); }
+.etapas-portal li.completado { color: var(--tinta); }
+.etapas-portal li.en_progreso { color: var(--cobalto); font-weight: 600; }
+.cuenta-panel details summary { cursor: pointer; font-weight: 600; }

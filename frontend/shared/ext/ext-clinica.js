@@ -422,6 +422,7 @@ const DovaClinica = (() => {
           <div><strong>${esc(TIPO_NOMBRE[e.tipo] || e.tipo)}</strong>${e.pieza ? ` · pieza ${esc(e.pieza)}` : ''} <span class="dova-nota">${esc(fmtFecha(e.fecha))}${e.odontologo_nombre ? ` · ${esc(e.odontologo_nombre)}` : ''}</span>
             ${e.descripcion ? `<p>${esc(e.descripcion)}</p>` : ''}${e.observaciones ? `<p class="dova-nota">${esc(e.observaciones)}</p>` : ''}</div>
           <div class="dova-cli-estudio-acc">${e.tiene_archivo ? `<button class="dova-btn-secundario" data-ver-estudio="${e.id}">Ver</button>` : '<span class="dova-nota">Sin archivo</span>'}
+            ${puede('estudios.manage') && e.tiene_archivo ? `<label class="dova-ext-check" title="El paciente lo puede ver y descargar desde su cuenta web"><input type="checkbox" data-compartir-estudio="${e.id}" ${e.visible_paciente ? 'checked' : ''}/> Visible para el paciente</label>` : e.visible_paciente ? '<span class="dova-nota">Visible para el paciente</span>' : ''}
             ${puede('estudios.manage') ? `<button class="dova-btn-link dova-ext-peligro" data-borrar-estudio="${e.id}">Eliminar</button>` : ''}</div>
         </article>`).join('') : '<p class="dova-nota">Sin estudios cargados.</p>'}</div>`;
 
@@ -443,6 +444,12 @@ const DovaClinica = (() => {
     const ne = c.querySelector('[data-nuevo-estudio]'); if (ne) ne.addEventListener('click', () => formEstudio(c.querySelector('[data-form-estudio]'), pid, { alGuardar: recargar }));
     const cmp = c.querySelector('[data-comparar]'); if (cmp) cmp.addEventListener('click', () => comparar(fotos));
     c.querySelectorAll('[data-ver-estudio]').forEach((b) => b.addEventListener('click', () => visorEstudio(estudios.find((x) => String(x.id) === b.dataset.verEstudio))));
+    c.querySelectorAll('[data-compartir-estudio]').forEach((b) => b.addEventListener('change', async () => {
+      b.disabled = true;
+      try { await DOVA.post(`/clinico/estudios/${b.dataset.compartirEstudio}/compartir`, { visible: b.checked }); toast(b.checked ? 'El paciente ya lo puede ver en su cuenta' : 'Dejó de estar visible para el paciente', 'ok'); }
+      catch (e) { b.checked = !b.checked; toast(e.message, 'error'); }
+      b.disabled = false;
+    }));
     c.querySelectorAll('[data-borrar-estudio]').forEach((b) => b.addEventListener('click', async () => {
       if (!(await confirmarBorrado('¿Eliminar este estudio?', 'Se borra el archivo. Queda registrado en la auditoría.'))) return;
       try { await DOVA.del(`/clinico/estudios/${b.dataset.borrarEstudio}`); toast('Estudio eliminado', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }

@@ -454,9 +454,31 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 
 /* Documentos del paciente */
 .dova-cli-docs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.dova-cli-docgrupo { border: 1px solid var(--dova-borde, #e5e5e5); border-radius: 10px; padding: 12px 14px; }
+.dova-cli-docgrupo { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
 .dova-cli-docgrupo h4 { margin: 0 0 8px; }
 .dova-cli-doclista { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
-.dova-cli-doclista li { display: flex; flex-direction: column; padding: 6px 0; border-bottom: 1px dashed var(--dova-borde, #eee); }
+.dova-cli-doclista li { display: flex; flex-direction: column; padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .dova-cli-doclista li:last-child { border-bottom: 0; }
 .dova-cli-doclista .dova-btn-link { text-align: left; padding: 0; }
+.dova-ext-chip { border: 1px solid var(--border); background: var(--white); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; color: inherit; }
+.dova-ext-chip.activo { border-color: var(--terracotta, #C1673F); box-shadow: inset 0 0 0 1px var(--terracotta, #C1673F); }
+.dova-ext-chip strong { margin-left: 4px; }
+
+/* Centro de reportes */
+.dova-rep { display: grid; grid-template-columns: 230px 1fr; gap: 20px; align-items: start; }
+.dova-rep-menu { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-m, 10px); padding: 10px; background: var(--white); }
+.dova-rep-menu h4 { margin: 10px 6px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+.dova-rep-menu h4:first-child { margin-top: 0; }
+.dova-rep-menu button { text-align: left; background: none; border: 0; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: inherit; font: inherit; font-size: 14px; }
+.dova-rep-menu button:hover { background: rgba(0,0,0,.05); }
+.dova-rep-menu button.activo { background: rgba(193,103,63,.14); font-weight: 600; }
+.dova-rep-select { display: none; }
+.dova-rep-cuerpo { min-width: 0; }
+.dova-rep-export { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.dova-rep-tabla td.num, .dova-rep-tabla th.num { text-align: right; white-space: nowrap; }
+@media (max-width: 900px) {
+  .dova-rep { grid-template-columns: 1fr; }
+  .dova-rep-menu { display: none; }
+  .dova-rep-select { display: flex; flex-direction: column; gap: 4px; }
+  .dova-rep-select select { width: 100%; }
+}

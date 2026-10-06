@@ -26,6 +26,18 @@ router.get('/estudios/:id/archivo', requirePermiso(...VER_CLINICO), controller.a
 router.post('/estudios', requirePermiso('estudios.manage'), uploadEstudios.single('archivo'), controller.crearEstudio);
 router.patch('/estudios/:id', requirePermiso('estudios.manage'), controller.actualizarEstudio);
 router.delete('/estudios/:id', requirePermiso('estudios.manage'), controller.eliminarEstudio);
+// Compartir (o dejar de compartir) un estudio con el paciente en su cuenta web.
+router.post('/estudios/:id/compartir', requirePermiso('estudios.manage'), async (req, res, next) => {
+  try {
+    const { query } = require('../../config/db');
+    const visible = req.body && req.body.visible === true;
+    const e = (await query(`UPDATE estudios SET visible_paciente=$3, compartido_por=CASE WHEN $3 THEN $4::int END, compartido_en=CASE WHEN $3 THEN now() END
+                            WHERE clinica_id=$1 AND id=$2 AND (archivo IS NOT NULL OR storage_path IS NOT NULL) RETURNING id, paciente_id, visible_paciente`, [req.clinicaId, Number(req.params.id), visible, req.usuario.id])).rows[0];
+    if (!e) { const { ApiError } = require('../../middlewares/error.middleware'); throw new ApiError(404, 'Estudio no encontrado o sin archivo'); }
+    await require('../../utils/auditoria').registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: visible ? 'compartir_estudio_paciente' : 'dejar_de_compartir_estudio', modulo: 'pacientes', entidadId: e.id, detalle: { pacienteId: e.paciente_id } });
+    res.json(e);
+  } catch (er) { next(er); }
+});
 
 // Consentimientos
 router.get('/consentimientos/plantillas', requirePermiso('consentimientos.manage'), controller.plantillasConsentimiento);
