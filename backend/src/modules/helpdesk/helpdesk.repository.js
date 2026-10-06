@@ -120,10 +120,13 @@ async function obtenerAdjunto(clinicaId, adjuntoId) {
   return res.rows[0] || null;
 }
 
-async function listarAdjuntosVencidos() {
+// Con clinicaId: solo los adjuntos de esa clínica (el botón de la pantalla);
+// sin clinicaId: todos (el script de mantenimiento del servidor).
+async function listarAdjuntosVencidos(clinicaId) {
   const res = await query(
-    `SELECT * FROM ticket_adjuntos
-     WHERE estado = 'active' AND eliminacion_programada_en IS NOT NULL AND eliminacion_programada_en <= now()`
+    `SELECT a.id, a.storage_path FROM ticket_adjuntos a JOIN tickets t ON t.id = a.ticket_id
+     WHERE a.estado = 'active' AND a.eliminacion_programada_en IS NOT NULL AND a.eliminacion_programada_en <= now()
+       AND ($1::int IS NULL OR t.clinica_id = $1)`, [clinicaId || null]
   );
   return res.rows;
 }

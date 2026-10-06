@@ -207,7 +207,7 @@ async function autenticar(req, res, next) {
     const [esquema, token] = String(req.headers.authorization || '').split(' ');
     if (esquema !== 'Bearer' || !token) throw new ApiError(401, 'Iniciá sesión para continuar');
     let pl;
-    try { pl = jwt.verify(token, CLAVE_PORTAL(), { audience: AUD }); } catch (_e) { throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.'); }
+    try { pl = jwt.verify(token, CLAVE_PORTAL(), { audience: AUD, algorithms: ['HS256'] }); } catch (_e) { throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.'); }
     const r = (await query(`SELECT wc.id, wc.paciente_id, wc.clinica_id, wc.version_token, wc.activa, p.activo, p.nombre, p.apellido, p.ci, p.web_verificado
                               FROM web_cuentas wc JOIN pacientes p ON p.id=wc.paciente_id WHERE wc.id=$1`, [pl.sub])).rows[0];
     if (!r || !r.activa || !r.activo || r.version_token !== pl.v || r.paciente_id !== pl.pid) throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.');

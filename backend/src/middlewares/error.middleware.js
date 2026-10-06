@@ -33,13 +33,25 @@ function errorHandler(err, req, res, next) {
   }
   if (err.message === 'Origen no permitido por CORS') err.status = 403;
   if (err.type === 'entity.parse.failed') { err.status = 400; err.message = 'El cuerpo de la petición no es JSON válido.'; }
+  if (err.type === 'entity.too.large') { err.status = 413; err.message = 'La petición es demasiado grande.'; }
+  // Subidas de archivos: tamaño, cantidad o tipo no permitidos → 400 (antes 500).
+  if (err.name === 'MulterError') {
+    err.status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    err.message = err.code === 'LIMIT_FILE_SIZE' ? 'El archivo supera el tamaño máximo permitido.' : 'El archivo enviado no es válido.';
+  }
+  if (!err.status && /^Tipo de archivo no permitido/.test(err.message || '')) err.status = 400;
   const status = err.status || 500;
-  if (status >= 500) {
-    console.error('[error]', err);
+  if (status >= 500 && !(err instanceof ApiError)) {
+    // El detalle queda en el registro del servidor; al cliente nunca le llegan
+    // mensajes internos (SQL, rutas, nombres de tablas).
+    const ref = require('crypto').randomBytes(4).toString('hex');
+    console.error(`[error ${ref}] ${req.method} ${(req.originalUrl || '').split('?')[0]}`, err);
+    res.status(500).json({ error: { message: `Ocurrió un error inesperado. Si se repite, avisá al soporte (referencia ${ref}).` } });
+    return;
   }
   res.status(status).json({
     error: {
-      message: err.message || 'Error interno del servidor',
+      message: err.message || 'Solicitud inválida',
       details: err.details || undefined,
     },
   });

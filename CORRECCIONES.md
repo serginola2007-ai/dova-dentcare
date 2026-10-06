@@ -392,3 +392,24 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Ayuda técnica: los adjuntos también se guardan en la base. Los viejos se siguen leyendo del disco si existen.
 - Ctrl+K: se agregaron las acciones para un paciente "Nueva receta", "Nuevo presupuesto" y "Abrir odontograma", y la búsqueda de tratamientos del catálogo.
 - Tablet: 16 pantallas sin desbordes en los 3 diseños, en vertical y en horizontal.
+
+## Auditoría de seguridad y endurecimiento (migración 0039)
+Informe completo en `SEGURIDAD.md`, con cada hallazgo, la solución y la prueba que lo verifica. Pruebas reproducibles en `backend/tests/seguridad/`.
+- Crítica: la contraseña inicial obligatoria ahora la exige la API, no solo la pantalla.
+- Altas:
+  - Anti-escalada de privilegios en usuarios y roles.
+  - Cierre inmediato de sesiones al cambiar la contraseña, dar de baja o cambiar el rol, y al cerrar sesión.
+  - Rotación de refresh tokens con detección de robo.
+  - Política de scripts estricta, sin scripts en línea.
+  - Datos de salud ocultos para quien no tiene permisos clínicos.
+- Medias y bajas:
+  - Errores sin detalles internos.
+  - Archivos validados por contenido.
+  - CORS solo para el propio sitio.
+  - Registros sin búsquedas ni tokens.
+  - Contraseñas más fuertes.
+  - Límites de pedidos.
+  - Auditoría inmutable en la base.
+  - Dependencias sin vulnerabilidades.
+  - Algoritmo JWT fijo.
+  - Cabeceras completas.

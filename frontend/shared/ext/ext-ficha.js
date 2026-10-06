@@ -851,7 +851,7 @@ const DovaFicha = (() => {
       { k: 'grupoFamiliar', label: 'Grupo familiar', ayuda: 'Mismo texto para toda la familia (ej. "Familia Benítez")' },
       { k: 'listaPrecioId', label: 'Lista de precios', tipo: 'select', opciones: listas.map((l) => [l.id, l.nombre]) },
       { k: 'aceptaWhatsapp', label: 'Acepta mensajes de WhatsApp', tipo: 'bool' }, { k: 'aceptaRecordatorios', label: 'Acepta recordatorios de controles', tipo: 'bool' },
-    ];
+    ].filter((c) => !(p.datosClinicosOcultos && c.k === 'grupoSanguineo'));
     cont.innerHTML = `<div class="dova-ext-caja"><h4>Datos de seguimiento del paciente</h4><form data-datos-seg>${X.formHtml(campos, p)}<button class="dova-btn-primary">Guardar datos</button> <button type="button" class="dova-btn-secundario" data-exportar style="display:${puede('pacientes.export') ? '' : 'none'}">Descargar ficha completa</button></form></div>`;
     const f = cont.querySelector('[data-datos-seg]');
     f.addEventListener('submit', async (e) => { e.preventDefault(); try { await DOVA.put(`/pacientes/${pid}`, X.leerForm(f, campos, true)); X.toast('Datos guardados', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); } });

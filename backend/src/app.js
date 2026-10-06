@@ -58,7 +58,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      // Sin 'unsafe-inline': un texto malicioso guardado en la base nunca se
+      // puede ejecutar como script (todos los scripts son archivos propios).
+      scriptSrc: ["'self'"],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
@@ -76,23 +78,64 @@ app.use(helmet({
       upgradeInsecureRequests: null,
     },
   },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  // HSTS solo tiene efecto sobre https (Render); en la red local por http se ignora.
+  strictTransportSecurity: { maxAge: 31536000, includeSubDomains: true },
 }));
+// Funciones del navegador que DOVA no usa: deshabilitadas.
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()');
+  next();
+});
 // CORS: el propio sitio (pantallas servidas por este servidor) siempre puede
-// usar la API; además, los orígenes de CORS_ORIGIN (ej. un frontend en
-// Netlify). Sin CORS_ORIGIN se permite cualquiera (la API usa tokens, no
-// cookies, así que otro sitio no puede actuar en nombre del usuario).
+// usar la API; además, solo los orígenes listados en CORS_ORIGIN (ej. un
+// frontend en Netlify). Sin CORS_ORIGIN, en producción NO se acepta ningún
+// otro origen. DOVA no usa cookies, así que nunca se habilitan credenciales.
 app.use(cors((req, cb) => {
   const origin = req.get('Origin');
   const propio = `${req.protocol}://${req.get('host')}`;
   const permitido = !origin || origin === propio || env.corsOrigin.includes('*') || env.corsOrigin.includes(origin);
   if (!permitido) return cb(new Error('Origen no permitido por CORS'));
-  cb(null, { origin: !!origin, credentials: true });
+  cb(null, { origin: origin && origin !== propio ? origin : false, credentials: false, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'], maxAge: 600 });
 }));
 // Los eventos en tiempo real (/api/eventos) no se comprimen: se tienen que enviar al instante.
 app.use(compression({ filter: (req, res) => (req.path === '/api/eventos' ? false : compression.filter(req, res)) }));
 app.use(express.json({ limit: '2mb' }));
 if (env.nodeEnv !== 'test') {
-  app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
+  // Registro de pedidos SIN datos sensibles: nunca la consulta (?q=nombre del
+  // paciente, filtros) ni los tokens de los enlaces de turnos.
+  morgan.token('url-segura', (req) => {
+    const [ruta, qs] = String(req.originalUrl || req.url || '').split('?');
+    const limpia = ruta.replace(/(\/turno\/)[^/]+/g, '$1[token]').replace(/[A-Za-z0-9_-]{32,}/g, '[token]');
+    return qs ? `${limpia}?[${qs.split('&').map((p) => p.split('=')[0]).filter(Boolean).slice(0, 10).join(',')}]` : limpia;
+  });
+  app.use(morgan(env.nodeEnv === 'development' ? 'dev' : ':remote-addr - [:date[clf]] ":method :url-segura HTTP/:http-version" :status :res[content-length] :response-time ms ":user-agent"'));
+}
+
+// Límites de pedidos (fuerza bruta, enumeración y abuso automatizado).
+{
+  const { limitar, porUsuario } = require('./middlewares/limite.middleware');
+  // Por usuario+IP (fuerza bruta sobre una cuenta) y por IP (relleno de credenciales);
+  // una clínica entera detrás de la misma IP queda holgada.
+  app.use('/api/auth/login', limitar({ nombre: 'login-usuario', max: 10, ventanaSeg: 60, clave: (req) => `${req.ip}|${String((req.body && req.body.username) || '').toLowerCase().slice(0, 60)}` }));
+  app.use('/api/auth/login', limitar({ nombre: 'login-ip', max: 60, ventanaSeg: 60 }));
+  app.use('/api/auth/refresh', limitar({ nombre: 'refresh', max: 60, ventanaSeg: 60 }));
+  app.use('/api/auth/cambiar-clave', limitar({ nombre: 'clave', max: 10, ventanaSeg: 600 }));
+  app.use('/api/web/cuenta/ingresar', limitar({ nombre: 'portal-login', max: 20, ventanaSeg: 60 }));
+  app.use('/api/web/publico', limitar({ nombre: 'web-publica', max: 120, ventanaSeg: 60 }));
+  app.use('/api/busqueda', limitar({ nombre: 'busqueda', max: 120, ventanaSeg: 60, clave: porUsuario }));
+  // Exportaciones y subidas: costosas y sensibles.
+  app.use((req, res, next) => {
+    const exportar = req.method === 'GET' && (/[?&]formato=(pdf|xlsx|csv)/.test(req.originalUrl) || req.originalUrl.startsWith('/api/comprobantes/'));
+    const subir = req.method === 'POST' && /multipart\/form-data/.test(req.headers['content-type'] || '');
+    if (exportar) return limiteExport(req, res, next);
+    if (subir) return limiteSubida(req, res, next);
+    return next();
+  });
+  const limiteExport = limitar({ nombre: 'export', max: 60, ventanaSeg: 60, clave: porUsuario });
+  const limiteSubida = limitar({ nombre: 'subida', max: 40, ventanaSeg: 60, clave: porUsuario });
+  // Tope general de la API por IP (una clínica entera detrás de una IP queda muy por debajo).
+  app.use('/api', limitar({ nombre: 'api', max: Number(process.env.API_LIMITE_POR_MINUTO) || 1500, ventanaSeg: 60 }));
 }
 
 app.get('/api/health', (req, res) => res.json({ ok: true, producto: 'DOVA', version: '0.1.0' }));

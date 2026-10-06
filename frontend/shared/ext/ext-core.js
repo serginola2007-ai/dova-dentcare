@@ -362,8 +362,10 @@ const DovaExt = (() => {
     if (!w) { toast('El navegador bloqueó la ventana de impresión', 'error'); return; }
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title>
       <style>body{font-family:system-ui,sans-serif;color:#2B2420;margin:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #D8C9B2;padding:6px;text-align:left}.nota{color:#6B6055;font-size:12px}</style>
-      </head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
+      </head><body>${html}</body></html>`);
     w.document.close();
+    // Sin script dentro de la ventana (la política de seguridad no lo permite): se imprime desde acá.
+    setTimeout(() => { try { w.focus(); w.print(); } catch (_e) { /* el usuario puede imprimir con Ctrl+P */ } }, 300);
   }
 
   // Catálogos que se piden una sola vez por carga de página.

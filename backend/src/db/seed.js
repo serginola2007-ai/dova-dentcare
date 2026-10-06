@@ -113,13 +113,21 @@ async function run() {
     // 4) Usuario admin. Contraseña inicial: ADMIN_PASSWORD si está definida,
     // si no "admin". Mientras siga siendo "admin", DOVA obliga a cambiarla
     // en el próximo ingreso (también en instalaciones ya existentes).
-    const claveInicial = process.env.ADMIN_PASSWORD || 'admin';
+    // En producción (instalación NUEVA) nunca se usa "admin": si no se definió
+    // ADMIN_PASSWORD se genera una aleatoria que sale UNA vez en el registro del
+    // deploy (solo lo ve el dueño de la cuenta de Render).
+    const existeAdmin = (await client.query('SELECT 1 FROM usuarios WHERE clinica_id=$1 AND username=$2', [clinicaId, 'admin'])).rowCount > 0;
+    let claveInicial = process.env.ADMIN_PASSWORD || 'admin';
+    if (!process.env.ADMIN_PASSWORD && process.env.NODE_ENV === 'production' && !existeAdmin) {
+      claveInicial = `Dova-${require('crypto').randomBytes(9).toString('base64url')}`;
+      console.log(`[seed] Contraseña inicial del usuario "admin": ${claveInicial}  (cambiala en el primer ingreso)`);
+    }
     const passwordHash = await bcrypt.hash(claveInicial, 10);
     await client.query(
       `INSERT INTO usuarios (clinica_id, rol_id, nombre, username, password_hash, activo, es_admin_protegido, debe_cambiar_clave)
        VALUES ($1,$2,$3,$4,$5,true,true,$6)
        ON CONFLICT (clinica_id, username) DO NOTHING`,
-      [clinicaId, rolIdPorCodigo.admin, 'Administrador', 'admin', passwordHash, claveInicial === 'admin']
+      [clinicaId, rolIdPorCodigo.admin, 'Administrador', 'admin', passwordHash, !process.env.ADMIN_PASSWORD]
     );
     const adm = await client.query('SELECT id, password_hash FROM usuarios WHERE clinica_id=$1 AND username=$2', [clinicaId, 'admin']);
     if (adm.rowCount && await bcrypt.compare('admin', adm.rows[0].password_hash)) {

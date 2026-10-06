@@ -23,7 +23,7 @@ async function refresh(req, res, next) {
 async function logout(req, res, next) {
   try {
     const { refreshToken } = req.body;
-    await authService.logout(refreshToken);
+    await authService.logout(refreshToken, req.headers.authorization);
     res.json({ ok: true });
   } catch (err) {
     next(err);

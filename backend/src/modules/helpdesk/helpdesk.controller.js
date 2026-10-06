@@ -44,7 +44,7 @@ async function metricas(req, res, next) {
   try { res.json(await service.metricas(req.clinicaId)); } catch (e) { next(e); }
 }
 async function ejecutarLimpieza(req, res, next) {
-  try { res.json(await service.ejecutarLimpiezaRetencion()); } catch (e) { next(e); }
+  try { res.json(await service.ejecutarLimpiezaRetencion(req.clinicaId)); } catch (e) { next(e); }
 }
 
 module.exports = {

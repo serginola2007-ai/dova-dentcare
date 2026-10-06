@@ -3,25 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script>
-  /* Selector de diseño: si esta sesión ya tiene guardada una preferencia
-     de diseño DISTINTA a esta carpeta, redirigir a la carpeta correcta
-     ANTES de pintar nada (evita cargar fuentes/CSS del diseño equivocado
-     y el flash de un diseño para saltar enseguida a otro). Corre igual en
-     las 3 carpetas (moderno/minimalista/tecnico); solo cambia ESTE_TEMA. */
-  (function () {
-    var ESTE_TEMA = 'moderno';
-    var TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
-    try {
-      var sesion = JSON.parse(localStorage.getItem('dova_session') || 'null');
-      var pref = sesion && sesion.usuario && sesion.usuario.disenoPreferido;
-      if (pref && TEMAS_VALIDOS.indexOf(pref) !== -1 && pref !== ESTE_TEMA) {
-        var nuevaRuta = location.pathname.replace(new RegExp('/' + ESTE_TEMA + '(/|$)'), '/' + pref + '$1');
-        location.replace(nuevaRuta + location.search + location.hash);
-      }
-    } catch (e) { /* sesión corrupta o localStorage no disponible: seguir acá normalmente */ }
-  })();
-</script>
+<script src="../shared/pre-diseno.js" data-tema="moderno" data-modo-oscuro="si"></script>
 <title>DOVA — DentCareRC</title>
 <!-- App instalable (PWA): ícono, pantalla completa y apertura sin internet -->
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -37,18 +19,6 @@
 <link rel="stylesheet" href="../shared/base.css" />
 <link rel="stylesheet" href="../shared/ext/ext.css" />
 <link rel="stylesheet" href="/moderno/skin.css" />
-<script>
-  /* Aplicar el tema guardado ANTES de pintar, para evitar flash del tema
-     incorrecto al recargar la página. */
-  (function () {
-    try {
-      var guardado = localStorage.getItem('dova-tema');
-      if (guardado === 'dark' || guardado === 'light') {
-        document.documentElement.setAttribute('data-theme', guardado);
-      }
-    } catch (e) {}
-  })();
-</script>
 </head>
 <body>
   <div id="login-root"></div>
@@ -76,33 +46,6 @@
   <script src="../shared/ext/ext-clinica.js"></script>
   <script src="../shared/pwa.js"></script>
   <script src="../shared/app.js"></script>
-  <script>
-    DovaApp.iniciar({
-      mainId: 'main-root', menuId: 'menu-root', marcaId: 'marca-root',
-      loginId: 'login-root', shellId: 'shell-root', logoutId: 'logout-btn',
-    });
-
-    // Toggle de tema claro/oscuro, persistido en localStorage.
-    (function () {
-      var btn = document.getElementById('theme-toggle-btn');
-      if (!btn) return;
-      function temaActual() {
-        var actual = document.documentElement.getAttribute('data-theme');
-        if (actual === 'dark' || actual === 'light') return actual;
-        // Sin preferencia guardada: seguir el prefers-color-scheme del sistema.
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-      function actualizarIcono() {
-        btn.textContent = temaActual() === 'dark' ? '☀️' : '🌙';
-      }
-      btn.addEventListener('click', function () {
-        var nuevo = temaActual() === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', nuevo);
-        try { localStorage.setItem('dova-tema', nuevo); } catch (e) {}
-        actualizarIcono();
-      });
-      actualizarIcono();
-    })();
-  </script>
+  <script src="../shared/arranque.js"></script>
 </body>
 </html>

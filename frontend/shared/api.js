@@ -32,6 +32,8 @@ const DOVA = (() => {
     const actual = getSession();
     if (!actual || actual.refreshToken !== sesion.refreshToken) throw new Error('Sesión cerrada');
     actual.accessToken = data.accessToken;
+    // Rotación: el servidor entrega un refresh token nuevo y el anterior deja de valer.
+    if (data.refreshToken) actual.refreshToken = data.refreshToken;
     if (Array.isArray(data.permisos) && actual.usuario) actual.usuario.permisos = data.permisos;
     setSession(actual);
     return actual.accessToken;
@@ -54,6 +56,11 @@ const DOVA = (() => {
         await refrescarToken();
         return request(path, { method, body, isForm, reintentar: false, raw });
       } catch (_e) {
+        // Otra pestaña pudo haber renovado la sesión mientras tanto: se reintenta con lo guardado.
+        const ahora = getSession();
+        if (ahora && ahora.refreshToken && ahora.refreshToken !== sesion.refreshToken) {
+          return request(path, { method, body, isForm, reintentar: false, raw });
+        }
         clearSession();
         window.location.reload();
         throw new Error('Sesión expirada');
@@ -142,7 +149,12 @@ const DOVA = (() => {
   async function cambiarClave(actual, nueva) {
     const data = await request('/auth/cambiar-clave', { method: 'POST', body: { actual, nueva } });
     const sesion = getSession();
-    if (sesion && sesion.usuario) { sesion.usuario.debeCambiarClave = false; setSession(sesion); }
+    if (sesion && sesion.usuario) {
+      sesion.usuario.debeCambiarClave = false;
+      // Al cambiar la contraseña se cierran las demás sesiones; esta sigue con tokens nuevos.
+      if (data && data.accessToken) { sesion.accessToken = data.accessToken; sesion.refreshToken = data.refreshToken; }
+      setSession(sesion);
+    }
     return data;
   }
 

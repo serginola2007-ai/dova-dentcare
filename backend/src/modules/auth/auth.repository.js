@@ -3,7 +3,7 @@ const { query } = require('../../config/db');
 async function findUsuarioByUsername(clinicaId, username) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.password_hash,
-            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave,
+            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
@@ -16,7 +16,7 @@ async function findUsuarioByUsername(clinicaId, username) {
 async function findUsuarioById(id) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.activo,
-            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido,
+            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
@@ -68,8 +68,14 @@ async function findRefreshToken(tokenHash) {
   return res.rows[0] || null;
 }
 
-async function revocarRefreshToken(tokenHash) {
-  await query('UPDATE refresh_tokens SET revocado = true WHERE token_hash = $1', [tokenHash]);
+async function revocarRefreshToken(tokenHash, motivo = 'logout') {
+  await query('UPDATE refresh_tokens SET revocado = true, revocado_en = COALESCE(revocado_en, now()), motivo = COALESCE(motivo, $2) WHERE token_hash = $1', [tokenHash, motivo]);
+}
+
+// Incluye los revocados (para detectar la reutilización de un token ya rotado).
+async function findRefreshTokenCualquiera(tokenHash) {
+  const res = await query('SELECT *, (revocado_en > now() - interval \'60 seconds\') AS en_gracia FROM refresh_tokens WHERE token_hash = $1 AND expira_en > now()', [tokenHash]);
+  return res.rows[0] || null;
 }
 
 /* ---- Freno a la fuerza bruta en el login ----
@@ -109,4 +115,5 @@ module.exports = {
   guardarRefreshToken,
   findRefreshToken,
   revocarRefreshToken,
+  findRefreshTokenCualquiera,
 };

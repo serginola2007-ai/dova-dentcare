@@ -2,6 +2,25 @@ const { validationResult } = require('express-validator');
 const { ApiError } = require('../../middlewares/error.middleware');
 const service = require('./pacientes.service');
 
+/* Mínimo privilegio sobre datos de salud: quien no tiene permisos clínicos
+   (p. ej. recepción) no recibe alergias, medicación ni antecedentes, y
+   tampoco los puede modificar desde la ficha administrativa. */
+const CLINICOS_BD = ['alergias', 'medicamentos', 'antecedentes_medicos', 'antecedentes_odontologicos', 'grupo_sanguineo'];
+const CLINICOS_IN = ['alergias', 'medicamentos', 'antecedentesMedicos', 'antecedentesOdontologicos', 'grupoSanguineo'];
+const tiene = (req, ...c) => c.some((x) => (req.usuario.permisos || []).includes(x));
+const veClinico = (req) => tiene(req, 'pacientes.clinical.view', 'historia_clinica.view', 'historia_clinica.edit', 'pacientes.clinical.edit');
+const editaClinico = (req) => tiene(req, 'pacientes.clinical.edit', 'historia_clinica.edit');
+function filtrar(req, p) {
+  if (!p || typeof p !== 'object' || veClinico(req)) return p;
+  const out = { ...p }; for (const k of CLINICOS_BD) delete out[k];
+  out.datosClinicosOcultos = true;
+  return out;
+}
+function limpiarEntrada(req) {
+  if (editaClinico(req) || !req.body) return;
+  for (const k of CLINICOS_IN) delete req.body[k];
+}
+
 function checkValidation(req) {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
@@ -19,6 +38,8 @@ async function listar(req, res, next) {
       incluirInactivos: incluirInactivos === 'true',
       soloEliminados: eliminados === 'true',
     });
+    if (resultado && Array.isArray(resultado.data)) resultado.data = resultado.data.map((p) => filtrar(req, p));
+    else if (Array.isArray(resultado)) { res.json(resultado.map((p) => filtrar(req, p))); return; }
     res.json(resultado);
   } catch (err) { next(err); }
 }
@@ -26,23 +47,25 @@ async function listar(req, res, next) {
 async function obtener(req, res, next) {
   try {
     const paciente = await service.obtener(req.clinicaId, req.params.id);
-    res.json(paciente);
+    res.json(filtrar(req, paciente));
   } catch (err) { next(err); }
 }
 
 async function crear(req, res, next) {
   try {
     checkValidation(req);
+    limpiarEntrada(req);
     const paciente = await service.crear(req.clinicaId, req.body, req.usuario);
-    res.status(201).json(paciente);
+    res.status(201).json(filtrar(req, paciente));
   } catch (err) { next(err); }
 }
 
 async function actualizar(req, res, next) {
   try {
     checkValidation(req);
+    limpiarEntrada(req);
     const paciente = await service.actualizar(req.clinicaId, req.params.id, req.body, req.usuario);
-    res.json(paciente);
+    res.json(filtrar(req, paciente));
   } catch (err) { next(err); }
 }
 

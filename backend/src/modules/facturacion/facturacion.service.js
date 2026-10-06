@@ -160,10 +160,13 @@ async function guardarConfig(clinicaId, datos, usuario) {
 
 async function guardarLogo(clinicaId, archivo, usuario) {
   if (!archivo) throw new ApiError(400, 'Elegí una imagen');
-  if (!['image/png', 'image/jpeg'].includes(archivo.mimetype)) throw new ApiError(400, 'El logo tiene que ser PNG o JPG');
+  // Se valida el contenido real (no lo que dice el navegador): un archivo
+  // disfrazado de imagen rompería la impresión de todas las facturas.
+  const mime = require('../../utils/upload').tipoReal(archivo.buffer);
+  if (!['image/png', 'image/jpeg'].includes(mime)) throw new ApiError(400, 'El logo tiene que ser PNG o JPG');
   if (archivo.size > 500 * 1024) throw new ApiError(400, 'El logo no puede pesar más de 500 KB');
   await asegurarConfig(clinicaId);
-  await query('UPDATE facturacion_config SET logo=$2, logo_mime=$3, actualizado_en=now(), actualizado_por=$4 WHERE clinica_id=$1', [clinicaId, archivo.buffer, archivo.mimetype, usuario.id]);
+  await query('UPDATE facturacion_config SET logo=$2, logo_mime=$3, actualizado_en=now(), actualizado_por=$4 WHERE clinica_id=$1', [clinicaId, archivo.buffer, mime, usuario.id]);
   await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'cambiar_logo_facturacion', modulo: 'facturacion', entidadId: 'config', detalle: { bytes: archivo.size } });
   return { ok: true };
 }
@@ -593,7 +596,7 @@ async function listar(clinicaId, fl, a) {
   const orden = ORDEN[fl.orden] || 'f.fecha';
   const dir = fl.dir === 'asc' ? 'ASC' : 'DESC';
   const pageSize = Math.min(Math.max(Number(fl.pageSize) || 20, 5), 100);
-  const page = Math.max(Number(fl.page) || 1, 1);
+  const page = Math.min(Math.max(Math.trunc(Number(fl.page)) || 1, 1), 100000);
   const total = Number((await query(`SELECT count(*) n FROM facturas f WHERE ${where}`, params)).rows[0].n);
   const r = await query(
     `SELECT f.id, f.numero_completo, f.fecha, f.paciente_id, f.cliente_nombre, f.cliente_documento, f.cliente_ruc, f.total, f.metodo_pago,

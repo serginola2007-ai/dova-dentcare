@@ -3,25 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script>
-  /* Selector de diseño: si esta sesión ya tiene guardada una preferencia
-     de diseño DISTINTA a esta carpeta, redirigir a la carpeta correcta
-     ANTES de pintar nada (evita cargar fuentes/CSS del diseño equivocado
-     y el flash de un diseño para saltar enseguida a otro). Corre igual en
-     las 3 carpetas (moderno/minimalista/tecnico); solo cambia ESTE_TEMA. */
-  (function () {
-    var ESTE_TEMA = 'minimalista';
-    var TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
-    try {
-      var sesion = JSON.parse(localStorage.getItem('dova_session') || 'null');
-      var pref = sesion && sesion.usuario && sesion.usuario.disenoPreferido;
-      if (pref && TEMAS_VALIDOS.indexOf(pref) !== -1 && pref !== ESTE_TEMA) {
-        var nuevaRuta = location.pathname.replace(new RegExp('/' + ESTE_TEMA + '(/|$)'), '/' + pref + '$1');
-        location.replace(nuevaRuta + location.search + location.hash);
-      }
-    } catch (e) { /* sesión corrupta o localStorage no disponible: seguir acá normalmente */ }
-  })();
-</script>
+<script src="../shared/pre-diseno.js" data-tema="minimalista"></script>
 <title>DOVA — DentCareRC</title>
 <!-- App instalable (PWA): ícono, pantalla completa y apertura sin internet -->
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -63,11 +45,6 @@
   <script src="../shared/ext/ext-clinica.js"></script>
   <script src="../shared/pwa.js"></script>
   <script src="../shared/app.js"></script>
-  <script>
-    DovaApp.iniciar({
-      mainId: 'main-root', menuId: 'menu-root', marcaId: 'marca-root',
-      loginId: 'login-root', shellId: 'shell-root', logoutId: 'logout-btn',
-    });
-  </script>
+  <script src="../shared/arranque.js"></script>
 </body>
 </html>

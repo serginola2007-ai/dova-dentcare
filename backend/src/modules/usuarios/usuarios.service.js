@@ -2,6 +2,30 @@ const bcrypt = require('bcryptjs');
 const repo = require('./usuarios.repository');
 const { ApiError } = require('../../middlewares/error.middleware');
 const auditoria = require('../../utils/auditoria');
+const sesiones = require('../../utils/sesiones');
+const { query } = require('../../config/db');
+
+/* Anti-escalada de privilegios (auditoría de seguridad):
+   - nadie puede dar permisos que no tiene (salvo el administrador);
+   - nadie puede cambiar su propio rol, sus propios permisos ni darse de baja;
+   - solo un administrador puede tocar a otro administrador. */
+const esAdmin = (actor) => actor && actor.rolCodigo === 'admin';
+function exigirSubconjunto(actor, codigos, que) {
+  if (esAdmin(actor)) return;
+  const mios = new Set(actor.permisos || []);
+  const faltan = codigos.filter((c) => !mios.has(c));
+  if (faltan.length) throw new ApiError(403, `No podés ${que} con permisos que vos no tenés (${faltan.slice(0, 5).join(', ')}${faltan.length > 5 ? '…' : ''})`);
+}
+async function codigosDeRol(rolId) { return (await repo.permisosDeRol(rolId)).map((p) => p.codigo); }
+function noSobreSiMismo(actor, id, que) { if (Number(actor.id) === Number(id)) throw new ApiError(403, `No podés ${que} sobre tu propio usuario`); }
+function soloAdminSobreAdmin(actor, usuario) { if ((usuario.rol_codigo === 'admin' || usuario.es_admin_protegido) && !esAdmin(actor)) throw new ApiError(403, 'Solo un administrador puede modificar a otro administrador'); }
+async function codigosValidos(codigos) {
+  if (!Array.isArray(codigos) || codigos.some((c) => typeof c !== 'string')) throw new ApiError(400, 'Lista de permisos inválida');
+  const unicos = [...new Set(codigos)];
+  const ok = unicos.length ? (await query('SELECT codigo FROM permisos WHERE codigo = ANY($1::text[])', [unicos])).rows.map((r) => r.codigo) : [];
+  if (ok.length !== unicos.length) throw new ApiError(400, 'Hay permisos que no existen');
+  return unicos;
+}
 
 const ROLES_SISTEMA = ['admin', 'odontologo', 'recepcion', 'asistente', 'helpdesk'];
 const DISENOS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
@@ -37,11 +61,20 @@ async function actualizarPermisosRol(clinicaId, rolId, codigosPermisos, actor) {
   if (rol.codigo === 'admin') {
     throw new ApiError(403, 'El rol admin siempre tiene todos los permisos y no puede modificarse');
   }
-  const permisos = await repo.actualizarPermisosRol(rolId, codigosPermisos || []);
+  const codigos = await codigosValidos(codigosPermisos || []);
+  if (!esAdmin(actor)) {
+    const yo = await repo.obtener(clinicaId, actor.id);
+    if (yo && Number(yo.rol_id) === Number(rolId)) throw new ApiError(403, 'No podés cambiar los permisos de tu propio rol');
+    // Solo se pueden agregar permisos que uno tiene; los que ya tenía el rol pueden quedar.
+    const antes = new Set(await codigosDeRol(rolId));
+    exigirSubconjunto(actor, codigos.filter((c) => !antes.has(c)), 'armar un rol');
+  }
+  const antesLista = await codigosDeRol(rolId);
+  const permisos = await repo.actualizarPermisosRol(rolId, codigos);
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
     accion: 'actualizar_permisos_rol', modulo: 'administracion', entidadId: rolId,
-    detalle: { codigos: codigosPermisos },
+    detalle: { antes: { permisos: antesLista }, despues: { permisos: codigos } },
   });
   return permisos;
 }
@@ -68,15 +101,20 @@ async function crear(clinicaId, datos, actor) {
   if (!nombre || !username || !password || !rolId) {
     throw new ApiError(400, 'nombre, username, password y rolId son requeridos');
   }
-  if (password.length < 6) throw new ApiError(400, 'La contraseña debe tener al menos 6 caracteres');
+  sesiones.validarClaveFuerte(password, { username, nombre });
+  if (!/^[A-Za-z0-9._-]{3,50}$/.test(String(username))) throw new ApiError(400, 'El usuario solo puede tener letras, números, punto, guion y guion bajo (3 a 50)');
   const yaExiste = await repo.existeUsername(clinicaId, username);
   if (yaExiste) throw new ApiError(409, 'Ese nombre de usuario ya está en uso en esta clínica');
 
   const rol = await repo.obtenerRol(clinicaId, rolId);
   if (!rol) throw new ApiError(400, 'El rol indicado no existe');
+  if (rol.codigo === 'admin' && !esAdmin(actor)) throw new ApiError(403, 'Solo un administrador puede crear administradores');
+  exigirSubconjunto(actor, await codigosDeRol(rol.id), 'crear un usuario');
 
   const passwordHash = await bcrypt.hash(password, 10);
   const usuario = await repo.crear(clinicaId, { nombre, username, email, passwordHash, rolId, odontologoId });
+  // La contraseña la eligió el administrador: la persona la cambia en su primer ingreso.
+  await query('UPDATE usuarios SET debe_cambiar_clave=true WHERE id=$1', [usuario.id]);
 
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
@@ -89,6 +127,10 @@ async function crear(clinicaId, datos, actor) {
 async function actualizar(clinicaId, id, datos, actor) {
   const usuario = await repo.obtener(clinicaId, id);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+  soloAdminSobreAdmin(actor, usuario);
+  if (Number(actor.id) === Number(id) && ((datos.rolId !== undefined && Number(datos.rolId) !== Number(usuario.rol_id)) || (datos.activo !== undefined && datos.activo !== usuario.activo))) {
+    throw new ApiError(403, 'No podés cambiar tu propio rol ni darte de baja');
+  }
 
   const campos = {};
   if (datos.nombre !== undefined) campos.nombre = datos.nombre;
@@ -104,6 +146,8 @@ async function actualizar(clinicaId, id, datos, actor) {
   if (datos.rolId !== undefined && datos.rolId !== usuario.rol_id) {
     const rol = await repo.obtenerRol(clinicaId, datos.rolId);
     if (!rol) throw new ApiError(400, 'El rol indicado no existe');
+    if (rol.codigo === 'admin' && !esAdmin(actor)) throw new ApiError(403, 'Solo un administrador puede asignar el rol de administrador');
+    exigirSubconjunto(actor, await codigosDeRol(rol.id), 'asignar un rol');
     if (usuario.es_admin_protegido && rol.codigo !== 'admin') {
       throw new ApiError(403, 'No se puede cambiar el rol del administrador protegido');
     }
@@ -133,9 +177,12 @@ async function actualizar(clinicaId, id, datos, actor) {
   if (Object.keys(campos).length === 0) return obtenerConPermisos(clinicaId, id);
 
   await repo.actualizar(clinicaId, id, campos);
+  // Cambio de rol o baja: las sesiones abiertas de ese usuario se cierran al instante.
+  if (campos.rol_id !== undefined || campos.activo === false || campos.username !== undefined) await sesiones.invalidarSesiones(id, campos.activo === false ? 'baja' : 'cambio_rol');
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
-    accion: 'actualizar_usuario', modulo: 'administracion', entidadId: id, detalle: campos,
+    accion: 'actualizar_usuario', modulo: 'administracion', entidadId: id,
+    detalle: { antes: Object.fromEntries(Object.keys(campos).map((k) => [k, usuario[k]])), despues: campos },
   });
   return obtenerConPermisos(clinicaId, id);
 }
@@ -143,11 +190,15 @@ async function actualizar(clinicaId, id, datos, actor) {
 async function cambiarPassword(clinicaId, id, nuevaPassword, actor) {
   const usuario = await repo.obtener(clinicaId, id);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
-  if (!nuevaPassword || nuevaPassword.length < 6) {
-    throw new ApiError(400, 'La contraseña debe tener al menos 6 caracteres');
-  }
+  noSobreSiMismo(actor, id, 'blanquear la contraseña (usá "Cambiar mi contraseña", que pide la actual)');
+  soloAdminSobreAdmin(actor, usuario);
+  sesiones.validarClaveFuerte(nuevaPassword, { username: usuario.username, nombre: usuario.nombre });
   const hash = await bcrypt.hash(nuevaPassword, 10);
   await repo.cambiarPassword(id, hash);
+  // Es una contraseña temporal: la persona la tiene que cambiar al entrar, y
+  // cualquier sesión abierta con la contraseña anterior se cierra.
+  await query('UPDATE usuarios SET debe_cambiar_clave=true WHERE id=$1', [id]);
+  await sesiones.invalidarSesiones(id, 'blanqueo_clave');
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
     accion: 'cambiar_password', modulo: 'administracion', entidadId: id,
@@ -161,6 +212,11 @@ async function setOverride(clinicaId, usuarioId, codigoPermiso, allow, actor) {
   if (usuario.es_admin_protegido) {
     throw new ApiError(403, 'El administrador protegido siempre tiene todos los permisos; no admite overrides');
   }
+  noSobreSiMismo(actor, usuarioId, 'cambiar permisos');
+  soloAdminSobreAdmin(actor, usuario);
+  await codigosValidos([codigoPermiso]);
+  if (typeof allow !== 'boolean') throw new ApiError(400, 'allow tiene que ser verdadero o falso');
+  if (allow) exigirSubconjunto(actor, [codigoPermiso], 'dar permisos');
   const overrides = await repo.setOverride(usuarioId, codigoPermiso, allow);
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
@@ -173,6 +229,10 @@ async function setOverride(clinicaId, usuarioId, codigoPermiso, allow, actor) {
 async function quitarOverride(clinicaId, usuarioId, codigoPermiso, actor) {
   const usuario = await repo.obtener(clinicaId, usuarioId);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+  noSobreSiMismo(actor, usuarioId, 'cambiar permisos');
+  soloAdminSobreAdmin(actor, usuario);
+  // Quitar una prohibición equivale a dar el permiso.
+  exigirSubconjunto(actor, [String(codigoPermiso)], 'dar permisos');
   const overrides = await repo.quitarOverride(usuarioId, codigoPermiso);
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,

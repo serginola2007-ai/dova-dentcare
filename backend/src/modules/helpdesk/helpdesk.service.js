@@ -137,6 +137,16 @@ async function agregarAdjunto(clinicaId, ticketId, mensajeId, usuario, archivoMu
     await fs.unlink(archivoMulter.path).catch(() => {});
     throw new ApiError(400, 'El archivo supera el tamaño máximo permitido (15MB)');
   }
+  // El contenido tiene que coincidir con el tipo declarado (no se confía en el navegador).
+  {
+    const cab = Buffer.alloc(16); const fh = await fs.open(archivoMulter.path, 'r');
+    try { await fh.read(cab, 0, 16, 0); } finally { await fh.close(); }
+    const t = archivoMulter.mimetype; const a = cab.toString('latin1');
+    const ok = (t === 'image/jpeg' && cab[0] === 0xFF && cab[1] === 0xD8) || (t === 'image/png' && a.startsWith('\x89PNG')) || (t === 'image/webp' && a.startsWith('RIFF') && a.slice(8, 12) === 'WEBP')
+      || (t === 'application/pdf' && a.startsWith('%PDF-')) || (t === 'audio/mpeg' && (a.startsWith('ID3') || cab[0] === 0xFF)) || (t === 'audio/ogg' && a.startsWith('OggS'))
+      || (t === 'audio/wav' && a.startsWith('RIFF') && a.slice(8, 12) === 'WAVE') || (t === 'video/mp4' && a.slice(4, 8) === 'ftyp');
+    if (!ok) { await fs.unlink(archivoMulter.path).catch(() => {}); throw new ApiError(400, 'El contenido del archivo no coincide con su tipo'); }
+  }
 
   // Se guarda en la base (el disco del servidor se borra en cada actualización en Render).
   const datos = await fs.readFile(archivoMulter.path);
@@ -176,8 +186,8 @@ async function metricas(clinicaId) { return repo.metricas(clinicaId); }
    no tiene un proceso permanente, así que se deja como script invocable
    (`npm run helpdesk:limpieza`) más que como un cron ya activo. Es
    idempotente y tolerante a archivos ya inexistentes en disco. */
-async function ejecutarLimpiezaRetencion() {
-  const vencidos = await repo.listarAdjuntosVencidos();
+async function ejecutarLimpiezaRetencion(clinicaId) {
+  const vencidos = await repo.listarAdjuntosVencidos(clinicaId);
   let eliminados = 0;
   for (const adjunto of vencidos) {
     try {

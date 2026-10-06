@@ -417,7 +417,7 @@ async function listarSolicitudes(clinicaId, { estado, tipo, page = 1 }) {
   const c = ['s.clinica_id=$1']; const p = [clinicaId];
   if (estado) { p.push(estado); c.push(`s.estado=$${p.length}`); }
   if (tipo) { p.push(tipo); c.push(`s.tipo=$${p.length}`); }
-  const lim = 30; const off = (Math.max(Number(page) || 1, 1) - 1) * lim;
+  const lim = 30; const off = (Math.min(Math.max(Math.trunc(Number(page)) || 1, 1), 100000) - 1) * lim;
   const r = await query(`SELECT s.*, u.nombre AS resuelta_por_nombre, t.fecha::text AS turno_fecha, to_char(t.hora_inicio,'HH24:MI') AS turno_hora, t.estado AS turno_estado,
                                 o.nombre AS turno_odontologo, pa.nombre || ' ' || pa.apellido AS paciente_nombre, pa.web_verificado
                            FROM web_solicitudes s LEFT JOIN usuarios u ON u.id=s.resuelta_por LEFT JOIN turnos t ON t.id=s.turno_id

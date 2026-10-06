@@ -165,7 +165,7 @@ function crearRecurso(cfg) {
       if (cfg.borrado && cfg.borrado.startsWith('logico:') && req.query.incluirInactivos !== 'true') {
         cond.push(`t.${cfg.borrado.split(':')[1]} = true`);
       }
-      const limite = Math.min(Number(req.query.limite) || 500, 2000);
+      const limite = Math.min(Math.max(Math.trunc(Number(req.query.limite)) || 500, 1), 2000);
       const r = await query(`${selectBase()} WHERE ${cond.join(' AND ')} ORDER BY ${cfg.orden || 't.id DESC'} LIMIT ${limite}`, params);
       res.json(r.rows.map(tr));
     } catch (e) { next(e); }

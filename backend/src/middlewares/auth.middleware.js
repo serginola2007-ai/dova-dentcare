@@ -16,7 +16,9 @@ async function estadoUsuario(id, rolIdDesconocido) {
   if (c && ahora - c.t < CACHE_MS) return c.v;
   const authRepo = require('../modules/auth/auth.repository');
   const u = await authRepo.findUsuarioById(id);
-  const v = u && u.activo ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id) } : { activo: false };
+  const v = u && u.activo
+    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id }
+    : { activo: false };
   cache.set(id, { t: ahora, v });
   if (cache.size > 5000) cache.clear();
   void rolIdDesconocido;
@@ -34,13 +36,21 @@ async function authMiddleware(req, res, next) {
   }
   let payload;
   try {
-    payload = jwt.verify(token, env.jwtSecret);
+    payload = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] });
   } catch (err) {
     return next(new ApiError(401, 'Token inválido o expirado'));
   }
   try {
     const est = await estadoUsuario(Number(payload.sub));
     if (!est.activo) return next(new ApiError(401, 'Tu usuario fue desactivado. Consultá con el administrador.'));
+    // Contraseña cambiada, rol cambiado o sesiones cerradas: los tokens anteriores ya no valen.
+    if ((Number(payload.tv) || 0) !== est.tokenVersion || Number(payload.clinicaId) !== Number(est.clinicaId)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
+    if (await require('../utils/sesiones').jtiRevocado(payload.jti)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
+    // Con la contraseña inicial pendiente de cambio, la API no se puede usar
+    // (antes solo lo exigía la pantalla y la API respondía igual).
+    if (est.debeCambiarClave && !(req.method === 'POST' && (req.originalUrl || '').split('?')[0] === '/api/auth/cambiar-clave')) {
+      return next(new ApiError(403, 'Tenés que cambiar la contraseña inicial antes de seguir.', { codigo: 'DEBE_CAMBIAR_CLAVE' }));
+    }
     req.usuario = {
       id: payload.sub,
       clinicaId: payload.clinicaId,

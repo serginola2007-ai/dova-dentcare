@@ -127,7 +127,7 @@ router.get('/auditoria', requirePermiso('auditoria.view'), h(async (req) => {
   if (['ok', 'fallido', 'denegado'].includes(req.query.resultado)) add("COALESCE(resultado,'ok') = ?", req.query.resultado);
   if (req.query.pacienteId) add("(detalle->>'pacienteId' = ? OR (modulo='pacientes' AND entidad_id = ?))", String(req.query.pacienteId));
   if (req.query.q) add('(detalle::text ILIKE ? OR usuario_nombre ILIKE ?)', `%${String(req.query.q).slice(0, 80)}%`);
-  const limite = Math.min(Number(req.query.limite) || 200, 1000);
+  const limite = Math.min(Math.max(Math.trunc(Number(req.query.limite)) || 200, 1), 1000);
   const csv = req.query.formato === 'csv';
   const [filas, modulos, acciones] = await Promise.all([
     query(`SELECT * FROM auditoria WHERE ${cond.join(' AND ')} ORDER BY creado_en DESC LIMIT ${csv ? 20000 : limite}`, params),
