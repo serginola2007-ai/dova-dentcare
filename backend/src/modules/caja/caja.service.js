@@ -1,4 +1,5 @@
 const { ApiError } = require('../../middlewares/error.middleware');
+const { monto: validarMonto } = require('../../utils/montos');
 const repo = require('./caja.repository');
 const auditoria = require('../../utils/auditoria');
 const { query, conCandado } = require('../../config/db');
@@ -63,8 +64,8 @@ async function abrirSinCandado(clinicaId, datos, usuario) {
         : 'Ya hay una caja abierta hoy.'
     );
   }
-  if (Number(datos.montoInicial) < 0) throw new ApiError(400, 'El monto inicial no puede ser negativo');
-  const caja = await repo.abrir(clinicaId, datos.montoInicial || 0, usuario.id);
+  const montoInicial = validarMonto(datos.montoInicial === undefined || datos.montoInicial === '' ? 0 : datos.montoInicial, { campo: 'El monto inicial', cero: true });
+  const caja = await repo.abrir(clinicaId, montoInicial, usuario.id);
   // Los cobros de HOY hechos antes de abrir la caja se incorporan a esta
   // caja (quedan marcados en el concepto), así no se pierden del arqueo.
   const previos = await pagosSinCaja(clinicaId);
@@ -76,7 +77,7 @@ async function abrirSinCandado(clinicaId, datos, usuario) {
   }
   await auditoria.registrar({
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
-    accion: 'abrir_caja', modulo: 'caja', entidadId: caja.id, detalle: { montoInicial: datos.montoInicial, pagosIncorporados: previos.length },
+    accion: 'abrir_caja', modulo: 'caja', entidadId: caja.id, detalle: { montoInicial, pagosIncorporados: previos.length },
   });
   return { ...caja, pagosIncorporados: previos.length };
 }
@@ -91,8 +92,10 @@ async function registrarMovimiento(clinicaId, datosIn, usuario) {
     datos.concepto = `Devolución: ${String(datos.concepto || '').trim() || 'sin detalle'}`;
   }
   if (!['ingreso', 'egreso'].includes(datos.tipo)) throw new ApiError(400, 'Tipo de movimiento inválido');
-  if (Number(datos.monto) <= 0) throw new ApiError(400, 'El monto debe ser mayor a cero');
-  if (!String(datos.concepto || '').trim()) throw new ApiError(400, 'Escribí el concepto del movimiento');
+  datos.monto = validarMonto(datos.monto);
+  datos.concepto = String(datos.concepto || '').trim().slice(0, 300);
+  if (!datos.concepto) throw new ApiError(400, 'Escribí el concepto del movimiento');
+  if (datos.metodo !== undefined && datos.metodo !== null && (typeof datos.metodo !== 'string' || datos.metodo.length > 40)) throw new ApiError(400, 'Método inválido');
 
   const movimiento = await repo.registrarMovimiento(caja.id, {
     tipo: datos.tipo, concepto: datos.concepto, monto: datos.monto,
@@ -100,7 +103,7 @@ async function registrarMovimiento(clinicaId, datosIn, usuario) {
   });
   await auditoria.registrar({
     clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre,
-    accion: `caja_${datos.tipo}`, modulo: 'caja', entidadId: caja.id, detalle: datos,
+    accion: `caja_${datos.tipo}`, modulo: 'caja', entidadId: caja.id, detalle: { tipo: datos.tipo, concepto: datos.concepto, monto: datos.monto, metodo: datos.metodo || null, movimientoId: movimiento.id },
   });
   return movimiento;
 }
@@ -141,8 +144,8 @@ async function cerrar(clinicaId, id, datos, usuario) {
   const totales = await repo.calcularTotales(id);
   const e = calcularEsperado(caja, totales);
   const montoEsperado = e.efectivoEsperado;
-  const montoContado = Number(datos.montoContado);
-  if (Number.isNaN(montoContado)) throw new ApiError(400, 'Debés indicar el monto contado físicamente');
+  if (datos.montoContado === undefined || datos.montoContado === null || datos.montoContado === '') throw new ApiError(400, 'Debés indicar el monto contado físicamente');
+  const montoContado = validarMonto(datos.montoContado, { campo: 'El monto contado', cero: true });
   const diferencia = Math.round((montoContado - montoEsperado) * 100) / 100;
 
   if (diferencia !== 0 && !datos.motivoDiferencia) {

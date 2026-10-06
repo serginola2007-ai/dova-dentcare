@@ -1,4 +1,3 @@
-const fs = require('fs');
 const service = require('./helpdesk.service');
 const { ApiError } = require('../../middlewares/error.middleware');
 
@@ -36,8 +35,9 @@ async function descargarAdjunto(req, res, next) {
       res.end(adjunto.archivo);
       return;
     }
-    if (!adjunto.storage_path) throw new ApiError(404, 'El archivo ya no está disponible');
-    res.download(adjunto.storage_path, adjunto.nombre_original, (err) => { if (err && !res.headersSent) next(new ApiError(404, 'El archivo ya no está disponible (se subió antes de guardar los adjuntos en la base). Volvé a subirlo.')); });
+    const ruta = require('../../utils/upload').rutaSegura(adjunto.storage_path);
+    if (!ruta) throw new ApiError(404, 'El archivo ya no está disponible');
+    res.download(ruta, String(adjunto.nombre_original || 'archivo').replace(/[^\w.\- ]/g, '_'), (err) => { if (err && !res.headersSent) next(new ApiError(404, 'El archivo ya no está disponible (se subió antes de guardar los adjuntos en la base). Volvé a subirlo.')); });
   } catch (e) { next(e); }
 }
 async function metricas(req, res, next) {

@@ -27,6 +27,7 @@ async function invalidarSesiones(usuarioId, motivo = 'invalidacion') {
   await query('UPDATE usuarios SET token_version = token_version + 1 WHERE id=$1', [Number(usuarioId)]);
   await query('UPDATE refresh_tokens SET revocado=true, revocado_en=COALESCE(revocado_en, now()), motivo=COALESCE(motivo, $2) WHERE usuario_id=$1 AND revocado=false', [Number(usuarioId), String(motivo).slice(0, 30)]);
   require('../middlewares/auth.middleware').olvidarUsuario(Number(usuarioId));
+  require('./tiempoReal').cerrarUsuario(Number(usuarioId));
 }
 
 // ---- jti revocados (cierre de sesión) ----
@@ -35,6 +36,7 @@ async function revocarJti(jti, expSeg) {
   if (!jti) return;
   const vence = new Date((Number(expSeg) || Math.floor(Date.now() / 1000) + 900) * 1000);
   revocados.set(jti, vence.getTime());
+  require('./tiempoReal').cerrarJti(jti);
   await query('INSERT INTO tokens_revocados (jti, expira_en) VALUES ($1,$2) ON CONFLICT (jti) DO NOTHING', [String(jti).slice(0, 64), vence]);
   if (Math.random() < 0.05) await query('DELETE FROM tokens_revocados WHERE expira_en < now()');
 }

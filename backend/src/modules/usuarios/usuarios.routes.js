@@ -27,6 +27,8 @@ router.get('/:id', requirePermiso('usuarios.manage'), controller.obtener);
 router.post('/', requirePermiso('usuarios.manage'), controller.crear);
 router.put('/:id', requirePermiso('usuarios.manage'), controller.actualizar);
 router.post('/:id/password', requirePermiso('usuarios.manage'), controller.cambiarPassword);
+// Cerrar todas las sesiones abiertas de una persona (por ejemplo, si perdió el celular).
+router.post('/:id/cerrar-sesiones', requirePermiso('usuarios.manage'), controller.cerrarSesiones);
 
 // Permisos personalizados (overrides) por usuario
 router.put('/:id/permisos', requirePermiso('usuarios.manage'), controller.setOverride);

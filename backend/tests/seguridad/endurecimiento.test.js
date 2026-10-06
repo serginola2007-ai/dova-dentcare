@@ -3,10 +3,20 @@ types.setTypeParser(1082, (v) => v);
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const B = (process.env.DOVA_URL || (process.env.DOVA_URL || 'http://localhost:4500')) + '/api'; const res = [];
 const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, ok ? '' : String(JSON.stringify(d)).slice(0, 400)); };
-const req = async (m, url, body, { tok, form, raw } = {}) => {
-  const h = {}; if (tok) h.authorization = `Bearer ${tok}`; if (body && !form) h['content-type'] = 'application/json';
+let refreshEnCuerpo = 0;
+// El refresh token viaja solo en la cookie dova_rt: el ayudante lo toma de
+// Set-Cookie (r.j.refreshToken) y lo devuelve como cookie con la cabecera anti-CSRF.
+const req = async (m, url, body, { tok, form, raw, legado } = {}) => {
+  const h = {}; if (tok) h.authorization = `Bearer ${tok}`;
+  if (body && body.refreshToken && !legado) { h.cookie = `dova_rt=${body.refreshToken}`; h['x-dova-csrf'] = '1'; const { refreshToken, ...resto } = body; void refreshToken; body = resto; }
+  if (body && !form) h['content-type'] = 'application/json';
   const r = await fetch(B + url, { method: m, headers: h, body: form || (body ? JSON.stringify(body) : undefined) });
-  if (raw) return r; return { s: r.status, j: await r.json().catch(() => null) };
+  if (raw) return r;
+  const j = await r.json().catch(() => null);
+  if (j && j.refreshToken) refreshEnCuerpo++;
+  const ck = (r.headers.getSetCookie ? r.headers.getSetCookie() : []).map((c) => c.split(';')[0]).find((c) => /^dova_rt=./.test(c));
+  if (j && typeof j === 'object' && ck) j.refreshToken = ck.slice('dova_rt='.length);
+  return { s: r.status, j };
 };
 const login = async (u, p) => (await req('POST', '/auth/login', { username: u, password: p })).j.accessToken;
 const q1 = async (s, p) => (await db.query(s, p)).rows[0];
@@ -15,7 +25,7 @@ const loginR = async (u, p, extra = {}) => req('POST', '/auth/login', { username
 const H = async (url, opts = {}) => fetch(B.replace('/api', '') + url, opts);
 (async () => {
   await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false WHERE username IN ('admin','recep1','odo1')");
-  const A = await login('admin', 'admin'); const R = await login('recep1', 'clave123');
+  const A = await login('admin', 'admin'); await login('recep1', 'clave123');
   const suf = String(Date.now() % 1000000);
   const rolRecep = (await q1("SELECT id FROM roles WHERE codigo='recepcion' AND clinica_id=1")).id;
   const rolAdmin = (await q1("SELECT id FROM roles WHERE codigo='admin' AND clinica_id=1")).id;
@@ -103,6 +113,18 @@ const H = async (url, opts = {}) => fetch(B.replace('/api', '') + url, opts);
   P('Reutilizar un refresh viejo se rechaza…', r.s === 401, r.s);
   P('…y cierra todas las sesiones (posible robo)', (await req('POST', '/auth/refresh', { refreshToken: nuevo })).s === 401 && (await req('GET', '/pacientes', null, { tok: s3.accessToken })).s === 401);
   P('…y queda en la auditoría', !!(await q1("SELECT id FROM auditoria WHERE accion='refresh_reutilizado' ORDER BY id DESC LIMIT 1")));
+  // Cookies: el refresh token nunca aparece en el cuerpo de una respuesta, y
+  // uno nuevo no se acepta en el cuerpo (solo en la cookie, con anti-CSRF).
+  P('Ninguna respuesta trajo el refresh token en el cuerpo', refreshEnCuerpo === 0, refreshEnCuerpo);
+  const s6 = (await loginR('recep1', 'clave123')).j;
+  P('Refresh token nuevo enviado en el cuerpo (no en la cookie): 401', (await req('POST', '/auth/refresh', { refreshToken: s6.refreshToken }, { legado: true })).s === 401);
+  r = await fetch(B + '/auth/refresh', { method: 'POST', headers: { cookie: `dova_rt=${s6.refreshToken}` } });
+  P('Refresh por cookie sin cabecera anti-CSRF: 403', r.status === 403, r.status);
+  r = await fetch(B + '/auth/refresh', { method: 'POST', headers: { cookie: `dova_rt=${s6.refreshToken}`, 'x-dova-csrf': '1', origin: 'https://sitio-malicioso.example' } });
+  P('Refresh por cookie desde otro origen: 403', r.status === 403, r.status);
+  r = await fetch(B + '/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'recep1', password: 'clave123' }) });
+  const sc = (r.headers.getSetCookie() || []).find((c) => c.startsWith('dova_rt=')) || '';
+  P('Cookie de sesión HttpOnly, SameSite=Strict y limitada a /api/auth', /HttpOnly/i.test(sc) && /SameSite=Strict/i.test(sc) && /Path=\/api\/auth/i.test(sc), sc.replace(/=[^;]+/, '=…'));
 
   // ---- Tokens manipulados
   const R2 = await login('recep1', 'clave123');

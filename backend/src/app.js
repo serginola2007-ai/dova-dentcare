@@ -48,7 +48,7 @@ const app = express();
 // Render (y cualquier hosting con proxy) pone la IP real en X-Forwarded-For:
 // sin esto todos los usuarios "tendrían" la IP del proxy y el freno de
 // intentos de login por IP bloquearía a toda la clínica junta.
-app.set('trust proxy', 1);
+app.set('trust proxy', require('./config/seguridad').trustProxy);
 // IP del pedido disponible para la auditoría (utils/contexto.js).
 app.use(require('./utils/contexto').middleware);
 // Cabeceras de seguridad. La política de contenido permite lo que usan las
@@ -115,16 +115,20 @@ if (env.nodeEnv !== 'test') {
 // Límites de pedidos (fuerza bruta, enumeración y abuso automatizado).
 {
   const { limitar, porUsuario } = require('./middlewares/limite.middleware');
+  const L = require('./config/seguridad').limites;
+  const lim = (nombre, [max, ventanaSeg], extra = {}) => limitar({ nombre, max, ventanaSeg, ...extra });
   // Por usuario+IP (fuerza bruta sobre una cuenta) y por IP (relleno de credenciales);
   // una clínica entera detrás de la misma IP queda holgada.
-  app.use('/api/auth/login', limitar({ nombre: 'login-usuario', max: 10, ventanaSeg: 60, clave: (req) => `${req.ip}|${String((req.body && req.body.username) || '').toLowerCase().slice(0, 60)}` }));
-  app.use('/api/auth/login', limitar({ nombre: 'login-ip', max: 60, ventanaSeg: 60 }));
-  app.use('/api/auth/refresh', limitar({ nombre: 'refresh', max: 60, ventanaSeg: 60 }));
-  app.use('/api/auth/cambiar-clave', limitar({ nombre: 'clave', max: 10, ventanaSeg: 600 }));
-  app.use('/api/web/cuenta/ingresar', limitar({ nombre: 'portal-login', max: 20, ventanaSeg: 60 }));
-  app.use('/api/web/publico', limitar({ nombre: 'web-publica', max: 120, ventanaSeg: 60 }));
-  app.use('/api/busqueda', limitar({ nombre: 'busqueda', max: 120, ventanaSeg: 60, clave: porUsuario }));
+  app.use('/api/auth/login', lim('login-usuario', L.loginUsuario, { compartido: true, clave: (req) => `${req.ip}|${String((req.body && req.body.username) || '').toLowerCase().slice(0, 60)}` }));
+  app.use('/api/auth/login', lim('login-ip', L.loginIp, { compartido: true }));
+  app.use('/api/auth/refresh', lim('refresh', L.refresh, { compartido: true }));
+  app.use('/api/auth/cambiar-clave', lim('clave', L.cambiarClave, { compartido: true }));
+  app.use('/api/web/cuenta/ingresar', lim('portal-login', L.portalLogin, { compartido: true }));
+  app.use('/api/web/publico', lim('web-publica', L.webPublica));
+  app.use('/api/busqueda', lim('busqueda', L.busqueda, { clave: porUsuario }));
   // Exportaciones y subidas: costosas y sensibles.
+  const limiteExport = lim('export', L.exportar, { clave: porUsuario });
+  const limiteSubida = lim('subida', L.subida, { clave: porUsuario });
   app.use((req, res, next) => {
     const exportar = req.method === 'GET' && (/[?&]formato=(pdf|xlsx|csv)/.test(req.originalUrl) || req.originalUrl.startsWith('/api/comprobantes/'));
     const subir = req.method === 'POST' && /multipart\/form-data/.test(req.headers['content-type'] || '');
@@ -132,10 +136,8 @@ if (env.nodeEnv !== 'test') {
     if (subir) return limiteSubida(req, res, next);
     return next();
   });
-  const limiteExport = limitar({ nombre: 'export', max: 60, ventanaSeg: 60, clave: porUsuario });
-  const limiteSubida = limitar({ nombre: 'subida', max: 40, ventanaSeg: 60, clave: porUsuario });
   // Tope general de la API por IP (una clínica entera detrás de una IP queda muy por debajo).
-  app.use('/api', limitar({ nombre: 'api', max: Number(process.env.API_LIMITE_POR_MINUTO) || 1500, ventanaSeg: 60 }));
+  app.use('/api', lim('api', L.api));
 }
 
 app.get('/api/health', (req, res) => res.json({ ok: true, producto: 'DOVA', version: '0.1.0' }));

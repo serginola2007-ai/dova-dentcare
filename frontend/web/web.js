@@ -29,16 +29,25 @@
   const guardarTurno = (t) => { try { const l = misTurnos().filter((x) => x.token !== t.token); l.unshift(t); localStorage.setItem(MIS, JSON.stringify(l.slice(0, 10))); } catch (_e) { /* modo privado */ } };
 
   // ---- Sesión del paciente (cuenta en la web) ----
+  // La sesión viaja en una cookie HttpOnly que esta página no puede leer: acá
+  // solo se recuerda el nombre para saludar y saber si hay una cuenta abierta.
   const SES = 'dentcare-sesion';
   const sesion = () => { try { return JSON.parse(localStorage.getItem(SES) || 'null'); } catch (_e) { return null; } };
-  const guardarSesion = (x) => { try { localStorage.setItem(SES, JSON.stringify(x)); } catch (_e) { /* modo privado */ } };
+  const guardarSesion = (x) => { try { localStorage.setItem(SES, JSON.stringify({ nombre: x.nombre, apellido: x.apellido })); } catch (_e) { /* modo privado */ } };
   const cerrarSesion = () => { try { localStorage.removeItem(SES); } catch (_e) { /* */ } };
+  let migrando = null;
   async function cuentaApi(ruta, { method = 'GET', body, form, blob } = {}) {
     const s = sesion();
-    const h = {}; if (s) h.Authorization = `Bearer ${s.token}`;
+    // Versión anterior: el token estaba guardado en el navegador. Se pasa a la cookie y se borra.
+    if (s && s.token && !migrando) {
+      migrando = fetch('/api/web/cuenta/migrar-sesion', { method: 'POST', credentials: 'same-origin', headers: { Authorization: `Bearer ${s.token}`, 'X-DOVA-CSRF': '1' } })
+        .then(() => guardarSesion(s)).catch(() => {});
+    }
+    if (migrando) await migrando;
+    const h = { 'X-DOVA-CSRF': '1' };
     if (body) h['Content-Type'] = 'application/json';
     let r;
-    try { r = await fetch(`/api/web/cuenta${ruta}`, { method, headers: h, body: form || (body ? JSON.stringify(body) : undefined) }); }
+    try { r = await fetch(`/api/web/cuenta${ruta}`, { method, headers: h, credentials: 'same-origin', body: form || (body ? JSON.stringify(body) : undefined) }); }
     catch (_e) { throw new Error('No hay conexión. Revisá tu internet y probá de nuevo.'); }
     if (r.status === 401 && s && !ruta.startsWith('/ingresar') && !ruta.startsWith('/activar') && !ruta.startsWith('/registro')) { cerrarSesion(); location.href = `ingresar.html?volver=${encodeURIComponent(location.pathname.split('/').pop() + location.hash)}`; throw new Error('Tu sesión venció'); }
     if (blob && r.ok) return r.blob();
@@ -465,7 +474,7 @@
       c.innerHTML = `<div class="tarjeta-turno"><h1 class="acceso-titulo">Mi cuenta</h1><p style="margin-top:10px">Las cuentas online todavía no están disponibles. Mientras tanto podés <a href="reservar.html">reservar tu turno</a> sin cuenta o escribirnos desde <a href="contacto.html">Contacto</a>.</p></div>`;
       return;
     }
-    const entrar = (r) => { guardarSesion({ token: r.token, ...r.paciente }); location.href = volverA(); };
+    const entrar = (r) => { guardarSesion({ ...r.paciente }); location.href = volverA(); };
     const claveOk = (f, m) => {
       if (f.clave.value.length < 8 || !/[A-Za-z]/.test(f.clave.value) || !/\d/.test(f.clave.value)) { m('La contraseña tiene que tener al menos 8 caracteres, con letras y números'); return false; }
       if (f.clave.value !== f.clave2.value) { m('Las dos contraseñas no coinciden'); return false; }
@@ -529,7 +538,17 @@
           if (!claveOk(f, m)) return;
           if (!f.acepta.checked) return m('Marcá la casilla para aceptar que guardemos tus datos');
           const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Creando…';
-          try { entrar(await cuentaApi('/registro', { method: 'POST', body: { ...d, email: d.email.trim(), acepta: true } })); }
+          try {
+            const rr = await cuentaApi('/registro', { method: 'POST', body: { ...d, email: d.email.trim(), acepta: true } });
+            if (rr && rr.pendiente) {
+              // Sin confirmar si la cédula ya era paciente: la clínica manda el código.
+              b.disabled = false; b.textContent = 'Crear mi cuenta';
+              m('', `<p class="ok-msg">${esc(rr.mensaje)}</p><p style="margin-top:10px"><button type="button" class="boton boton-chico" data-ya-tengo>Ya tengo el código</button></p>`);
+              const y0 = $('[data-ya-tengo]', err); if (y0) y0.addEventListener('click', () => vista('codigo', { ci: d.ci.trim(), telefono: d.telefono.trim() }));
+              return;
+            }
+            entrar(rr);
+          }
           catch (e) {
             b.disabled = false; b.textContent = 'Crear mi cuenta';
             if (e.codigo === 'YA_PACIENTE') {
@@ -611,7 +630,7 @@
       <div class="cuenta-resumen" data-resumen></div>
       <nav class="cuenta-tabs" aria-label="Mi cuenta">${SECC.map(([k, t]) => `<a href="#${k}" data-tab="${k}">${t}</a>`).join('')}</nav>
       <div class="cuenta-panel" data-panel aria-live="polite"></div>`;
-    $('[data-salir]', c).addEventListener('click', () => { cerrarSesion(); location.href = 'index.html'; });
+    $('[data-salir]', c).addEventListener('click', async () => { try { await cuentaApi('/salir', { method: 'POST' }); } catch (_e) { /* igual se cierra acá */ } cerrarSesion(); location.href = 'index.html'; });
     try { if (sessionStorage.getItem('dentcare-recien')) { sessionStorage.removeItem('dentcare-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
     const mostrar = async () => {
       const k = (location.hash.slice(1) || 'turnos'); const sec = SECC.some(([x]) => x === k) ? k : 'turnos';

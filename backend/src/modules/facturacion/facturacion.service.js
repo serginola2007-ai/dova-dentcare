@@ -118,7 +118,7 @@ async function guardarConfig(clinicaId, datos, usuario) {
     if (datos[k] === undefined) continue;
     const v = txt(datos[k], max);
     if (col === 'email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) throw new ApiError(400, 'El email no es válido');
-    if (col === 'ruc' && v && !/^[0-9A-Za-z.\-]{3,20}$/.test(v)) throw new ApiError(400, 'El RUC no es válido (ej.: 80012345-6)');
+    if (col === 'ruc' && v && !/^[0-9A-Za-z.-]{3,20}$/.test(v)) throw new ApiError(400, 'El RUC no es válido (ej.: 80012345-6)');
     if ((previo[col] || null) !== v) cambios[col] = { antes: previo[col] || null, despues: v };
     params.push(v); sets.push(`${col}=$${params.length}`);
   }
@@ -362,7 +362,7 @@ async function crear(clinicaId, datos, usuario, { movimiento = null } = {}) {
     telefono: txt(datos.clienteTelefono, 60) ?? P.telefono ?? null,
     email: txt(datos.clienteEmail, 150) ?? P.email ?? null,
   };
-  if (cliente.ruc && !/^[0-9A-Za-z.\-]{3,20}$/.test(cliente.ruc)) throw new ApiError(400, 'El RUC del cliente no es válido (ej.: 4567890-1)');
+  if (cliente.ruc && !/^[0-9A-Za-z.-]{3,20}$/.test(cliente.ruc)) throw new ApiError(400, 'El RUC del cliente no es válido (ej.: 4567890-1)');
   if (cliente.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.email)) throw new ApiError(400, 'El email del cliente no es válido');
 
   const pagoIds = !movimiento && Array.isArray(datos.pagoIds) ? datos.pagoIds : [];
@@ -467,7 +467,7 @@ async function editar(clinicaId, id, datos, usuario, a) {
     if (datos[k] === undefined) continue;
     const v = txt(datos[k], max);
     if (col === 'cliente_nombre' && !v) throw new ApiError(400, 'El nombre del cliente es obligatorio');
-    if (col === 'cliente_ruc' && v && !/^[0-9A-Za-z.\-]{3,20}$/.test(v)) throw new ApiError(400, 'El RUC no es válido');
+    if (col === 'cliente_ruc' && v && !/^[0-9A-Za-z.-]{3,20}$/.test(v)) throw new ApiError(400, 'El RUC no es válido');
     if (col === 'cliente_email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) throw new ApiError(400, 'El email no es válido');
     if ((f[col] || null) !== v) { cambios[col] = { antes: f[col] || null, despues: v }; params.push(v); sets.push(`${col}=$${params.length}`); }
   }

@@ -317,13 +317,13 @@ const DovaSecciones = (() => {
     const puedeMover = puede('agenda.edit', 'historia_clinica.edit');
     const sillones = await DOVA.get('/operaciones/sillones').catch(() => []);
     c.innerHTML = `<p class="dova-nota">Registrá la llegada del paciente, cuando pasa al sillón y cuando termina: DOVA mide la espera y la duración real de la atención.</p>
-      <table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Estado</th><th>Espera</th><th>Atención</th><th></th></tr></thead><tbody>
+      <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Estado</th><th>Espera</th><th>Atención</th><th></th></tr></thead><tbody>
       ${filas.map((t) => {
         const estado = t.finalizado_en ? badge('Atendido', 'ok') : t.en_sillon_en ? badge('En el sillón', 'info') : t.llegada_en ? badge('Esperando', 'atencion') : badge(etiqueta(t.estado));
         return `<tr><td>${esc(String(t.hora_inicio).slice(0, 5))}</td><td>${linkPac(t.paciente_id, t.nombre, t.apellido)}</td><td>${esc(t.odontologo_nombre || '-')}${t.sillon_nombre ? `<br><span class="dova-nota">${esc(t.sillon_nombre)}</span>` : ''}</td><td>${estado}</td>
           <td>${t.minutos_esperando != null ? badge(`${t.minutos_esperando} min`, t.minutos_esperando > 20 ? 'critica' : 'atencion') : t.minutos_espera != null ? `${t.minutos_espera} min` : '-'}</td><td>${t.minutos_atencion != null ? `${t.minutos_atencion} min` : '-'}</td>
           <td class="dova-ext-acciones">${puedeMover && !['atendido', 'no_asistio'].includes(t.estado) ? `${!t.llegada_en ? `<button class="dova-btn-link" data-paso="llegada" data-t="${t.id}">Llegó</button>` : ''}${t.llegada_en && !t.en_sillon_en ? `<button class="dova-btn-link" data-paso="sillon" data-t="${t.id}">Pasa al sillón</button>` : ''}${t.en_sillon_en && !t.finalizado_en ? `<button class="dova-btn-link" data-paso="finalizado" data-t="${t.id}">Terminó</button>` : ''}` : ''}</td></tr>`;
-      }).join('') || '<tr><td colspan="7">No hay turnos hoy.</td></tr>'}</tbody></table>`;
+      }).join('') || '<tr><td colspan="7">No hay turnos hoy.</td></tr>'}</tbody></table></div>`;
     const mover = async (turnoId, paso, body = {}) => { await DOVA.post(`/operaciones/flujo/${turnoId}/${paso}`, body); subSala(c); };
     c.querySelectorAll('[data-paso]').forEach((b) => b.addEventListener('click', async () => {
       if (b.dataset.paso === 'sillon' && sillones.length) {

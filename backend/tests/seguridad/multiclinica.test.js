@@ -8,7 +8,7 @@ const req = async (m, url, body, { tok, form, raw } = {}) => {
   const r = await fetch(B + url, { method: m, headers: h, body: form || (body ? JSON.stringify(body) : undefined) });
   if (raw) return r; return { s: r.status, j: await r.json().catch(() => null) };
 };
-const login = async (u, p) => (await req('POST', '/auth/login', { username: u, password: p })).j.accessToken;
+const _login = async (u, p) => (await req('POST', '/auth/login', { username: u, password: p })).j.accessToken;
 const q1 = async (s, p) => (await db.query(s, p)).rows[0];
 // Aislamiento entre clínicas en listados, búsquedas, reportes y exportaciones (sin IDs: lo que trae "todo").
 (async () => {

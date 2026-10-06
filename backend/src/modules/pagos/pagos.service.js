@@ -1,4 +1,5 @@
 const { ApiError } = require('../../middlewares/error.middleware');
+const { monto: validarMonto } = require('../../utils/montos');
 const repo = require('./pagos.repository');
 const planesPagoRepo = require('../planes-pago/planespago.repository');
 const pacientesRepo = require('../pacientes/pacientes.repository');
@@ -33,7 +34,7 @@ async function crear(clinicaId, datos, usuario) {
   if (!datos.pacienteId) throw new ApiError(400, 'El paciente es obligatorio');
   const paciente = await pacientesRepo.obtenerPorId(clinicaId, datos.pacienteId);
   if (!paciente) throw new ApiError(404, 'Paciente no encontrado en esta clínica');
-  if (!(Number(datos.monto) > 0)) throw new ApiError(400, 'El monto debe ser mayor a cero');
+  datos.monto = validarMonto(datos.monto);
   const metodos = await metodosValidos(clinicaId);
   if (datos.metodo && !metodos.includes(datos.metodo)) {
     throw new ApiError(400, `Método de pago inválido: ${metodos.join(', ')}`);
@@ -50,7 +51,10 @@ async function crear(clinicaId, datos, usuario) {
     const cuota = await planesPagoRepo.obtenerCuota(clinicaId, datos.cuotaId);
     if (!cuota) throw new ApiError(404, 'Cuota no encontrada');
     if (cuota.estado === 'pagada') throw new ApiError(409, 'Esta cuota ya fue pagada anteriormente');
-    const pl = await query('SELECT presupuesto_id FROM planes_pago WHERE id=$1', [cuota.plan_pago_id]);
+    const pl = await query('SELECT presupuesto_id, paciente_id FROM planes_pago WHERE id=$1', [cuota.plan_pago_id]);
+    // La cuota tiene que ser del mismo paciente del cobro, y un cobro menor no la salda.
+    if (!pl.rows[0] || Number(pl.rows[0].paciente_id) !== Number(datos.pacienteId)) throw new ApiError(400, 'La cuota indicada no es de este paciente');
+    if (datos.monto + 0.005 < Number(cuota.monto)) throw new ApiError(400, `El monto es menor que la cuota (Gs. ${Number(cuota.monto).toLocaleString('es-PY')}). Cobralo sin aplicarlo a la cuota o corregí el monto.`);
     if (pl.rows[0] && pl.rows[0].presupuesto_id && !datos.presupuestoId) datos.presupuestoId = pl.rows[0].presupuesto_id;
   }
 

@@ -74,6 +74,7 @@ async function avisarCuentaNueva(c, p, { ci, telefono, email, nuevo, fechaNacimi
 // reservan turnos; pagos y comprobantes, cuando recepción verifica su cédula.
 // Si la cédula ya es paciente, no se puede tomar su ficha desde la web: tiene
 // que pedir un código a la clínica.
+const REGISTRO_PENDIENTE = 'Recibimos tus datos. Para terminar, la clínica te manda un código por WhatsApp a ese número (en horario de atención). Con ese código entrás en "Ya tengo el código".';
 async function registrarse(d, ip) {
   if (d.sitio) throw new ApiError(400, 'No se pudo enviar');
   w.limitar(ip, 'portal-registro', 5, 30);
@@ -81,14 +82,19 @@ async function registrarse(d, ip) {
   const persona = w.validarPersona(d);
   const clave = validarClave(d.clave);
   const res = await conCandado([`web:ci:${c.id}:${persona.ci}`], async () => {
-    if (await fichaPorCi(c.id, persona.ci)) {
-      throw new ApiError(409, 'Esa cédula ya está registrada en la clínica. Para entrar, pedí tu código de activación por WhatsApp o en recepción.', { codigo: 'YA_PACIENTE' });
-    }
+    if (await fichaPorCi(c.id, persona.ci)) return { existe: true };
     const r = await w.pacientePorCi(c.id, persona);
     const p = (await query('SELECT id, nombre, apellido FROM pacientes WHERE id=$1', [r.id])).rows[0];
     const cuenta = await guardarCuenta(c.id, p.id, persona.email, clave);
     return { p, cuenta };
   });
+  if (res.existe) {
+    // La cédula ya tiene ficha: no se toma la ficha desde la web ni se confirma
+    // que exista. Se le pide el código a recepción (igual que "Pedir mi código")
+    // y la respuesta no menciona la ficha (anti-enumeración de pacientes).
+    try { await pedirCodigoClinica({ ci: persona.ci, telefono: persona.telefono }, ip); } catch (_e) { /* misma respuesta aunque el aviso no salga (límite de pedidos) */ }
+    return { pendiente: true, mensaje: REGISTRO_PENDIENTE };
+  }
   await auditoria.registrar({ clinicaId: c.id, usuarioId: null, usuarioNombre: 'Página web', accion: 'crear_cuenta_paciente', modulo: 'web', entidadId: res.p.id, detalle: { ip, pacienteNuevo: true } });
   await avisarCuentaNueva(c, res.p, { ...persona, nuevo: true }, ip);
   return sesion(res.cuenta, res.p);
@@ -177,7 +183,7 @@ async function desactivarCuenta(clinicaId, pacienteId, usuario) {
 }
 
 function sesion(cuenta, p) {
-  const token = jwt.sign({ sub: cuenta.id, pid: cuenta.paciente_id, cid: cuenta.clinica_id, v: cuenta.version_token }, CLAVE_PORTAL(), { expiresIn: '7d', audience: AUD });
+  const token = jwt.sign({ sub: cuenta.id, pid: cuenta.paciente_id, cid: cuenta.clinica_id, v: cuenta.version_token }, CLAVE_PORTAL(), { expiresIn: '7d', audience: AUD, algorithm: 'HS256', jwtid: crypto.randomBytes(12).toString('hex') });
   return { token, paciente: { nombre: p.nombre, apellido: p.apellido } };
 }
 
@@ -202,18 +208,40 @@ async function ingresar({ usuario, clave }, ip) {
 }
 
 // Middleware: identifica al paciente del token del portal.
+// La sesión del paciente viaja en una cookie HttpOnly (SameSite=Strict, ruta
+// /api/web/cuenta) con control anti-CSRF. El token Bearer solo se acepta para
+// migrar sesiones guardadas por versiones anteriores de la página.
 async function autenticar(req, res, next) {
   try {
-    const [esquema, token] = String(req.headers.authorization || '').split(' ');
-    if (esquema !== 'Bearer' || !token) throw new ApiError(401, 'Iniciá sesión para continuar');
+    const cookies = require('../../utils/cookies');
+    let token = cookies.leer(req, require('../../config/seguridad').cookies.portal.nombre);
+    const deCookie = !!token;
+    if (token) cookies.exigirAntiCsrf(req);
+    else {
+      const [esquema, tk] = String(req.headers.authorization || '').split(' ');
+      if (esquema === 'Bearer' && tk) token = tk;
+    }
+    if (!token) throw new ApiError(401, 'Iniciá sesión para continuar');
     let pl;
     try { pl = jwt.verify(token, CLAVE_PORTAL(), { audience: AUD, algorithms: ['HS256'] }); } catch (_e) { throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.'); }
     const r = (await query(`SELECT wc.id, wc.paciente_id, wc.clinica_id, wc.version_token, wc.activa, p.activo, p.nombre, p.apellido, p.ci, p.web_verificado
                               FROM web_cuentas wc JOIN pacientes p ON p.id=wc.paciente_id WHERE wc.id=$1`, [pl.sub])).rows[0];
+    // Por cabecera solo se aceptan sesiones de versiones anteriores (sin jti), para
+    // migrarlas a cookie; las sesiones nuevas viven solo en la cookie HttpOnly.
+    if (!deCookie && pl.jti) throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.');
     if (!r || !r.activa || !r.activo || r.version_token !== pl.v || r.paciente_id !== pl.pid) throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.');
+    if (await require('../../utils/sesiones').jtiRevocado(pl.jti)) throw new ApiError(401, 'Tu sesión venció. Volvé a ingresar.');
+    req.portalToken = { token, jti: pl.jti, exp: pl.exp };
     req.portal = { cuentaId: r.id, pacienteId: r.paciente_id, clinicaId: r.clinica_id, nombre: r.nombre, apellido: r.apellido, ci: r.ci, verificado: r.web_verificado };
     next();
   } catch (e) { next(e); }
+}
+
+// Pasa una sesión de una versión anterior (token sin jti en la cabecera) a una
+// sesión nueva que vive solo en la cookie HttpOnly.
+async function sesionNueva(pt) {
+  const c = (await query('SELECT * FROM web_cuentas WHERE id=$1', [pt.cuentaId])).rows[0];
+  return sesion(c, pt);
 }
 
 async function cambiarClave(pt, { actual, nueva }) {
@@ -442,6 +470,6 @@ async function verificarPaciente(clinicaId, pacienteId, usuario) {
 }
 
 module.exports = {
-  registrarse, activar, pedirCodigoClinica, listarAccesos, generarCodigo, desactivarCuenta, ingresar, autenticar, cambiarClave, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
+  registrarse, activar, pedirCodigoClinica, listarAccesos, generarCodigo, desactivarCuenta, ingresar, autenticar, cambiarClave, sesionNueva, yo, turnos, accionTurno, reservar, cuenta, reciboPdf, facturaPdf, informarPago,
   listarPagos, comprobante, aprobarPago, rechazarPago, verificarPaciente, tipoArchivo,
 };

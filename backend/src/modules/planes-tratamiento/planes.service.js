@@ -155,7 +155,7 @@ async function registrarSesion(clinicaId, planId, datos, usuario) {
   }
 
   const numero = (await repo.contarSesiones(planId)) + 1;
-  const sesion = await repo.crearSesion(planId, numero, datos);
+  await repo.crearSesion(planId, numero, datos);
   await repo.incrementarSesionesRealizadas(planId);
 
   await historiaRepo.crear(clinicaId, {

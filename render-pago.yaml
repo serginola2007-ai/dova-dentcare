@@ -41,6 +41,18 @@ services:
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
+      # Sesiones (ver SECURITY-AUDIT.md): sin uso 7 días se pide ingresar de nuevo;
+      # ninguna sesión dura más de 30 días desde el login.
+      - key: SESSION_IDLE_TIMEOUT_DAYS
+        value: "7"
+      - key: SESSION_ABSOLUTE_MAX_DAYS
+        value: "30"
+      # Render siempre sirve por https: las cookies de sesión van siempre con Secure.
+      - key: COOKIES_SIEMPRE_SECURE
+        value: "true"
+      # Usuario de base con MÍNIMO PRIVILEGIO (opcional, se configura a mano,
+      # ver SECURITY-AUDIT.md → "Base de datos"): agregar APP_DATABASE_URL con el
+      # usuario dova_app. DATABASE_URL (dueño) queda solo para migraciones y seed.
       # Fotos, estudios y adjuntos van al disco persistente.
       - key: UPLOADS_DIR
         value: /var/data/uploads

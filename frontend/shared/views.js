@@ -244,6 +244,9 @@ const Vistas = (() => {
       <div class="dova-card dova-card-clave">
         <p class="dova-nota">Cambiá tu contraseña de ingreso a DOVA.</p>
         ${formCambioClaveHtml()}
+        <hr class="dova-separador" />
+        <p class="dova-nota">¿Dejaste DOVA abierto en otra compu o perdiste el celular? Cerrá tu sesión en todos los dispositivos (también en este).</p>
+        <button type="button" class="dova-btn-secundario" id="btn-logout-todas">Cerrar sesión en todos los dispositivos</button>
       </div>
       ${window.DovaPWA ? DovaPWA.tarjetaHtml() : ''}
     `;
@@ -251,7 +254,14 @@ const Vistas = (() => {
 
   function initConfiguracion() {
     const fc = document.getElementById('form-cambio-clave');
-    if (fc) initCambioClave(fc, () => fc.actual.value, () => { fc.reset(); toast('Contraseña actualizada', 'ok'); });
+    if (fc) initCambioClave(fc, () => fc.actual.value, () => { fc.reset(); toast('Contraseña actualizada. Se cerraron tus sesiones en otros dispositivos.', 'ok'); });
+    const bt = document.getElementById('btn-logout-todas');
+    if (bt) bt.addEventListener('click', async () => {
+      if (bt.dataset.seguro !== '1') { bt.dataset.seguro = '1'; bt.textContent = '¿Seguro? Tocá de nuevo para cerrar todas'; return; }
+      bt.disabled = true;
+      try { await DOVA.logoutTodas(); } catch (_e) { /* igual se cierra acá */ }
+      location.reload();
+    });
     if (window.DovaPWA) DovaPWA.activarTarjeta();
     document.querySelectorAll('[data-elegir-diseno-config]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -1754,6 +1764,10 @@ const Vistas = (() => {
               <p class="dova-nota" style="margin-top:10px;">Excepciones activas: ${usuario.overrides.map((o) => `${esc(o.codigo)} (${o.allow ? '+' : '−'})`).join(', ')}</p>
             ` : ''}
           `}
+        <div style="margin-top:14px">
+          <button type="button" class="dova-btn-secundario" data-cerrar-sesiones="${usuario.id}">Cerrar todas sus sesiones abiertas</button>
+          <span class="dova-nota">Útil si perdió el celular o dejó DOVA abierto en otra compu.</span>
+        </div>
       </div>`;
   }
 
@@ -1775,6 +1789,12 @@ const Vistas = (() => {
         try {
           root.innerHTML = await renderDetalleUsuario(btn.dataset.verUsuario);
           initCheckboxesPermisos('usr');
+          const bc = root.querySelector('[data-cerrar-sesiones]');
+          if (bc) bc.addEventListener('click', async () => {
+            bc.disabled = true;
+            try { await DOVA.post(`/usuarios/${bc.dataset.cerrarSesiones}/cerrar-sesiones`, {}); toast('Se cerraron todas sus sesiones', 'ok'); } catch (e) { toast(e.message, 'error'); }
+            bc.disabled = false;
+          });
           const btnGuardar = document.getElementById('btn-guardar-overrides');
           if (btnGuardar) {
             btnGuardar.addEventListener('click', async () => {

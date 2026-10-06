@@ -1,4 +1,5 @@
 const { ApiError } = require('../../middlewares/error.middleware');
+const { monto: validarMonto } = require('../../utils/montos');
 const repo = require('./presupuestos.repository');
 const pacientesRepo = require('../pacientes/pacientes.repository');
 const auditoria = require('../../utils/auditoria');
@@ -31,8 +32,8 @@ function validarItems(items) {
   if (!Array.isArray(items) || items.length === 0) throw new ApiError(400, 'El presupuesto debe tener al menos un ítem');
   for (const it of items) {
     if (!it.descripcion) throw new ApiError(400, 'Cada ítem necesita una descripción');
-    if (Number(it.cantidad) <= 0) throw new ApiError(400, 'La cantidad debe ser mayor a cero');
-    if (Number(it.precioUnitario) < 0) throw new ApiError(400, 'El precio no puede ser negativo');
+    it.cantidad = validarMonto(it.cantidad === undefined ? 1 : it.cantidad, { campo: 'La cantidad', max: 10000 });
+    it.precioUnitario = validarMonto(it.precioUnitario === undefined ? 0 : it.precioUnitario, { campo: 'El precio', cero: true });
   }
 }
 
@@ -41,8 +42,8 @@ async function crear(clinicaId, datos, usuario) {
   const paciente = await pacientesRepo.obtenerPorId(clinicaId, datos.pacienteId);
   if (!paciente) throw new ApiError(404, 'Paciente no encontrado en esta clínica');
   validarItems(datos.items);
-  if (datos.descuento !== undefined && (Number(datos.descuento) < 0 || Number(datos.descuento) > 100)) {
-    throw new ApiError(400, 'El descuento debe estar entre 0 y 100');
+  if (datos.descuento !== undefined && datos.descuento !== null && datos.descuento !== '') {
+    datos.descuento = validarMonto(datos.descuento, { campo: 'El descuento', cero: true, max: 100 });
   }
   const presupuesto = await repo.crear(clinicaId, datos);
   await auditoria.registrar({

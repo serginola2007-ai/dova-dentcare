@@ -1,5 +1,4 @@
 const path = require('path');
-const crypto = require('crypto');
 const fs = require('fs/promises');
 const { ApiError } = require('../../middlewares/error.middleware');
 const repo = require('./helpdesk.repository');
@@ -191,7 +190,8 @@ async function ejecutarLimpiezaRetencion(clinicaId) {
   let eliminados = 0;
   for (const adjunto of vencidos) {
     try {
-      if (adjunto.storage_path) await fs.unlink(adjunto.storage_path);
+      const ruta = require('../../utils/upload').rutaSegura(adjunto.storage_path);
+      if (ruta) await fs.unlink(ruta);
     } catch (err) {
       if (err.code !== 'ENOENT') console.error('[helpdesk-retencion] error borrando archivo', adjunto.id, err.message);
       // Tolerante: si el archivo ya no existe, igual marcamos el registro.

@@ -4,63 +4,80 @@
    recargas de página (comportamiento normal de cualquier SPA). */
 
 const DOVA = (() => {
+  /* Sesión (auditoría de seguridad):
+     - El token de ACCESO vive solo en memoria (se pierde al cerrar la pestaña y
+       se pide uno nuevo al abrir).
+     - El token de RENOVACIÓN está en una cookie HttpOnly que el JavaScript no
+       puede leer (ni un script inyectado).
+     - En el navegador solo se guarda el perfil visible (nombre, permisos para
+       mostrar u ocultar botones, diseño). El servidor vuelve a validar todo. */
   const STORAGE_KEY = 'dova_session';
+  const CSRF = { 'X-DOVA-CSRF': '1' };
   // Sin config.js (p. ej. la app instalada abierta sin internet): la API del mismo sitio.
   let apiBase = window.DOVA_API_BASE || (/^https?:$/.test(location.protocol) ? '/api' : 'http://localhost:4000/api');
+  let accessToken = null;
+  let renovando = null;
 
-  function getSession() {
+  function getPerfil() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (_e) { return null; }
   }
-  function setSession(s) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (_e) { /* almacenamiento no disponible */ }
+  function setPerfil(p) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ usuario: p.usuario, clinica: p.clinica })); } catch (_e) { /* almacenamiento no disponible */ }
+  }
+  function getSession() {
+    const p = getPerfil();
+    return p ? { ...p, accessToken } : null;
   }
   function clearSession() {
+    accessToken = null;
     try { localStorage.removeItem(STORAGE_KEY); } catch (_e) { /* no crítico */ }
   }
 
-  async function refrescarToken() {
-    const sesion = getSession();
-    if (!sesion || !sesion.refreshToken) throw new Error('Sin sesión');
-    const res = await fetch(`${apiBase}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: sesion.refreshToken }),
-    });
-    if (!res.ok) { const a = getSession(); if (a && a.refreshToken === sesion.refreshToken) clearSession(); throw new Error('Sesión expirada'); }
-    const data = await res.json();
-    // Si mientras tanto se cerró la sesión (o entró otra persona), no se la revive.
-    const actual = getSession();
-    if (!actual || actual.refreshToken !== sesion.refreshToken) throw new Error('Sesión cerrada');
-    actual.accessToken = data.accessToken;
-    // Rotación: el servidor entrega un refresh token nuevo y el anterior deja de valer.
-    if (data.refreshToken) actual.refreshToken = data.refreshToken;
-    if (Array.isArray(data.permisos) && actual.usuario) actual.usuario.permisos = data.permisos;
-    setSession(actual);
-    return actual.accessToken;
+  // Una sola renovación a la vez por pestaña (varios pedidos pueden vencer juntos).
+  function refrescarToken() {
+    if (renovando) return renovando;
+    renovando = (async () => {
+      const perfil = getPerfil();
+      if (!perfil) throw new Error('Sin sesión');
+      // Migración: sesiones guardadas por versiones anteriores tenían el token en el navegador.
+      const viejo = perfil.refreshToken;
+      const res = await fetch(`${apiBase}/auth/refresh`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', ...CSRF },
+        body: JSON.stringify(viejo ? { refreshToken: viejo } : {}),
+      });
+      if (!res.ok) { clearSession(); throw new Error('Sesión expirada'); }
+      const data = await res.json();
+      accessToken = data.accessToken;
+      const actual = getPerfil() || perfil;
+      if (Array.isArray(data.permisos) && actual.usuario) actual.usuario.permisos = data.permisos;
+      setPerfil(actual); // también borra cualquier token viejo del navegador
+      return accessToken;
+    })();
+    renovando.finally(() => { renovando = null; }).catch(() => {});
+    return renovando;
   }
 
   async function request(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {
-    const sesion = getSession();
+    if (!accessToken && getPerfil() && reintentar) {
+      try { await refrescarToken(); } catch (_e) { /* el pedido sigue y responderá 401 */ }
+    }
     const headers = {};
     if (!isForm) headers['Content-Type'] = 'application/json';
-    if (sesion && sesion.accessToken) headers.Authorization = `Bearer ${sesion.accessToken}`;
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
     const res = await fetch(`${apiBase}${path}`, {
       method,
       headers,
+      credentials: 'same-origin',
       body: isForm ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
 
-    if (res.status === 401 && reintentar && sesion && sesion.refreshToken) {
+    if (res.status === 401 && reintentar && getPerfil()) {
       try {
         await refrescarToken();
         return request(path, { method, body, isForm, reintentar: false, raw });
       } catch (_e) {
-        // Otra pestaña pudo haber renovado la sesión mientras tanto: se reintenta con lo guardado.
-        const ahora = getSession();
-        if (ahora && ahora.refreshToken && ahora.refreshToken !== sesion.refreshToken) {
-          return request(path, { method, body, isForm, reintentar: false, raw });
-        }
         clearSession();
         window.location.reload();
         throw new Error('Sesión expirada');
@@ -84,15 +101,15 @@ const DOVA = (() => {
 
   async function login(username, password) {
     const data = await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false });
-    setSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, usuario: data.usuario, clinica: data.clinica });
+    accessToken = data.accessToken;
+    setPerfil({ usuario: data.usuario, clinica: data.clinica });
     return data;
   }
 
   async function logout() {
-    const sesion = getSession();
-    if (sesion && sesion.refreshToken) {
-      try { await request('/auth/logout', { method: 'POST', body: { refreshToken: sesion.refreshToken }, reintentar: false }); } catch (_e) { /* no crítico */ }
-    }
+    try {
+      await fetch(`${apiBase}/auth/logout`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...CSRF, ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: '{}' });
+    } catch (_e) { /* sin conexión: igual se cierra acá */ }
     clearSession();
   }
 
@@ -112,7 +129,11 @@ const DOVA = (() => {
     return codigos.some(tienePermiso);
   }
   function estaAutenticado() {
-    return !!getSession();
+    return !!getPerfil();
+  }
+  // Cerrar la sesión en todos los dispositivos (celular perdido, compu compartida…).
+  async function logoutTodas() {
+    try { await request('/auth/logout-todas', { method: 'POST', reintentar: false }); } finally { clearSession(); }
   }
 
   /* Mensaje "flash": sobrevive una navegación de página completa (como el
@@ -137,10 +158,10 @@ const DOVA = (() => {
      quede al día sin forzar un nuevo login. */
   async function actualizarDisenoPreferido(disenoPreferido) {
     const data = await request('/usuarios/me/preferencias', { method: 'PATCH', body: { disenoPreferido } });
-    const sesion = getSession();
-    if (sesion && sesion.usuario) {
-      sesion.usuario.disenoPreferido = data.disenoPreferido;
-      setSession(sesion);
+    const perfil = getPerfil();
+    if (perfil && perfil.usuario) {
+      perfil.usuario.disenoPreferido = data.disenoPreferido;
+      setPerfil(perfil);
     }
     return data;
   }
@@ -148,13 +169,10 @@ const DOVA = (() => {
   // Cambio de la contraseña propia (obligatorio en el primer ingreso con la clave inicial).
   async function cambiarClave(actual, nueva) {
     const data = await request('/auth/cambiar-clave', { method: 'POST', body: { actual, nueva } });
-    const sesion = getSession();
-    if (sesion && sesion.usuario) {
-      sesion.usuario.debeCambiarClave = false;
-      // Al cambiar la contraseña se cierran las demás sesiones; esta sigue con tokens nuevos.
-      if (data && data.accessToken) { sesion.accessToken = data.accessToken; sesion.refreshToken = data.refreshToken; }
-      setSession(sesion);
-    }
+    const perfil = getPerfil();
+    // Al cambiar la contraseña se cierran las demás sesiones; esta sigue con tokens nuevos.
+    if (data && data.accessToken) accessToken = data.accessToken;
+    if (perfil && perfil.usuario) { perfil.usuario.debeCambiarClave = false; setPerfil(perfil); }
     return data;
   }
 
@@ -178,10 +196,10 @@ const DOVA = (() => {
     // Al abrir DOVA: trae los permisos vigentes (módulos nuevos o cambios de rol) sin cerrar sesión.
     actualizarSesion: () => refrescarToken().then(() => true).catch(() => false),
     // Para la conexión en tiempo real (ver tiempo-real.js).
-    tokenActual: () => (getSession() || {}).accessToken || null,
+    tokenActual: () => accessToken,
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
-    request, login, logout, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
+    request, login, logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),

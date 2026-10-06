@@ -63,4 +63,17 @@ function tipoReal(buf) {
 const MIME_IMAGENES = ['image/jpeg', 'image/png', 'image/webp'];
 const MIME_ESTUDIOS = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/dicom'];
 
-module.exports = { RAIZ_UPLOADS, crearUpload, crearUploadMemoria, tipoReal, MIME_IMAGENES, MIME_ESTUDIOS };
+/* Archivos viejos guardados en disco: la ruta registrada en la base solo se usa
+   si queda DENTRO de la carpeta de subidas (nunca ../, rutas absolutas ajenas
+   ni enlaces fuera). Devuelve la ruta resuelta o null. */
+function rutaSegura(p) {
+  if (!p || typeof p !== 'string' || p.includes('\0')) return null;
+  const raiz = path.resolve(RAIZ_UPLOADS);
+  const r = path.resolve(raiz, p);
+  if (r !== raiz && r.startsWith(raiz + path.sep)) {
+    try { const real = require('fs').realpathSync(r); const raizReal = require('fs').realpathSync(raiz); return real.startsWith(raizReal + path.sep) ? real : null; } catch (_e) { return null; }
+  }
+  return null;
+}
+
+module.exports = { rutaSegura, RAIZ_UPLOADS, crearUpload, crearUploadMemoria, tipoReal, MIME_IMAGENES, MIME_ESTUDIOS };

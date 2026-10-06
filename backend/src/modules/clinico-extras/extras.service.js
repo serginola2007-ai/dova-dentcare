@@ -86,7 +86,8 @@ async function eliminarFoto(clinicaId, id, actor) {
   const foto = await repo.obtenerFoto(clinicaId, id);
   if (!foto) throw new ApiError(404, 'Foto no encontrada');
   await repo.eliminarFoto(clinicaId, id);
-  if (foto.storage_path) { try { fs.unlinkSync(foto.storage_path); } catch (_e) { /* archivo ya no existe, no es crítico */ } }
+  const rutaF = require('../../utils/upload').rutaSegura(foto.storage_path);
+  if (rutaF) { try { fs.unlinkSync(rutaF); } catch (_e) { /* archivo ya no existe, no es crítico */ } }
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
     accion: 'eliminar_foto_clinica', modulo: 'pacientes', entidadId: id, detalle: { pacienteId: foto.paciente_id, categoria: foto.categoria, fecha: foto.fecha },
@@ -100,7 +101,8 @@ async function archivo(clinicaId, tabla, id) {
   if (!a) throw new ApiError(404, 'Archivo no encontrado');
   if (a.archivo) return { datos: a.archivo, mime: a.mime || tipoReal(a.archivo) || 'application/octet-stream', nombre: a.nombre };
   if (a.storage_path) {
-    try { const datos = require('fs').readFileSync(a.storage_path); return { datos, mime: tipoReal(datos) || 'application/octet-stream', nombre: a.nombre }; } catch (_e) { /* el disco se borró */ }
+    const ruta = require('../../utils/upload').rutaSegura(a.storage_path);
+    if (ruta) try { const datos = require('fs').readFileSync(ruta); return { datos, mime: tipoReal(datos) || 'application/octet-stream', nombre: a.nombre }; } catch (_e) { /* el disco se borró */ }
   }
   throw new ApiError(404, 'El archivo ya no está disponible (se subió antes de guardar los archivos en la base). Volvé a subirlo.');
 }
@@ -153,7 +155,8 @@ async function eliminarEstudio(clinicaId, id, actor) {
   const estudio = await repo.obtenerEstudio(clinicaId, id);
   if (!estudio) throw new ApiError(404, 'Estudio no encontrado');
   await repo.eliminarEstudio(clinicaId, id);
-  if (estudio.storage_path) { try { fs.unlinkSync(estudio.storage_path); } catch (_e) { /* no crítico */ } }
+  const rutaE = require('../../utils/upload').rutaSegura(estudio.storage_path);
+  if (rutaE) { try { fs.unlinkSync(rutaE); } catch (_e) { /* no crítico */ } }
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
     accion: 'eliminar_estudio', modulo: 'pacientes', entidadId: id, detalle: { pacienteId: estudio.paciente_id, tipo: estudio.tipo, fecha: estudio.fecha },

@@ -58,7 +58,7 @@ No se agregaron funciones nuevas ni se rediseñó la interfaz. **No se declara q
   - El `.env` no está en el repositorio ni en el historial.
   - Los JWT de Render se generan automáticamente.
   - El frontend no contiene secretos.
-- **CSRF:** DOVA no usa cookies; la sesión viaja en la cabecera `Authorization`. Un sitio ajeno no puede hacer pedidos en nombre del usuario, así que no hace falta un token CSRF.
+- **CSRF:** la API del personal usa la cabecera `Authorization`. Desde la 2.ª auditoría la renovación de sesión y el portal usan cookies `HttpOnly` `SameSite=Strict`, con cabecera anti-CSRF obligatoria y control de `Origin` (ver `SECURITY-AUDIT.md`).
 
 ## Hallazgos y correcciones
 
@@ -148,6 +148,11 @@ No se agregaron funciones nuevas ni se rediseñó la interfaz. **No se declara q
 | B6 | Las derivaciones y los adjuntos de ayuda guardaban archivos en el disco y exponían su ruta interna. | Ya estaba corregido en el cierre integral anterior (migración 0038). |
 
 ## Problemas que no pude corregir (requieren acción externa)
+
+> **Actualización (2.ª auditoría, `SECURITY-AUDIT.md`):**
+> - Resueltos en el código: 1 (el seed reemplaza `admin`/`admin` en producción), 4 (sesión en cookies HttpOnly), 6 (registro con respuesta genérica), 7 (tope absoluto de 30 días) y 8 (avisos solo a la clínica correspondiente).
+> - Con código listo y pendientes de configurar: 3 (usuario de base `dova_app`) y 5 (almacén compartido `postgres`, Redis si se escala).
+> - Sigue pendiente: 2 (copias de seguridad).
 
 1. **Contraseña del `admin` en producción.** No tengo acceso a la base de Render ni corresponde probar credenciales en producción.
    - Si el administrador todavía tiene la contraseña inicial `admin`, cualquiera que llegue primero a la pantalla podría entrar y fijar su propia contraseña.

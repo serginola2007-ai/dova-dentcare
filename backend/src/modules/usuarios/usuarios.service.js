@@ -112,7 +112,7 @@ async function crear(clinicaId, datos, actor) {
   exigirSubconjunto(actor, await codigosDeRol(rol.id), 'crear un usuario');
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const usuario = await repo.crear(clinicaId, { nombre, username, email, passwordHash, rolId, odontologoId });
+  const usuario = await repo.crear(clinicaId, { nombre, username, email, passwordHash, rolId, odontologoId: await odontologoDeLaClinica(clinicaId, odontologoId) });
   // La contraseña la eligió el administrador: la persona la cambia en su primer ingreso.
   await query('UPDATE usuarios SET debe_cambiar_clave=true WHERE id=$1', [usuario.id]);
 
@@ -122,6 +122,17 @@ async function crear(clinicaId, datos, actor) {
     detalle: { username, rol: rol.codigo },
   });
   return usuario;
+}
+
+// El profesional vinculado tiene que ser de la MISMA clínica (evita enlazar datos ajenos).
+async function odontologoDeLaClinica(clinicaId, odontologoId) {
+  if (odontologoId === undefined || odontologoId === null || odontologoId === '') return null;
+  const id = Number(odontologoId);
+  if (!Number.isInteger(id) || id < 1) throw new ApiError(400, 'Profesional inválido');
+  const { query } = require('../../config/db');
+  const r = await query('SELECT id FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
+  if (!r.rowCount) throw new ApiError(400, 'El profesional indicado no existe en esta clínica');
+  return id;
 }
 
 async function actualizar(clinicaId, id, datos, actor) {
@@ -135,7 +146,7 @@ async function actualizar(clinicaId, id, datos, actor) {
   const campos = {};
   if (datos.nombre !== undefined) campos.nombre = datos.nombre;
   if (datos.email !== undefined) campos.email = datos.email;
-  if (datos.odontologoId !== undefined) campos.odontologo_id = datos.odontologoId;
+  if (datos.odontologoId !== undefined) campos.odontologo_id = await odontologoDeLaClinica(clinicaId, datos.odontologoId);
 
   if (datos.username !== undefined && datos.username !== usuario.username) {
     const yaExiste = await repo.existeUsername(clinicaId, datos.username, id);
@@ -242,6 +253,15 @@ async function quitarOverride(clinicaId, usuarioId, codigoPermiso, actor) {
   return overrides;
 }
 
+async function cerrarSesiones(clinicaId, id, actor) {
+  const usuario = await repo.obtener(clinicaId, id);
+  if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+  soloAdminSobreAdmin(actor, usuario);
+  await sesiones.invalidarSesiones(id, 'cierre_admin');
+  await auditoria.registrar({ clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'cerrar_sesiones_usuario', modulo: 'seguridad', entidadId: id });
+  return { ok: true };
+}
+
 // ---- Preferencia de diseño propia (self-service, cualquier usuario logueado) ----
 async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido) {
   if (!DISENOS_VALIDOS.includes(disenoPreferido)) {
@@ -265,5 +285,5 @@ module.exports = {
   listarRoles, detalleRol, crearRol, actualizarPermisosRol: conOlvido(actualizarPermisosRol, null), listarPermisos,
   listar, obtenerConPermisos, crear, actualizar: conOlvido(actualizar, 1), cambiarPassword,
   setOverride: conOlvido(setOverride, 1), quitarOverride: conOlvido(quitarOverride, 1),
-  actualizarMiDisenoPreferido,
+  actualizarMiDisenoPreferido, cerrarSesiones,
 };

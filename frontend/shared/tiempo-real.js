@@ -35,7 +35,9 @@ const DovaVivo = (() => {
   }
 
   async function conectarUna() {
-    const token = DOVA.tokenActual();
+    let token = DOVA.tokenActual();
+    // El token vive solo en memoria: si todavía no hay, se pide uno (cookie de renovación).
+    if (!token && DOVA.estaAutenticado()) { await DOVA.refrescar().catch(() => {}); token = DOVA.tokenActual(); }
     if (!token) throw new Error('sin sesión');
     ctrl = new AbortController();
     const r = await fetch(`${DOVA.apiBase()}/eventos`, { headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' }, signal: ctrl.signal, cache: 'no-store' });

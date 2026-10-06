@@ -53,13 +53,37 @@ publico.get('/qr', async (req, res, next) => {
 // ---------------- Portal del paciente (cuenta en la web) ----------------
 const cuenta = express.Router();
 cuenta.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-cuenta.post('/registro', h((req) => portal.registrarse(req.body || {}, ip(req))));
+// La sesión se entrega en una cookie HttpOnly: el token nunca llega al JavaScript de la página.
+const cookiesU = require('../../utils/cookies');
+const COOKIE_PORTAL = require('../../config/seguridad').cookies.portal;
+const conSesion = (fn) => async (req, res, next) => {
+  try {
+    const r = await fn(req);
+    if (r && r.token) {
+      cookiesU.poner(req, res, COOKIE_PORTAL, r.token, 7 * 24 * 3600);
+      const { token, ...resto } = r; void token;
+      return res.json({ ok: true, ...resto });
+    }
+    return res.json(r);
+  } catch (e) { return next(e); }
+};
+cuenta.post('/registro', conSesion((req) => portal.registrarse(req.body || {}, ip(req))));
 cuenta.post('/pedir-codigo', h((req) => portal.pedirCodigoClinica(req.body || {}, ip(req))));
-cuenta.post('/activar', h((req) => portal.activar(req.body || {}, ip(req))));
-cuenta.post('/ingresar', h((req) => portal.ingresar(req.body || {}, ip(req))));
+cuenta.post('/activar', conSesion((req) => portal.activar(req.body || {}, ip(req))));
+cuenta.post('/ingresar', conSesion((req) => portal.ingresar(req.body || {}, ip(req))));
 cuenta.use(portal.autenticar);
+// Pasa una sesión guardada por la versión anterior (token en el navegador) a la cookie.
+cuenta.post('/migrar-sesion', conSesion((req) => portal.sesionNueva(req.portal)));
+// Cerrar sesión: esta sesión deja de valer al instante (aunque alguien hubiera copiado el token).
+cuenta.post('/salir', async (req, res, next) => {
+  try {
+    await require('../../utils/sesiones').revocarJti(req.portalToken.jti, req.portalToken.exp);
+    cookiesU.borrar(req, res, COOKIE_PORTAL);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
 cuenta.get('/yo', h((req) => portal.yo(req.portal)));
-cuenta.post('/clave', h((req) => portal.cambiarClave(req.portal, req.body || {})));
+cuenta.post('/clave', conSesion((req) => portal.cambiarClave(req.portal, req.body || {})));
 cuenta.get('/turnos', h((req) => portal.turnos(req.portal)));
 cuenta.post('/turnos/:id/:accion', h((req) => portal.accionTurno(req.portal, req.params.id, req.params.accion)));
 cuenta.post('/reservar', async (req, res, next) => { try { res.status(201).json(await portal.reservar(req.portal, req.body || {})); } catch (e) { next(e); } });

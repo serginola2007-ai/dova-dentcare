@@ -1,5 +1,8 @@
 // Barrido de TODAS las rutas de la API: sin token (espera 401) y con un usuario sin permisos (espera 403).
-const rutas = require('./rutas.json');
+// Las rutas que cierran la sesión (logout, logout-todas) se prueban al final:
+// si no, invalidarían el token del usuario de prueba para el resto del barrido.
+const CIERRAN = /^\/api\/auth\/(logout|logout-todas)$/;
+const rutas = require('./rutas.json').slice().sort((a, b) => Number(CIERRAN.test(a.ruta)) - Number(CIERRAN.test(b.ruta)));
 const B = (process.env.DOVA_URL || 'http://localhost:4500');
 const PUBLICAS = [/^\/api\/auth\/(login|refresh|logout)$/, /^\/api\/web\/publico\//, /^\/api\/web\/cuenta\/(registro|pedir-codigo|activar|ingresar)$/, /^\/api\/clinica\/branding-publico$/, /^\/api\/health$/];
 const SOLO_SESION = [/^\/api\/auth\//, /^\/api\/notificaciones/, /^\/api\/usuarios\/me\//, /^\/api\/busqueda$/, /^\/api\/odontologos/, /^\/api\/clinica$/, /^\/api\/eventos$/];

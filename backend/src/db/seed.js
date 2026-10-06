@@ -3,11 +3,13 @@
    - La clínica DentCareRC (primera clínica configurada dentro de DOVA).
    - Los roles de sistema (admin, odontologo, recepcion, asistente, helpdesk).
    - El catálogo de permisos y su asignación por defecto a cada rol.
-   - El usuario admin/admin (protegido, no puede quedar sin permisos ni ser
+   - El usuario admin (protegido, con contraseña inicial aleatoria o ADMIN_PASSWORD; no puede quedar sin permisos ni ser
      eliminado si es el último admin activo — ver auth.service.js).
 
    Es idempotente: puede correrse varias veces sin duplicar datos. */
 require('dotenv').config();
+// El seed escribe permisos y roles: usa el usuario de migraciones si está configurado.
+if (process.env.MIGRATION_DATABASE_URL) process.env.DATABASE_URL = process.env.MIGRATION_DATABASE_URL;
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 const { PERMISOS, PERMISOS_POR_ROL } = require('../config/permisos');
@@ -110,28 +112,36 @@ async function run() {
       );
     }
 
-    // 4) Usuario admin. Contraseña inicial: ADMIN_PASSWORD si está definida,
-    // si no "admin". Mientras siga siendo "admin", DOVA obliga a cambiarla
-    // en el próximo ingreso (también en instalaciones ya existentes).
-    // En producción (instalación NUEVA) nunca se usa "admin": si no se definió
-    // ADMIN_PASSWORD se genera una aleatoria que sale UNA vez en el registro del
-    // deploy (solo lo ve el dueño de la cuenta de Render).
-    const existeAdmin = (await client.query('SELECT 1 FROM usuarios WHERE clinica_id=$1 AND username=$2', [clinicaId, 'admin'])).rowCount > 0;
-    let claveInicial = process.env.ADMIN_PASSWORD || 'admin';
-    if (!process.env.ADMIN_PASSWORD && process.env.NODE_ENV === 'production' && !existeAdmin) {
-      claveInicial = `Dova-${require('crypto').randomBytes(9).toString('base64url')}`;
-      console.log(`[seed] Contraseña inicial del usuario "admin": ${claveInicial}  (cambiala en el primer ingreso)`);
-    }
-    const passwordHash = await bcrypt.hash(claveInicial, 10);
-    await client.query(
-      `INSERT INTO usuarios (clinica_id, rol_id, nombre, username, password_hash, activo, es_admin_protegido, debe_cambiar_clave)
-       VALUES ($1,$2,$3,$4,$5,true,true,$6)
-       ON CONFLICT (clinica_id, username) DO NOTHING`,
-      [clinicaId, rolIdPorCodigo.admin, 'Administrador', 'admin', passwordHash, !process.env.ADMIN_PASSWORD]
-    );
+    // 4) Usuario admin (protegido). Nunca queda con la contraseña "admin":
+    //  - Instalación nueva: ADMIN_PASSWORD si está definida; si no, una
+    //    aleatoria que se muestra UNA vez en el registro del deploy.
+    //  - Instalación existente en producción que todavía tenga "admin": se
+    //    reemplaza igual (ADMIN_PASSWORD o aleatoria) y se cierran sus sesiones.
+    //    Si la contraseña ya se cambió, NO se toca.
+    //  - En los dos casos hay que cambiarla en el primer ingreso.
+    const prod = process.env.NODE_ENV === 'production';
+    const generar = () => `Dova-${require('crypto').randomBytes(9).toString('base64url')}`;
     const adm = await client.query('SELECT id, password_hash FROM usuarios WHERE clinica_id=$1 AND username=$2', [clinicaId, 'admin']);
-    if (adm.rowCount && await bcrypt.compare('admin', adm.rows[0].password_hash)) {
-      await client.query('UPDATE usuarios SET debe_cambiar_clave=true WHERE id=$1', [adm.rows[0].id]);
+    if (!adm.rowCount) {
+      const clave = process.env.ADMIN_PASSWORD || generar();
+      await client.query(
+        `INSERT INTO usuarios (clinica_id, rol_id, nombre, username, password_hash, activo, es_admin_protegido, debe_cambiar_clave)
+         VALUES ($1,$2,'Administrador','admin',$3,true,true,true)`,
+        [clinicaId, rolIdPorCodigo.admin, await bcrypt.hash(clave, 12)]
+      );
+      if (!process.env.ADMIN_PASSWORD) console.log(`[seed] Contraseña inicial del usuario "admin": ${clave}  (se pide cambiarla en el primer ingreso)`);
+    } else if (await bcrypt.compare('admin', adm.rows[0].password_hash)) {
+      if (prod) {
+        const clave = process.env.ADMIN_PASSWORD || generar();
+        await client.query('UPDATE usuarios SET password_hash=$2, debe_cambiar_clave=true, token_version=token_version+1 WHERE id=$1', [adm.rows[0].id, await bcrypt.hash(clave, 12)]);
+        await client.query("UPDATE refresh_tokens SET revocado=true, revocado_en=now(), motivo='clave_por_defecto' WHERE usuario_id=$1 AND NOT revocado", [adm.rows[0].id]);
+        console.log(process.env.ADMIN_PASSWORD
+          ? '[seed] El usuario "admin" tenía la contraseña por defecto: se reemplazó por ADMIN_PASSWORD (se pide cambiarla al ingresar).'
+          : `[seed] El usuario "admin" tenía la contraseña por defecto "admin". Nueva contraseña temporal: ${clave}  (se pide cambiarla al ingresar)`);
+      } else {
+        // Desarrollo local: se conserva para no romper las pruebas, pero la API no deja operar hasta cambiarla.
+        await client.query('UPDATE usuarios SET debe_cambiar_clave=true WHERE id=$1', [adm.rows[0].id]);
+      }
     }
 
     await client.query('COMMIT');

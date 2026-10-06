@@ -37,7 +37,7 @@ async function authMiddleware(req, res, next) {
   let payload;
   try {
     payload = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] });
-  } catch (err) {
+  } catch (_err) {
     return next(new ApiError(401, 'Token inválido o expirado'));
   }
   try {
@@ -60,6 +60,7 @@ async function authMiddleware(req, res, next) {
       permisos: est.permisos,
     };
     req.tokenExp = payload.exp;
+    req.tokenJti = payload.jti || null;
     next();
   } catch (err) {
     next(err);

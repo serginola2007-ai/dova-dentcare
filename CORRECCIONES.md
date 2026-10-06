@@ -413,3 +413,22 @@ Informe completo en `SEGURIDAD.md`, con cada hallazgo, la solución y la prueba 
   - Dependencias sin vulnerabilidades.
   - Algoritmo JWT fijo.
   - Cabeceras completas.
+
+## Auditoría de seguridad 2 (migraciones 0040 y 0041)
+Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, impacto, solución, prueba y estado) y pruebas en `SECURITY-TESTS.md`.
+- Crítica: el seed nunca deja `admin`/`admin`. En producción la reemplaza por `ADMIN_PASSWORD` o por una aleatoria que se muestra una vez en el registro del deploy; si ya se cambió, no la toca.
+- Altas:
+  - Sesión en cookies `HttpOnly` `SameSite=Strict` con anti-CSRF. El token de acceso vive solo en memoria. Las sesiones viejas se migran solas.
+  - "Cerrar sesión en todos los dispositivos" y "Cerrar todas sus sesiones" desde la ficha de un usuario.
+  - Cobro aplicado a una cuota: tiene que ser del mismo paciente y cubrirla.
+  - Profesional y proveedor de otra clínica rechazados al vincular.
+  - Usuario de base `dova_app` de mínimo privilegio (script listo; se activa con `APP_DATABASE_URL`).
+- Medias y bajas:
+  - Validación única de importes.
+  - Vencimiento de la sesión por inactividad (7 días) y absoluto (30 días).
+  - Avisos en tiempo real solo para la clínica correspondiente, con topes de conexiones y corte al cerrar sesión.
+  - Límites de pedidos configurables, con almacén compartido opcional en Postgres.
+  - Registro web con respuesta genérica (anti-enumeración).
+  - Rutas de archivos viejos encerradas en la carpeta de subidas.
+  - `nodemon` reemplazado por `node --watch`: `npm audit` da 0.
+  - `npm run lint` (ESLint) y `npm run build` (verificación de sintaxis).

@@ -14,9 +14,17 @@ async function crearProveedor(clinicaId, datos, usuario) {
 
 async function listarInsumos(clinicaId, filtros) { return repo.listarInsumos(clinicaId, filtros); }
 
+// El proveedor tiene que ser de la misma clínica.
+async function exigirProveedorPropio(clinicaId, proveedorId) {
+  if (!proveedorId) return;
+  const p = await repo.listarProveedores(clinicaId, {});
+  if (!p.some((x) => x.id === Number(proveedorId))) throw new ApiError(400, 'Proveedor no encontrado');
+}
+
 async function crearInsumo(clinicaId, datos, usuario) {
   if (!datos.nombre) throw new ApiError(400, 'El nombre del insumo es obligatorio');
   if (Number(datos.stockActual) < 0 || Number(datos.stockMinimo) < 0) throw new ApiError(400, 'El stock no puede ser negativo');
+  await exigirProveedorPropio(clinicaId, datos.proveedorId);
   let insumo = await repo.crearInsumo(clinicaId, { ...datos, stockActual: 0 });
   // El stock inicial entra como un lote (con su lote y vencimiento si se indicaron).
   if (Number(datos.stockActual) > 0) {
@@ -31,7 +39,7 @@ const TIPOS_VALIDOS = ['entrada', 'salida', 'ajuste', 'perdida', 'vencimiento'];
 async function registrarMovimiento(clinicaId, insumoId, datos, usuario) {
   if (!TIPOS_VALIDOS.includes(datos.tipo)) throw new ApiError(400, `Tipo inválido: ${TIPOS_VALIDOS.join(', ')}`);
   const cantidad = Number(datos.cantidad);
-  if (!Number.isFinite(cantidad) || cantidad < 0) throw new ApiError(400, 'La cantidad no puede ser negativa');
+  if (!Number.isFinite(cantidad) || cantidad < 0 || cantidad > 1e9) throw new ApiError(400, 'La cantidad no puede ser negativa');
   if (datos.tipo !== 'ajuste' && cantidad === 0) throw new ApiError(400, 'La cantidad debe ser mayor a cero');
   if (['ajuste', 'perdida', 'vencimiento'].includes(datos.tipo) && String(datos.motivo || '').trim().length < 3) throw new ApiError(400, 'Escribí el motivo del ajuste o la baja');
   if (datos.vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(datos.vencimiento)) throw new ApiError(400, 'Vencimiento inválido');
@@ -74,8 +82,9 @@ async function listarMovimientos(clinicaId, insumoId) {
    automáticamente el inventario"). */
 async function crearCompra(clinicaId, datos, usuario) {
   if (!Array.isArray(datos.items) || datos.items.length === 0) throw new ApiError(400, 'La compra debe tener al menos un ítem');
+  await exigirProveedorPropio(clinicaId, datos.proveedorId);
   for (const item of datos.items) {
-    if (!(Number(item.cantidad) > 0)) throw new ApiError(400, 'Cada ítem necesita una cantidad mayor a cero');
+    if (!(Number(item.cantidad) > 0) || !Number.isFinite(Number(item.cantidad)) || Number(item.cantidad) > 1e9) throw new ApiError(400, 'Cada ítem necesita una cantidad mayor a cero');
     if (!(await repo.obtenerInsumo(clinicaId, Number(item.insumoId)))) throw new ApiError(400, 'Hay un insumo que no es de esta clínica');
     if (item.vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(item.vencimiento)) throw new ApiError(400, 'Vencimiento inválido');
   }
@@ -99,7 +108,7 @@ async function registrarConsumoProcedimiento(clinicaId, origen, origenId, datos,
   if (!['etapa', 'sesion'].includes(origen)) throw new ApiError(400, 'Origen inválido');
   if (!datos.insumoId) throw new ApiError(400, 'El insumo es obligatorio');
   const cantidad = Number(datos.cantidad);
-  if (!cantidad || cantidad <= 0) throw new ApiError(400, 'La cantidad debe ser mayor a cero');
+  if (!Number.isFinite(cantidad) || cantidad <= 0 || cantidad > 1e9) throw new ApiError(400, 'La cantidad debe ser mayor a cero');
 
   const { actualizado, consumo } = await conCandado(`insumo:${datos.insumoId}`, async () => {
     const insumo = await repo.obtenerInsumo(clinicaId, datos.insumoId);
@@ -141,7 +150,7 @@ async function actualizarInsumo(clinicaId, id, datos, usuario) {
   if (!antes) throw new ApiError(404, 'Insumo no encontrado');
   if (datos.nombre !== undefined && !String(datos.nombre).trim()) throw new ApiError(400, 'El nombre no puede quedar vacío');
   if (Number(datos.stockMinimo) < 0) throw new ApiError(400, 'El mínimo no puede ser negativo');
-  if (datos.proveedorId) { const p = await repo.listarProveedores(clinicaId, {}); if (!p.some((x) => x.id === Number(datos.proveedorId))) throw new ApiError(400, 'Proveedor no encontrado'); }
+  await exigirProveedorPropio(clinicaId, datos.proveedorId);
   const despues = await repo.actualizarInsumo(clinicaId, id, datos);
   await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'editar_insumo', modulo: 'inventario', entidadId: id,
     detalle: { antes: { nombre: antes.nombre, stock_minimo: antes.stock_minimo, precio_compra: antes.precio_compra, activo: antes.activo }, despues: { nombre: despues.nombre, stock_minimo: despues.stock_minimo, precio_compra: despues.precio_compra, activo: despues.activo } } });

@@ -53,10 +53,10 @@ async function actualizarUltimoLogin(usuarioId) {
   await query('UPDATE usuarios SET ultimo_login = now() WHERE id = $1', [usuarioId]);
 }
 
-async function guardarRefreshToken(usuarioId, tokenHash, expiraEn) {
+async function guardarRefreshToken(usuarioId, tokenHash, expiraEn, sesionId, sesionInicio) {
   await query(
-    'INSERT INTO refresh_tokens (usuario_id, token_hash, expira_en) VALUES ($1,$2,$3)',
-    [usuarioId, tokenHash, expiraEn]
+    'INSERT INTO refresh_tokens (usuario_id, token_hash, expira_en, sesion_id, sesion_inicio) VALUES ($1,$2,$3,$4,COALESCE($5, now()))',
+    [usuarioId, tokenHash, expiraEn, sesionId || null, sesionInicio || null]
   );
 }
 
@@ -74,7 +74,7 @@ async function revocarRefreshToken(tokenHash, motivo = 'logout') {
 
 // Incluye los revocados (para detectar la reutilización de un token ya rotado).
 async function findRefreshTokenCualquiera(tokenHash) {
-  const res = await query('SELECT *, (revocado_en > now() - interval \'60 seconds\') AS en_gracia FROM refresh_tokens WHERE token_hash = $1 AND expira_en > now()', [tokenHash]);
+  const res = await query('SELECT *, (revocado_en > now() - ($2::int * interval \'1 second\')) AS en_gracia FROM refresh_tokens WHERE token_hash = $1 AND expira_en > now()', [tokenHash, require('../../config/seguridad').sesion.graciaRotacionSeg]);
   return res.rows[0] || null;
 }
 

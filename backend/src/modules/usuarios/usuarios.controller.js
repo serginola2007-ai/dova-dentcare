@@ -71,7 +71,12 @@ async function actualizarMiDisenoPreferido(req, res, next) {
   } catch (e) { next(e); }
 }
 
+async function cerrarSesiones(req, res, next) {
+  try { res.json(await service.cerrarSesiones(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
+}
+
 module.exports = {
+  cerrarSesiones,
   listarRoles, detalleRol, crearRol, actualizarPermisosRol, listarPermisos,
   listar, obtener, crear, actualizar, cambiarPassword, setOverride, quitarOverride,
   actualizarMiDisenoPreferido,

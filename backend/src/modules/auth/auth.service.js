@@ -9,7 +9,8 @@ const auditoria = require('../../utils/auditoria');
 const sesiones = require('../../utils/sesiones');
 // Para que el tiempo de respuesta no revele si un usuario existe.
 const HASH_FALSO = bcrypt.hashSync('usuario-inexistente-dova', 10);
-const DURACION_REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
+const segCfg = require('../../config/seguridad');
+const DIA_MS = 24 * 60 * 60 * 1000;
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -27,16 +28,21 @@ function firmarAcceso(usuario, permisos) {
     odontologoId: usuario.odontologo_id || null,
     tv: Number(usuario.token_version) || 0,
     permisos,
-  }, env.jwtSecret, { expiresIn: env.jwtExpiresIn, algorithm: 'HS256', jwtid: crypto.randomBytes(12).toString('hex') });
+  }, env.jwtSecret, { expiresIn: segCfg.sesion.accesoExpira, algorithm: 'HS256', jwtid: crypto.randomBytes(12).toString('hex') });
 }
 function construirTokens(usuario, permisos) {
   return { accessToken: firmarAcceso(usuario, permisos), refreshTokenRaw: crypto.randomBytes(48).toString('hex') };
 }
-async function emitirSesion(usuario) {
+/* Una sesión = un login. El refresh token vence por inactividad
+   (SESSION_IDLE_TIMEOUT_DAYS sin usarse) y nunca después del máximo absoluto
+   desde el login (SESSION_ABSOLUTE_MAX_DAYS), aunque se renueve a diario. */
+async function emitirSesion(usuario, { sesionId, sesionInicio } = {}) {
   const permisos = await authRepo.getPermisosEfectivos(usuario.id, usuario.rol_id);
   const { accessToken, refreshTokenRaw } = construirTokens(usuario, permisos);
-  await authRepo.guardarRefreshToken(usuario.id, hashToken(refreshTokenRaw), new Date(Date.now() + DURACION_REFRESH_MS));
-  return { accessToken, refreshToken: refreshTokenRaw, permisos };
+  const inicio = sesionInicio ? new Date(sesionInicio) : new Date();
+  const vence = new Date(Math.min(Date.now() + segCfg.sesion.inactividadDias * DIA_MS, inicio.getTime() + segCfg.sesion.absolutoDias * DIA_MS));
+  await authRepo.guardarRefreshToken(usuario.id, hashToken(refreshTokenRaw), vence, sesionId || crypto.randomBytes(12).toString('hex'), inicio);
+  return { accessToken, refreshToken: refreshTokenRaw, permisos, refreshVence: vence };
 }
 
 /* clinicaSlug es opcional: por ahora DOVA tiene una sola clínica real
@@ -97,12 +103,13 @@ async function loginVerificado({ username, password, clinicaSlug }) {
     throw new ApiError(401, 'Usuario o contraseña incorrectos');
   }
 
-  const { accessToken, refreshToken: refreshTokenRaw, permisos } = await emitirSesion(usuario);
+  const { accessToken, refreshToken: refreshTokenRaw, permisos, refreshVence } = await emitirSesion(usuario);
   await authRepo.actualizarUltimoLogin(usuario.id);
 
   return {
     accessToken,
     refreshToken: refreshTokenRaw,
+    refreshVence,
     usuario: {
       id: usuario.id,
       nombre: usuario.nombre,
@@ -130,13 +137,21 @@ async function loginVerificado({ username, password, clinicaSlug }) {
    anterior. Si un token ya rotado se vuelve a usar pasado el margen de 60 s
    (pensado para dos pestañas que renuevan a la vez), se asume robo: se
    cierran todas las sesiones del usuario y queda en la auditoría. */
-async function refresh(refreshTokenRaw) {
+async function refresh(refreshTokenRaw, { deCuerpo = false } = {}) {
   if (!refreshTokenRaw || typeof refreshTokenRaw !== 'string' || refreshTokenRaw.length > 200) throw new ApiError(400, 'refreshToken requerido');
   const tokenHash = hashToken(refreshTokenRaw);
   const registro = await authRepo.findRefreshTokenCualquiera(tokenHash);
   if (!registro) throw new ApiError(401, 'Sesión expirada, iniciá sesión nuevamente');
+  // En el cuerpo del pedido solo se aceptan tokens de versiones anteriores
+  // (sin sesion_id), para migrarlos a cookie. Los nuevos viven solo en la cookie.
+  if (deCuerpo && registro.sesion_id) throw new ApiError(401, 'Sesión expirada, iniciá sesión nuevamente');
   const usuario = await authRepo.findUsuarioById(registro.usuario_id);
   if (!usuario || !usuario.activo) throw new ApiError(401, 'Sesión expirada, iniciá sesión nuevamente');
+  // Tope absoluto desde el login, aunque la sesión se haya usado todos los días.
+  if (new Date(registro.sesion_inicio).getTime() + segCfg.sesion.absolutoDias * DIA_MS < Date.now()) {
+    await authRepo.revocarRefreshToken(tokenHash, 'vencida');
+    throw new ApiError(401, 'La sesión venció. Iniciá sesión nuevamente.');
+  }
   if (registro.revocado) {
     if (registro.motivo === 'rotado' && registro.en_gracia) {
       // Otra pestaña acaba de renovar: se entrega solo un acceso nuevo.
@@ -150,9 +165,9 @@ async function refresh(refreshTokenRaw) {
     throw new ApiError(401, 'Sesión expirada, iniciá sesión nuevamente');
   }
   await authRepo.revocarRefreshToken(tokenHash, 'rotado');
-  const s2 = await emitirSesion(usuario);
+  const s2 = await emitirSesion(usuario, { sesionId: registro.sesion_id, sesionInicio: registro.sesion_inicio });
   // Permisos actuales: la pantalla los actualiza sin tener que volver a iniciar sesión.
-  return { accessToken: s2.accessToken, refreshToken: s2.refreshToken, permisos: s2.permisos };
+  return { accessToken: s2.accessToken, refreshToken: s2.refreshToken, refreshVence: s2.refreshVence, permisos: s2.permisos };
 }
 
 async function logout(refreshTokenRaw, authorization) {
@@ -186,7 +201,13 @@ async function cambiarClavePropia(usuarioId, { actual, nueva } = {}) {
   const yo = await authRepo.findUsuarioById(usuarioId);
   if (yo) await auditoria.registrar({ clinicaId: yo.clinica_id, usuarioId, usuarioNombre: yo.nombre, accion: 'cambiar_clave_propia', modulo: 'seguridad' });
   const s2 = await emitirSesion(yo);
-  return { ok: true, accessToken: s2.accessToken, refreshToken: s2.refreshToken };
+  return { ok: true, accessToken: s2.accessToken, refreshToken: s2.refreshToken, refreshVence: s2.refreshVence };
 }
 
-module.exports = { login, refresh, logout, cambiarClavePropia };
+// "Cerrar sesión en todos los dispositivos" (la propia persona).
+async function logoutTodas(usuario) {
+  await sesiones.invalidarSesiones(usuario.id, 'logout_todas');
+  await auditoria.registrar({ clinicaId: usuario.clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'logout_todas', modulo: 'seguridad' });
+}
+
+module.exports = { login, refresh, logout, logoutTodas, cambiarClavePropia };

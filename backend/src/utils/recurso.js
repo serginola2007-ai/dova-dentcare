@@ -51,6 +51,7 @@ function convertir(nombre, def, valor) {
       if (def.tipo === 'entero' && !Number.isInteger(n)) throw new ApiError(400, `El campo ${nombre} debe ser un número entero`);
       if (def.min !== undefined && n < def.min) throw new ApiError(400, `El campo ${nombre} debe ser ≥ ${def.min}`);
       if (def.maxNum !== undefined && n > def.maxNum) throw new ApiError(400, `El campo ${nombre} debe ser ≤ ${def.maxNum}`);
+      if (Math.abs(n) > 100000000000) throw new ApiError(400, `El campo ${nombre} es demasiado grande`);
       return n;
     }
     case 'fecha': {

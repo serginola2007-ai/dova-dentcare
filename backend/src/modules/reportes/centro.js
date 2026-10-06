@@ -355,7 +355,7 @@ function csv(res, r, filtrosTxt) {
   if (r.totales) lineas.push(r.columnas.map((c, i) => e(i === 0 ? 'TOTAL' : r.totales[c.k] !== undefined ? r.totales[c.k] : '')).join(';'));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${r.clave}-${r.desde}-${r.hasta}.csv"`);
-  res.send(`﻿${lineas.join('\r\n')}`);
+  res.send(`\uFEFF${lineas.join('\r\n')}`);
 }
 
 async function xlsx(res, r, filtrosTxt, clinica) {
