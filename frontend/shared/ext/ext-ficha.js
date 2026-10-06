@@ -168,7 +168,7 @@ const DovaFicha = (() => {
           <input name="d_${p.codigo}" placeholder="Detalle" value="${esc((prev[p.codigo] && prev[p.codigo].d) || '')}"/></div></div>`).join('')}
         <label style="margin-top:12px">Observaciones</label><textarea name="obs" rows="2"></textarea>
         <label>Firma del paciente (opcional)</label>
-        <canvas data-firma width="420" height="120" style="border:1px solid var(--border-strong);border-radius:4px;touch-action:none;max-width:100%;background:#fff"></canvas>
+        <canvas data-firma width="420" height="120" style="border:1px solid var(--border-strong);border-radius:2px;touch-action:none;max-width:100%;background:#fff"></canvas>
         <div><button type="button" class="dova-btn-link" data-limpiar-firma>Limpiar firma</button></div>
         <label>Vigencia (meses)</label><input type="number" name="vig" value="12" min="1" max="60"/>
         <p class="dova-error-text" data-error style="display:none"></p>

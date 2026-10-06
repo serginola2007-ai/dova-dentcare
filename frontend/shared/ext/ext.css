@@ -34,7 +34,7 @@ tr.dova-ext-fila-aviso td { background: var(--dova-ext-atencion-bg); }
 
 /* Sub-pestañas */
 .dova-ext-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.dova-ext-subtab { background: transparent; border: 1px solid var(--border); color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+.dova-ext-subtab { background: transparent; border: 1px solid var(--border); color: var(--ink-soft); padding: 6px 12px; border-radius: 2px; font-size: 13px; cursor: pointer; }
 .dova-ext-subtab.activo { background: var(--terracotta); border-color: var(--terracotta); color: #fff; }
 .dova-ext-subtab:focus-visible, .dova-btn-link:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
 
@@ -55,8 +55,8 @@ tr.dova-ext-fila-aviso td { background: var(--dova-ext-atencion-bg); }
 .dova-ext-kpi.alerta .dova-ext-kpi-valor { color: var(--rust); }
 button.dova-ext-kpi { text-align: left; cursor: pointer; font: inherit; }
 button.dova-ext-kpi:hover { border-color: var(--terracotta); }
-.dova-ext-progreso { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 8px; }
-.dova-ext-progreso > span { display: block; height: 100%; background: var(--dova-ext-marca); border-radius: 999px; }
+.dova-ext-progreso { height: 6px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.dova-ext-progreso > span { display: block; height: 100%; background: var(--dova-ext-marca); border-radius: 2px; }
 
 /* Gráficos */
 .dova-ext-graficos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
@@ -71,7 +71,7 @@ button.dova-ext-kpi:hover { border-color: var(--terracotta); }
 .dova-ext-g-valor { fill: var(--ink); font-size: 12px; font-weight: 600; }
 .dova-ext-hit { cursor: default; }
 .dova-ext-hit-activo { fill: var(--ink); fill-opacity: 0.05; }
-.dova-ext-tooltip { position: absolute; transform: translateX(-50%); background: var(--ink); color: var(--cream); font-size: 12px; padding: 6px 10px; border-radius: 6px; pointer-events: none; white-space: nowrap; z-index: 5; }
+.dova-ext-tooltip { position: absolute; transform: translateX(-50%); background: var(--ink); color: var(--cream); font-size: 12px; padding: 6px 10px; border-radius: 2px; pointer-events: none; white-space: nowrap; z-index: 5; }
 .dova-ext-g-tabla summary { font-size: 12px; color: var(--ink-soft); cursor: pointer; margin-top: 6px; }
 
 /* Periodontograma */
@@ -143,34 +143,34 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-op-nav input, .dova-op-nav select { width: auto; min-width: 0; }
 .dova-op-fila-apagada td { opacity: .55; }
 .dova-op-buscapac { position: relative; }
-.dova-op-resultados { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--white); max-height: 240px; overflow-y: auto; }
+.dova-op-resultados { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 2px; background: var(--white); max-height: 240px; overflow-y: auto; }
 .dova-op-resultados:empty { display: none; }
 .dova-op-res-item { text-align: left; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--border); background: transparent; cursor: pointer; font: inherit; color: inherit; }
 .dova-op-res-item:hover, .dova-op-res-item:focus { background: rgba(0,0,0,.05); }
 .dova-op-items input, .dova-op-items select { width: 100%; min-width: 0; }
 .dova-op-items td { vertical-align: top; }
 .dova-op-total { font-size: 18px; text-align: right; margin: 10px 0; }
-.dova-op-firma { width: 100%; max-width: 600px; height: auto; border: 1px dashed var(--border); border-radius: 8px; background: #fff; touch-action: none; display: block; }
-.dova-op-consent-texto { max-height: 160px; overflow-y: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; font-size: 14px; }
+.dova-op-firma { width: 100%; max-width: 600px; height: auto; border: 1px dashed var(--border); border-radius: 2px; background: #fff; touch-action: none; display: block; }
+.dova-op-consent-texto { max-height: 160px; overflow-y: auto; padding: 10px; border: 1px solid var(--border); border-radius: 2px; margin-bottom: 12px; white-space: pre-wrap; font-size: 14px; }
 @media (max-width: 700px) {
   .dova-op-nav { width: 100%; }
   .dova-op-nav select { flex: 1 1 140px; }
 }
 
 /* ===== Calendario de la agenda ===== */
-.dova-cal-vistas { display: inline-flex; border: 1px solid var(--border-strong, var(--border)); border-radius: 8px; overflow: hidden; }
+.dova-cal-vistas { display: inline-flex; border: 1px solid var(--border-strong, var(--border)); border-radius: 2px; overflow: hidden; }
 .dova-cal-vistas button { border: 0; background: transparent; padding: 7px 12px; font: inherit; color: inherit; cursor: pointer; }
 .dova-cal-vistas button + button { border-left: 1px solid var(--border); }
 .dova-cal-vistas button.activo { background: var(--ink); color: var(--white); }
 .dova-cal-cabecera { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin: 10px 0 6px; }
 .dova-cal-leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; }
-.dova-cal-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-.dova-cal-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 10px; background: var(--white); }
+.dova-cal-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.dova-cal-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 2px; background: var(--white); }
 .dova-cal-grilla { display: grid; }
 .dova-cal-esquina, .dova-cal-col-titulo { position: sticky; top: 0; background: var(--white); z-index: 1; border-bottom: 1px solid var(--border-strong, var(--border)); }
 .dova-cal-col-titulo { padding: 8px; text-align: center; font-size: 13px; border-left: 1px solid var(--border); }
 .dova-cal-col-titulo.hoy { background: rgba(193,103,63,.08); }
-.dova-cal-dia-btn { border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.dova-cal-dia-btn { border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 2px; }
 .dova-cal-dia-btn:hover { background: rgba(0,0,0,.05); }
 .dova-cal-dia-btn b { font-size: 16px; margin-left: 2px; }
 .dova-cal-esquina { left: 0; z-index: 3; }
@@ -179,7 +179,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cal-celda:hover { background: rgba(0,0,0,.025); }
 .dova-cal-celda.hoy { background: rgba(193,103,63,.04); }
 .dova-cal-celda.ahora { box-shadow: inset 0 2px 0 var(--rust); }
-.dova-cal-chip { --c: var(--sage); display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; line-height: 1.25; color: var(--ink); border: 0; border-left: 4px solid var(--c); border-radius: 5px; padding: 4px 6px; cursor: pointer; background: color-mix(in srgb, var(--c) 14%, var(--white)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dova-cal-chip { --c: var(--sage); display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; line-height: 1.25; color: var(--ink); border: 0; border-left: 4px solid var(--c); border-radius: 2px; padding: 4px 6px; cursor: pointer; background: color-mix(in srgb, var(--c) 14%, var(--white)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dova-cal-chip span { display: block; font-size: 11px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; }
 .dova-cal-chip:hover { filter: brightness(.96); }
 .dova-cal-chip:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
@@ -318,7 +318,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-web-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
 .dova-web-horario input[type=time] { width: auto; min-width: 104px; }
 .dova-web-horario td { white-space: nowrap; }
-.dova-cal-web { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: var(--dova-ext-info-bg); color: var(--sage-dark); }
+.dova-cal-web { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 2px; background: var(--dova-ext-info-bg); color: var(--sage-dark); }
 @media (max-width: 700px) { .dova-web-cuando { margin-left: 0; width: 100%; } .dova-web-horario td { display: block; white-space: normal; } }
 .dova-web-codigo { font: 700 40px/1.1 ui-monospace, monospace; letter-spacing: 6px; text-align: center; margin: 8px 0 14px; padding: 14px; border-radius: var(--radius-m); background: var(--bg, #f6f3ee); }
 .dova-modal-actions a.dova-btn-primary { text-decoration: none; display: inline-flex; align-items: center; }
@@ -334,12 +334,12 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-grid { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 18px; align-items: start; }
 .dova-cli-lado { display: grid; gap: 12px; position: sticky; top: 12px; }
 .dova-cli-main { min-width: 0; }
-.dova-cli-caja { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.dova-cli-caja { background: var(--white); border: 1px solid var(--border); border-radius: 2px; padding: 12px 14px; }
 .dova-cli-caja h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
 .dova-cli-caja p { margin: 4px 0; font-size: 14px; }
 .dova-cli-alerta-caja { border-color: color-mix(in srgb, var(--rust) 35%, var(--border)); }
 .dova-cli-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.dova-cli-chips li { background: var(--cream); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+.dova-cli-chips li { background: var(--cream); border: 1px solid var(--border); border-radius: 2px; padding: 3px 10px; font-size: 13px; }
 .dova-cli-chips li.dova-cli-chip-alerta { background: color-mix(in srgb, var(--rust) 12%, var(--white)); border-color: color-mix(in srgb, var(--rust) 40%, transparent); color: var(--rust); font-weight: 600; }
 .dova-cli-lista { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
 .dova-cli-consulta-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -352,7 +352,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-ancho { grid-column: 1 / -1; }
 .dova-cli-acciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
 .dova-cli-accion { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; background: var(--white); border: 1px solid var(--border);
-  border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: center; min-height: 72px; justify-content: center; }
+  border-radius: 2px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: center; min-height: 72px; justify-content: center; }
 .dova-cli-accion span { font-size: 20px; }
 .dova-cli-accion:hover, .dova-cli-accion.activo { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 7%, var(--white)); }
 .dova-cli-panel { margin-top: 14px; }
@@ -370,33 +370,33 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-filtros select, .dova-cli-filtros input { width: auto; margin: 0; }
 .dova-cli-filtros input { width: 80px; }
 .dova-cli-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
-.dova-cli-foto { padding: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--white); cursor: pointer; text-align: left; font: inherit; color: var(--ink); }
+.dova-cli-foto { padding: 0; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; background: var(--white); cursor: pointer; text-align: left; font: inherit; color: var(--ink); }
 .dova-cli-foto img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--cream); opacity: 0; transition: opacity .2s; }
 .dova-cli-foto img.cargada { opacity: 1; }
 .dova-cli-foto-pie { display: block; padding: 6px 8px; font-size: 13px; }
 .dova-cli-sinimg { aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--cream); color: var(--ink-soft); font-size: 12px; text-align: center; padding: 6px; }
 .dova-cli-estudios { display: grid; gap: 8px; margin-top: 10px; }
-.dova-cli-estudio { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.dova-cli-estudio { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; background: var(--white); border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; }
 .dova-cli-estudio p { margin: 2px 0; }
-.dova-cli-estudio-ico { width: 56px; height: 56px; border-radius: 8px; background: var(--cream); display: grid; place-items: center; font-weight: 700; font-size: 12px; color: var(--ink-soft); }
+.dova-cli-estudio-ico { width: 56px; height: 56px; border-radius: 2px; background: var(--cream); display: grid; place-items: center; font-weight: 700; font-size: 12px; color: var(--ink-soft); }
 .dova-cli-estudio-acc { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-.dova-cli-visor { background: #111; border-radius: 10px; overflow: hidden; display: grid; place-items: center; min-height: 200px; }
+.dova-cli-visor { background: #111; border-radius: 2px; overflow: hidden; display: grid; place-items: center; min-height: 200px; }
 .dova-cli-visor img { max-width: 100%; max-height: 62vh; display: block; }
 .dova-cli-pdf { width: 100%; height: 62vh; border: 0; background: #fff; }
-.dova-cli-comparar { position: relative; margin: 12px 0 8px; border-radius: 10px; overflow: hidden; background: #111; --pos: 50%; }
+.dova-cli-comparar { position: relative; margin: 12px 0 8px; border-radius: 2px; overflow: hidden; background: #111; --pos: 50%; }
 .dova-cli-comparar > img, .dova-cli-comparar-antes img { display: block; width: 100%; max-height: 60vh; object-fit: contain; }
 .dova-cli-comparar-antes { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
 .dova-cli-cmp-linea { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 2px; background: #fff; box-shadow: 0 0 6px rgba(0,0,0,.5); }
-.dova-cli-cmp-et { position: absolute; top: 10px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.dova-cli-cmp-et { position: absolute; top: 10px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 2px; }
 .dova-cli-cmp-et.izq { left: 10px; } .dova-cli-cmp-et.der { right: 10px; }
 .dova-cli-rango { width: 100%; }
 .dova-cli-recetas { display: grid; gap: 10px; }
-.dova-cli-receta { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.dova-cli-receta { background: var(--white); border: 1px solid var(--border); border-radius: 2px; padding: 10px 14px; }
 .dova-cli-receta ul { margin: 6px 0; padding-left: 18px; }
 .dova-cli-nota-form { display: grid; gap: 6px; margin-bottom: 14px; }
 .dova-cli-nota-form button { justify-self: start; }
 .dova-cli-notas { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.dova-cli-notas li { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; }
+.dova-cli-notas li { background: var(--white); border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; display: grid; gap: 4px; }
 .dova-cli-notas li.importante { border-color: color-mix(in srgb, var(--terracotta) 45%, var(--border)); }
 .dova-cli-notas .dova-btn-link { justify-self: start; }
 @media (max-width: 900px) {
@@ -418,9 +418,9 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 }
 
 /* ===== Fase 2: agenda (flujo), recetas, etapas ===== */
-.dova-cal-flujo { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--terracotta) 18%, var(--white)); color: var(--terracotta-dark); }
+.dova-cal-flujo { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 2px; background: color-mix(in srgb, var(--terracotta) 18%, var(--white)); color: var(--terracotta-dark); }
 .dova-cal-chip.dova-cal-flujo-consulta { box-shadow: inset 0 0 0 2px var(--terracotta); }
-.dova-cli-med { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 12px; margin: 0 0 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; }
+.dova-cli-med { border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px 12px; margin: 0 0 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; }
 .dova-cli-med legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
 .dova-cli-med label { display: grid; gap: 3px; font-size: 13px; font-weight: 600; margin: 0; }
 .dova-cli-med label > span { color: var(--ink-soft); }
@@ -428,10 +428,10 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-med .dova-btn-link { justify-self: start; }
 .dova-cli-receta.anulada { opacity: .7; }
 .dova-cli-receta.anulada ul { text-decoration: line-through; }
-.dova-cli-progreso { height: 8px; border-radius: 999px; background: var(--cream); border: 1px solid var(--border); overflow: hidden; margin: 8px 0 14px; }
+.dova-cli-progreso { height: 8px; border-radius: 2px; background: var(--cream); border: 1px solid var(--border); overflow: hidden; margin: 8px 0 14px; }
 .dova-cli-progreso span { display: block; height: 100%; background: var(--sage); transition: width .3s; }
 .dova-cli-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: etapa; }
-.dova-cli-etapa { border: 1px solid var(--border); border-left: 4px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--white); counter-increment: etapa; }
+.dova-cli-etapa { border: 1px solid var(--border); border-left: 4px solid var(--border-strong); border-radius: 2px; padding: 10px 12px; background: var(--white); counter-increment: etapa; }
 .dova-cli-etapa.est-en_progreso { border-left-color: var(--terracotta); }
 .dova-cli-etapa.est-completado { border-left-color: var(--sage); }
 .dova-cli-etapa.est-cancelado { opacity: .6; }
@@ -440,7 +440,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-etapa-obs { margin: 6px 0 0; white-space: pre-wrap; font-size: 14px; }
 .dova-cli-etapa-acc { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; }
 .dova-cli-etapa-media { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
-.dova-cli-mini { padding: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; width: 56px; height: 42px; background: var(--cream); cursor: pointer; }
+.dova-cli-mini { padding: 0; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; width: 56px; height: 42px; background: var(--cream); cursor: pointer; }
 .dova-cli-mini img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; }
 .dova-cli-mini img.cargada { opacity: 1; }
 .dova-cli-nueva-etapa { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -454,13 +454,13 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 
 /* Documentos del paciente */
 .dova-cli-docs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.dova-cli-docgrupo { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.dova-cli-docgrupo { border: 1px solid var(--border); border-radius: 2px; padding: 12px 14px; }
 .dova-cli-docgrupo h4 { margin: 0 0 8px; }
 .dova-cli-doclista { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
 .dova-cli-doclista li { display: flex; flex-direction: column; padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .dova-cli-doclista li:last-child { border-bottom: 0; }
 .dova-cli-doclista .dova-btn-link { text-align: left; padding: 0; }
-.dova-ext-chip { border: 1px solid var(--border); background: var(--white); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; color: inherit; }
+.dova-ext-chip { border: 1px solid var(--border); background: var(--white); border-radius: 2px; padding: 4px 12px; font-size: 13px; cursor: pointer; color: inherit; }
 .dova-ext-chip.activo { border-color: var(--terracotta, #C1673F); box-shadow: inset 0 0 0 1px var(--terracotta, #C1673F); }
 .dova-ext-chip strong { margin-left: 4px; }
 
@@ -469,7 +469,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-rep-menu { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-m, 10px); padding: 10px; background: var(--white); }
 .dova-rep-menu h4 { margin: 10px 6px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
 .dova-rep-menu h4:first-child { margin-top: 0; }
-.dova-rep-menu button { text-align: left; background: none; border: 0; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: inherit; font: inherit; font-size: 14px; }
+.dova-rep-menu button { text-align: left; background: none; border: 0; padding: 7px 8px; border-radius: 2px; cursor: pointer; color: inherit; font: inherit; font-size: 14px; }
 .dova-rep-menu button:hover { background: rgba(0,0,0,.05); }
 .dova-rep-menu button.activo { background: rgba(193,103,63,.14); font-weight: 600; }
 .dova-rep-select { display: none; }
@@ -485,19 +485,19 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 
 /* Centro de comandos (Ctrl+K) */
 .dova-cmd-overlay { position: fixed; inset: 0; background: rgba(20, 16, 14, .45); z-index: 3000; display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
-.dova-cmd { width: 100%; max-width: 640px; background: var(--white, #fff); color: var(--ink, #222); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; }
+.dova-cmd { width: 100%; max-width: 640px; background: var(--white, #fff); color: var(--ink, #222); border-radius: 2px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; }
 .dova-cmd-barra { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border, #e5e5e5); }
 .dova-cmd-barra input { flex: 1; border: 0; outline: 0; font-size: 17px; background: transparent; color: inherit; padding: 4px 0; margin: 0; min-width: 0; }
-.dova-cmd kbd, .dova-cmd-btn kbd { font: 11px/1 ui-monospace, monospace; border: 1px solid var(--border, #ddd); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; opacity: .75; }
+.dova-cmd kbd, .dova-cmd-btn kbd { font: 11px/1 ui-monospace, monospace; border: 1px solid var(--border, #ddd); border-bottom-width: 2px; border-radius: 2px; padding: 2px 5px; opacity: .75; }
 .dova-cmd-lista { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
 .dova-cmd-grupo { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .6; padding: 10px 10px 4px; }
-.dova-cmd-item { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.dova-cmd-item { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 2px; cursor: pointer; }
 .dova-cmd-item[aria-selected="true"] { background: rgba(193,103,63,.14); }
 .dova-cmd-item small { display: block; opacity: .7; font-size: 12px; margin-top: 1px; }
 .dova-cmd-ic { width: 24px; text-align: center; flex-shrink: 0; }
 .dova-cmd-vacio { padding: 14px 10px; opacity: .7; }
 .dova-cmd-pie { display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--border, #e5e5e5); font-size: 12px; opacity: .8; }
-.dova-cmd-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 5px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+.dova-cmd-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 2px; padding: 5px 12px; cursor: pointer; font: inherit; font-size: 13px; }
 @media (max-width: 768px) {
   .dova-cmd-overlay { padding: 8px; }
   .dova-cmd { max-height: 88vh; }

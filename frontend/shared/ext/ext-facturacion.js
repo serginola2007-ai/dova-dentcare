@@ -193,7 +193,7 @@ const DovaFacturacion = (() => {
     const g = c.querySelector('[data-graf]');
     if (e.serieMes.length >= 2) {
       const s = { titulo: 'Facturado por día (este mes)', etiquetas: e.serieMes.map((x) => fmtFecha(x.fecha).slice(0, 5)), valores: e.serieMes.map((x) => x.total), formato: 'gs' };
-      g.innerHTML = X.grafico(s); X.activarGraficos(g, [s]);
+      g.innerHTML = X.grafico({ ...s, ancho: 900, alto: 230 }); X.activarGraficos(g, [s]);
     } else g.innerHTML = '<p class="dova-nota">El gráfico del mes aparece cuando haya facturas en al menos dos días distintos.</p>';
   }
 
@@ -606,7 +606,7 @@ const DovaFacturacion = (() => {
     if (!rep.filas.length) return;
     if (['dia', 'mes'].includes(st.agrupar) && rep.filas.length >= 2) {
       const s = { titulo: 'Facturado', etiquetas: rep.filas.map((f) => f.etiqueta.slice(0, 5)), valores: rep.filas.map((f) => f.total), formato: 'gs' };
-      const g = r.querySelector('[data-g]'); g.innerHTML = X.grafico(s); X.activarGraficos(g, [s]);
+      const g = r.querySelector('[data-g]'); g.innerHTML = X.grafico({ ...s, ancho: 900, alto: 230 }); X.activarGraficos(g, [s]);
     }
     r.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`facturacion-${st.agrupar}-${desde || 'inicio'}-${hasta || hoy()}.csv`, rep.filas, [
       { t: 'Detalle', csv: (f) => f.etiqueta }, { t: 'Facturas', csv: (f) => f.facturas }, { t: 'Facturado', csv: (f) => f.total }, { t: 'Cobrado', csv: (f) => f.cobrado }, { t: 'Pendiente', csv: (f) => f.pendiente }]));

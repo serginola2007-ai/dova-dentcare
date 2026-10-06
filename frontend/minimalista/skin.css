@@ -6,7 +6,7 @@
 .dova-marca-producto { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; }
 .dova-marca-clinica { font-size: 12px; color: var(--ink-soft); }
 .dova-menu { display: flex; gap: 4px; }
-.dova-menu-item { background: none; border: none; color: var(--ink-soft); padding: 8px 14px; font-size: 14px; border-radius: 999px; }
+.dova-menu-item { background: none; border: none; color: var(--ink-soft); padding: 8px 14px; font-size: 14px; border-radius: 2px; }
 .dova-menu-item:hover { color: var(--ink); }
 .dova-menu-item.activo { background: var(--cream); color: var(--terracotta); font-weight: 600; }
 .dova-logout { background: none; border: none; color: var(--ink-soft); font-size: 13px; text-decoration: underline; }

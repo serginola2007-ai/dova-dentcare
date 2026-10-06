@@ -442,3 +442,12 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - En el celular, dentro del menú ☰, funciona como acordeón: tocar la herramienta despliega sus opciones debajo.
 - Cada opción respeta los permisos de la persona. Una prueba (ui-submenu) verifica, para administración, recepción y odontólogo, que el menú ofrezca exactamente las pestañas que dibuja cada sección y que abra la elegida.
 - Archivos: `shared/app.js` (definición `subs` en el menú), `shared/ext/ext-core.js` (pestaña inicial pedida desde el menú), `shared/base.css` y `tecnico/skin.css`.
+
+## Estilo más sobrio y técnico
+- Esquinas casi rectas (2px) en todo el sistema; los círculos quedan solo para puntos y avatares.
+- Indicadores en una franja dividida por líneas finas, en lugar de una tarjeta redondeada por número. La alerta se marca con el número en rojo, sin recuadro rojo.
+- Sin sombras decorativas: solo menús, modales y avisos flotantes tienen una sombra corta.
+- Tablas sin caja alrededor, solo líneas entre filas. Pestañas subrayadas en lugar de "píldoras".
+- Alertas médicas con una marca lateral en lugar de un recuadro de color. Login sin recuadro doble.
+- Gráfico de Facturación: textos a escala normal (antes se veían gigantes) y barras rectas.
+- Todo en `shared/sobrio.css`, que se carga después del diseño elegido. Valores de radio unificados en `base.css`, `ext.css` y los 3 `skin.css`.

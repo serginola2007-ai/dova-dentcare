@@ -1,0 +1,70 @@
+/* DOVA — estilo sobrio (se carga DESPUÉS del skin, en los 3 diseños).
+   Criterio: esquinas casi rectas (2px), sin sombras decorativas, sin bordes
+   dentro de bordes. Los datos se separan con líneas finas, no con cajas.
+   Las sombras quedan solo en lo que flota (menús, modales, avisos). */
+
+:root { --radius-s: 2px; --radius-m: 2px; --shadow-card: none; }
+
+/* ---------- Indicadores: una franja con divisiones, no una tarjeta por número ---------- */
+.dova-cards-grid, .dova-ext-kpis {
+  gap: 0; border-top: 1px solid var(--border-strong); border-left: 1px solid var(--border);
+  background: transparent;
+}
+.dova-cards-grid > .dova-card, .dova-ext-kpis > .dova-ext-kpi {
+  border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  border-radius: 0; box-shadow: none; background: var(--white); padding: 12px 16px;
+}
+.dova-ext-kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+/* La alerta se marca solo con el número en rojo (sin recuadro de color) */
+.dova-cards-grid > .dova-card-alerta, .dova-ext-kpis > .dova-ext-kpi.alerta { border-color: var(--border); }
+/* Resúmenes (ficha, consulta): misma franja dividida */
+.dova-cli-360-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.dova-contexto-grid, .dova-cli-360-grid { gap: 0; border-top: 1px solid var(--border-strong); border-left: 1px solid var(--border); }
+.dova-contexto-grid > *, .dova-cli-360-grid > * { border: 0 !important; border-right: 1px solid var(--border) !important; border-bottom: 1px solid var(--border) !important; border-radius: 0 !important; box-shadow: none !important; background: var(--white); }
+.dova-card-clicable { transition: background-color .12s; }
+.dova-card-clicable:hover { box-shadow: none; transform: none; background: var(--cream); }
+.dova-card-valor, .dova-ext-kpi-valor { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; font-size: 22px; white-space: nowrap; }
+
+/* ---------- Paneles: planos, un solo borde fino ---------- */
+.dova-card { box-shadow: none; }
+.dova-ext-caja { box-shadow: none; }
+/* Un panel adentro de otro no repite el borde */
+.dova-card .dova-card, .dova-ext-caja .dova-ext-caja, .dova-card .dova-ext-caja, .dova-ext-caja .dova-card { border: 0; border-top: 1px solid var(--border); padding-left: 0; padding-right: 0; background: transparent; }
+
+/* ---------- Gráficos: sin caja redondeada, barras rectas ---------- */
+.dova-ext-grafico { box-shadow: none; }
+
+/* ---------- Tablas: sin caja alrededor, solo líneas entre filas ---------- */
+.dova-tabla { border: 0; border-radius: 0; box-shadow: none; background: var(--white); }
+.dova-tabla th { background: transparent; border-bottom: 1px solid var(--border-strong); font-size: 11px; letter-spacing: .05em; }
+.dova-tabla td { border-bottom: 1px solid var(--border); }
+.dova-tabla tbody tr:hover td { background: color-mix(in srgb, var(--cream) 60%, transparent); }
+.dova-ext-tabla-wrap { border: 0; border-radius: 0; }
+
+/* ---------- Pestañas: subrayado, no píldoras ---------- */
+.dova-ext-subtabs { gap: 0; padding-bottom: 0; border-bottom: 1px solid var(--border-strong); }
+.dova-ext-subtab {
+  background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  margin-bottom: -1px; padding: 9px 14px; color: var(--ink-soft); font-size: 13px;
+}
+.dova-ext-subtab:hover { color: var(--ink); }
+.dova-ext-subtab.activo { background: none; color: var(--terracotta); border-bottom-color: var(--terracotta); font-weight: 600; }
+
+/* ---------- Avisos: marca lateral en lugar de recuadro de color ---------- */
+.dova-ext-alertas-medicas, .dova-alerta-clinica, .dova-alerta-eliminado {
+  border: 0; border-left: 3px solid var(--rust); border-radius: 0;
+}
+
+/* ---------- Etiquetas, botones y chips ---------- */
+.dova-badge { border-radius: 2px; padding: 1px 6px; font-size: 11px; letter-spacing: .02em; }
+.dova-btn-primary, .dova-btn-secundario, .dova-btn-peligro { border-radius: 2px; box-shadow: none; }
+.dova-ext-chip, .dova-cli-chips li { border-radius: 2px; }
+
+/* ---------- Lo que flota conserva una sombra corta ---------- */
+.dova-submenu, .dova-submenu2, .dova-buscador-resultados, .dova-campana-panel { box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+.dova-modal-box { box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.dova-login-card { box-shadow: none; border: 0 !important; }
+
+@media (max-width: 768px) {
+  .dova-submenu, .dova-submenu2 { box-shadow: none; }
+}

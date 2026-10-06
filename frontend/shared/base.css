@@ -16,8 +16,8 @@
   /* Barra superior oscura: se mantiene oscura también en modo oscuro (si
      usara --ink, en modo oscuro quedaba clara con letras claras: invisible). */
   --barra: #2B2420;
-  --radius-s: 4px;
-  --radius-m: 8px;
+  --radius-s: 2px;
+  --radius-m: 2px;
   --shadow-menu: 0 8px 24px rgba(43,36,32,0.12);
 }
 @media (prefers-color-scheme: dark) {
@@ -152,7 +152,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 
 /* ---- Fase 5: materiales consumidos por etapa/sesión (inventario ↔ procedimientos) ---- */
 .dova-materiales-box { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 13px; }
-.dova-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.dova-badge { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; font-weight: 600; }
 .dova-badge-ok { background: rgba(122,139,118,0.2); color: var(--sage-dark); }
 
 /* ---- Modo Consulta ---- */
@@ -281,12 +281,12 @@ body.dova-menu-abierto .dova-menu-overlay {
 }
 .dova-preview-barra { height: 18px; display: flex; align-items: center; gap: 4px; padding: 0 8px; flex-shrink: 0; }
 .dova-preview-cuerpo { flex: 1; display: flex; gap: 6px; padding: 8px; }
-.dova-preview-bloque { border-radius: 3px; flex: 1; }
+.dova-preview-bloque { border-radius: 2px; flex: 1; }
 .dova-preview-dot { width: 6px; height: 6px; border-radius: 50%; }
 
 .dova-preview-moderno .dova-preview-barra { background: #FFFFFF; border-bottom: 1px solid #E4E4E7; }
 .dova-preview-moderno .dova-preview-cuerpo { background: #FAFAFA; }
-.dova-preview-moderno .dova-preview-bloque { background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-radius: 6px; }
+.dova-preview-moderno .dova-preview-bloque { background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-radius: 2px; }
 .dova-preview-moderno .dova-preview-dot { background: #C1673F; }
 
 .dova-preview-minimalista .dova-preview-barra { background: #F7F3EC; }
@@ -322,7 +322,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-card-clave { padding: 16px; max-width: 460px; }
 
 /* Botón "Instalar app" (PWA) en la barra superior */
-.dova-instalar-btn { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; opacity: .9; }
+.dova-instalar-btn { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 2px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; opacity: .9; }
 .dova-instalar-btn:hover { opacity: 1; }
 .dova-pwa-pasos { padding-left: 20px; line-height: 1.7; }
 /* Abierta como app: respetar la muesca / barra de estado del celular */
@@ -338,13 +338,13 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-submenu {
   display: none; flex-direction: column; gap: 2px;
   position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; z-index: 950;
-  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  background: var(--white); border: 1px solid var(--border); border-radius: 2px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.14); padding: 6px;
 }
 .dova-menu-grupo.abierto .dova-submenu { display: flex; }
 .dova-submenu .dova-menu-item {
   display: block; width: 100%; text-align: left; white-space: nowrap;
-  color: var(--ink); background: none; border: none; border-radius: 6px; padding: 10px 12px; font-size: 14px;
+  color: var(--ink); background: none; border: none; border-radius: 2px; padding: 10px 12px; font-size: 14px;
 }
 .dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: var(--cream); outline: none; }
 .dova-submenu .dova-menu-item.activo { background: rgba(193,103,63,0.12); color: var(--terracotta-dark, var(--terracotta)); font-weight: 600; }
@@ -359,7 +359,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-submenu2 {
   display: none; flex-direction: column; gap: 2px;
   position: absolute; top: -6px; left: calc(100% + 2px); min-width: 230px; z-index: 960;
-  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  background: var(--white); border: 1px solid var(--border); border-radius: 2px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.14); padding: 6px;
 }
 .dova-submenu-fila.a-la-izquierda .dova-submenu2 { left: auto; right: calc(100% + 2px); }
@@ -388,7 +388,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-btn-primary.dova-btn-peligro-fondo { background: var(--rust); }
 .dova-btn-primary.dova-btn-peligro-fondo:disabled { opacity: .45; cursor: not-allowed; }
 .dova-lista-avisos { margin: 10px 0 12px 18px; display: grid; gap: 4px; }
-.dova-alerta-eliminado { margin: 12px 0; padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--rust) 40%, transparent); background: color-mix(in srgb, var(--rust) 8%, transparent); color: var(--ink); }
+.dova-alerta-eliminado { margin: 12px 0; padding: 10px 14px; border-radius: 2px; border: 1px solid color-mix(in srgb, var(--rust) 40%, transparent); background: color-mix(in srgb, var(--rust) 8%, transparent); color: var(--ink); }
 .dova-toolbar #btn-ver-eliminados[aria-pressed="true"] { border-color: var(--rust); color: var(--rust); }
 
 /* ---- Tiempo real: campanita de avisos ---- */
@@ -396,7 +396,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-campana-btn { position: relative; width: 36px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;
   background: none; border: 1px solid var(--border); border-radius: var(--radius-m); color: inherit; cursor: pointer; }
 .dova-campana-btn:hover { border-color: var(--border-strong); }
-.dova-campana-num { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+.dova-campana-num { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 2px;
   background: var(--rust); color: #fff; font: 700 11px/18px system-ui, sans-serif; text-align: center; }
 .dova-vivo-punto { position: absolute; bottom: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); box-shadow: 0 0 0 2px var(--white); }
 .dova-vivo-punto.desconectado { background: var(--ink-soft); animation: dova-parpadeo 1.2s infinite; }
@@ -404,7 +404,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 .dova-campana.sonando .dova-campana-btn svg { animation: dova-sonar .8s ease; transform-origin: 50% 10%; }
 @keyframes dova-sonar { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 80% { transform: rotate(-5deg); } }
 .dova-campana-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 1200; width: min(360px, calc(100vw - 32px));
-  background: var(--white); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-menu); overflow: hidden; }
+  background: var(--white); color: var(--ink); border: 1px solid var(--border); border-radius: 2px; box-shadow: var(--shadow-menu); overflow: hidden; }
 .dova-campana-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .dova-campana-lista { max-height: min(420px, 60vh); overflow-y: auto; }
 .dova-campana-item { display: grid; gap: 2px; width: 100%; text-align: left; padding: 11px 14px; background: none; border: 0; border-bottom: 1px solid var(--border); color: inherit; cursor: pointer; font: inherit; }

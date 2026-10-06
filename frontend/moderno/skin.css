@@ -12,8 +12,8 @@
   --border: #E4E4E7;
   --border-strong: #D4D4D8;
   --white: #FFFFFF;
-  --radius-s: 6px;
-  --radius-m: 12px;
+  --radius-s: 2px;
+  --radius-m: 2px;
   --shadow-menu: 0 4px 16px rgba(0,0,0,0.08);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 12px rgba(0,0,0,0.04);
 }
@@ -71,14 +71,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 
 .dova-main { padding: 32px 40px; max-width: 1140px; margin: 0 auto; }
 
-/* ---- Tarjetas y tablas: solo sombra flotante, sin borde marcado ---- */
+/* ---- Tarjetas: planas, con un borde fino (sin sombra) ---- */
 .dova-card, .dova-login-card {
-  border: none; border-radius: var(--radius-m);
-  box-shadow: var(--shadow-card); background: var(--white);
+  border: 1px solid var(--border); border-radius: var(--radius-m);
+  box-shadow: none; background: var(--white);
 }
 .dova-card-valor { font-weight: 800; letter-spacing: -0.02em; }
 
-.dova-tabla { border: none; border-radius: var(--radius-m); box-shadow: var(--shadow-card); }
+.dova-tabla { border: none; border-radius: 0; box-shadow: none; }
 .dova-tabla th { background: var(--cream); font-weight: 600; letter-spacing: 0.02em; border-bottom: 1px solid var(--border); }
 .dova-tabla td { border-bottom: 1px solid var(--border); }
 .dova-tabla tr:last-child td { border-bottom: none; }
@@ -94,7 +94,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 
 .dova-btn-primary {
   border-radius: var(--radius-s); font-weight: 600; letter-spacing: -0.01em;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: none;
 }
 .dova-btn-secundario { border-radius: var(--radius-s); font-weight: 500; }
 

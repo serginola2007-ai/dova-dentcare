@@ -289,8 +289,10 @@ const DovaExt = (() => {
   }
   function fmtValor(v, formato) { return v === null || v === undefined ? '—' : formato === 'gs' ? fmtGs(v) : formato === 'pct' ? `${v}%` : Number(v).toLocaleString('es-PY'); }
 
-  function grafico({ titulo, etiquetas, valores, tipo = 'barras', formato, alto = 210, subtitulo }) {
-    const W = 400; const H = alto; const m = { t: 18, r: 14, b: 26, l: 58 };
+  // ancho: unidades del dibujo. Un gráfico que ocupa todo el ancho de la página
+  // usa un ancho mayor para que los textos no se agranden al escalar.
+  function grafico({ titulo, etiquetas, valores, tipo = 'barras', formato, alto = 210, subtitulo, ancho = 400 }) {
+    const W = ancho; const H = alto; const m = { t: 18, r: 14, b: 26, l: 58 };
     const iw = W - m.l - m.r; const ih = H - m.t - m.b;
     const max = niceMax(Math.max(...valores.filter((v) => v !== null), 0));
     const y = (v) => m.t + ih - (v / max) * ih;
@@ -304,8 +306,8 @@ const DovaExt = (() => {
       const bw = Math.min(20, Math.max(4, banda - 6));
       marcas = valores.map((v, i) => {
         if (v === null) return '';
-        const h = Math.max(0, m.t + ih - y(v)); const x0 = x(i) - bw / 2; const r = Math.min(4, h);
-        const d = `M${x0},${m.t + ih} v${-(h - r)} q0,${-r} ${r},${-r} h${bw - 2 * r} q${r},0 ${r},${r} v${h - r} z`;
+        const h = Math.max(0, m.t + ih - y(v)); const x0 = x(i) - bw / 2;
+        const d = `M${x0},${m.t + ih} v${-h} h${bw} v${h} z`;
         return `<path d="${d}" class="dova-ext-marca"/><rect x="${m.l + banda * i}" y="${m.t}" width="${banda}" height="${ih}" fill="transparent" data-i="${i}" class="dova-ext-hit"/>`;
       }).join('');
     } else {
