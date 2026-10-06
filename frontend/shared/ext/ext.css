@@ -482,3 +482,30 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-rep-select { display: flex; flex-direction: column; gap: 4px; }
   .dova-rep-select select { width: 100%; }
 }
+
+/* Centro de comandos (Ctrl+K) */
+.dova-cmd-overlay { position: fixed; inset: 0; background: rgba(20, 16, 14, .45); z-index: 3000; display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
+.dova-cmd { width: 100%; max-width: 640px; background: var(--white, #fff); color: var(--ink, #222); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; }
+.dova-cmd-barra { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border, #e5e5e5); }
+.dova-cmd-barra input { flex: 1; border: 0; outline: 0; font-size: 17px; background: transparent; color: inherit; padding: 4px 0; margin: 0; min-width: 0; }
+.dova-cmd kbd, .dova-cmd-btn kbd { font: 11px/1 ui-monospace, monospace; border: 1px solid var(--border, #ddd); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; opacity: .75; }
+.dova-cmd-lista { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+.dova-cmd-grupo { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .6; padding: 10px 10px 4px; }
+.dova-cmd-item { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.dova-cmd-item[aria-selected="true"] { background: rgba(193,103,63,.14); }
+.dova-cmd-item small { display: block; opacity: .7; font-size: 12px; margin-top: 1px; }
+.dova-cmd-ic { width: 24px; text-align: center; flex-shrink: 0; }
+.dova-cmd-vacio { padding: 14px 10px; opacity: .7; }
+.dova-cmd-pie { display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--border, #e5e5e5); font-size: 12px; opacity: .8; }
+.dova-cmd-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 5px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+@media (max-width: 768px) {
+  .dova-cmd-overlay { padding: 8px; }
+  .dova-cmd { max-height: 88vh; }
+  .dova-cmd-pie, .dova-cmd-btn-kbd, .dova-cmd-btn-txt, .dova-cmd-barra kbd { display: none; }
+  .dova-cmd-btn { padding: 5px 9px; }
+  /* Pestañas de la ficha: una fila que se desliza en lugar de varias filas apiladas */
+  .dova-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .dova-tabs .dova-tab { flex: 0 0 auto; white-space: nowrap; }
+  .dova-ext-subtabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .dova-ext-subtabs .dova-ext-subtab { flex: 0 0 auto; white-space: nowrap; }
+}

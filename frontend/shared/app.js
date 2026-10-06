@@ -346,6 +346,7 @@ const DovaApp = (() => {
       const ref = document.getElementById('theme-toggle-btn') || document.getElementById('logout-btn');
       if (ref) DovaVivo.montarCampana(ref, navegar);
     }
+    if (window.DovaComandos) DovaComandos.iniciar({ navegar, menu: () => MENU.filter((m) => tieneAcceso(m.permiso)) });
     {
       const hashActual = location.hash.replace('#', '');
       const [rutaInicial, ...restoInicial] = hashActual.split('/');

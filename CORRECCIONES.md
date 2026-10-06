@@ -368,3 +368,13 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
   - Filtros por fecha, odontólogo, tratamiento, estado, método de pago y usuario.
   - Exportación a PDF, Excel y CSV con el permiso nuevo `reportes.export` (el administrador lo tiene). Cada exportación queda auditada.
 - Auditoría: filtros por acción y resultado (correcto, denegado o fallido), columna de IP, detalle con tabla de antes y después, y descarga en CSV (también auditada).
+
+## Fase 6 — Ctrl+K, celular, rendimiento y seguridad (migración 0037)
+- Centro de comandos: Ctrl+K (⌘K en Mac) o el botón 🔍 del encabezado, que en el celular queda como ícono.
+  - Busca secciones, acciones rápidas y datos reales (pacientes, turnos, presupuestos, cobros, facturas, tickets y usuarios).
+  - Acciones rápidas: nuevo turno, nuevo paciente, Mi día, caja, pacientes para contactar, insumos por vencer, reporte de cobros e historial de cambios.
+  - Al elegir un paciente ofrece: abrir ficha, iniciar consulta, darle un turno, registrar un cobro y ver documentos.
+  - Todo filtrado por permisos (lo que el usuario no puede usar no aparece) y validado otra vez en el servidor. Se maneja con flechas, Enter y Esc.
+- Celular: las pestañas de la ficha y las subpestañas van en una sola fila que se desliza, en lugar de ocupar varias filas.
+- Rendimiento: 15 índices nuevos para las consultas por paciente. La bandeja de seguimiento pasó de 0,8 s a 0,08 s y los saldos de 0,28 s a 0,03 s; todas las pantallas cargan en menos de medio segundo.
+- Seguridad: prueba nueva de la matriz de permisos con 4 roles. Cubre endpoints sensibles, falta de token, token adulterado, parámetros con inyección (nunca dan error 500) y que los accesos denegados queden auditados.
