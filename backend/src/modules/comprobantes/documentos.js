@@ -175,4 +175,44 @@ async function estadoCuenta(clinicaId, pacienteId, res, usuario) {
   await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'exportar_estado_cuenta', modulo: 'pagos', entidadId: p.id });
 }
 
-module.exports = { historiaClinica, consulta, estadoCuenta };
+// Informe de derivación (interconsulta): datos del paciente, alertas, motivo y
+// las últimas consultas, para que el profesional de destino tenga el contexto.
+async function derivacion(clinicaId, id, res, usuario) {
+  const d = (await query(`SELECT d.*, oo.nombre AS origen_nombre, oo.matricula AS origen_matricula, od.nombre AS destino_nombre, od.especialidad AS destino_especialidad
+                          FROM derivaciones d LEFT JOIN odontologos oo ON oo.id=d.odontologo_origen_id LEFT JOIN odontologos od ON od.id=d.odontologo_destino_id
+                          WHERE d.clinica_id=$1 AND d.id=$2`, [clinicaId, Number(id)])).rows[0];
+  if (!d) throw new ApiError(404, 'Derivación no encontrada');
+  const [p, clinica, alergias, meds, hcs] = await Promise.all([
+    paciente(clinicaId, d.paciente_id), clinicaRepo.findById(clinicaId),
+    query('SELECT sustancia, severidad FROM paciente_alergias WHERE clinica_id=$1 AND paciente_id=$2 AND activa', [clinicaId, d.paciente_id]).then((r) => r.rows),
+    query('SELECT medicamento, dosis FROM paciente_medicacion WHERE clinica_id=$1 AND paciente_id=$2 AND activa', [clinicaId, d.paciente_id]).then((r) => r.rows),
+    query(`SELECT h.*, o.nombre AS odontologo_nombre FROM historia_clinica h LEFT JOIN odontologos o ON o.id=h.odontologo_id
+           WHERE h.clinica_id=$1 AND h.paciente_id=$2 AND h.firmada ORDER BY h.fecha DESC, h.id DESC LIMIT 3`, [clinicaId, d.paciente_id]).then((r) => r.rows),
+  ]);
+  const doc = nuevoDoc(res, `derivacion-${d.id}`);
+  cabecera(doc, clinica, 'Informe de derivación');
+  datosPaciente(doc, p);
+  campo(doc, 'Fecha', dia(d.creado_en instanceof Date ? d.creado_en.toISOString() : d.creado_en));
+  campo(doc, 'Deriva', d.origen_nombre ? `${d.origen_nombre}${d.origen_matricula ? ` (Mat. ${d.origen_matricula})` : ''}` : null);
+  campo(doc, 'Para', `${d.destino_nombre || '-'}${d.destino_especialidad ? ` — ${d.destino_especialidad}` : ''}`);
+  campo(doc, 'Especialidad solicitada', d.especialidad);
+  titulo(doc, 'Motivo de la derivación');
+  doc.fontSize(10).fillColor('#000').text(d.motivo || '-');
+  if (d.observaciones) { doc.moveDown(0.3); campo(doc, 'Observaciones', d.observaciones); }
+  titulo(doc, 'Alertas');
+  campo(doc, 'Alergias', [...alergias.map((a) => `${a.sustancia}${a.severidad ? ` (${a.severidad})` : ''}`), p.alergias].filter(Boolean).join('; ') || 'Sin alergias registradas');
+  campo(doc, 'Medicación', [...meds.map((m) => [m.medicamento, m.dosis].filter(Boolean).join(' ')), p.medicamentos].filter(Boolean).join('; ') || 'Sin medicación registrada');
+  campo(doc, 'Antecedentes médicos', p.antecedentes_medicos);
+  if (hcs.length) { titulo(doc, 'Últimas consultas'); for (const h of hcs) consultaEnDoc(doc, h); }
+  if (d.archivo_nombre) { doc.moveDown(0.3); doc.fontSize(9).fillColor('#555').text(`Adjunto en DOVA: ${d.archivo_nombre}`); }
+  const y = Math.max(doc.y + 40, 680);
+  if (y < 760) {
+    doc.moveTo(330, y).lineTo(545, y).strokeColor('#999').stroke();
+    doc.fontSize(9.5).fillColor('#000').text(d.origen_nombre || 'Profesional', 330, y + 6, { width: 215, align: 'center' });
+  }
+  numerar(doc);
+  doc.end();
+  await auditoria.registrar({ clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'exportar_derivacion', modulo: 'derivaciones', entidadId: d.id, detalle: { pacienteId: d.paciente_id } });
+}
+
+module.exports = { historiaClinica, consulta, estadoCuenta, derivacion };

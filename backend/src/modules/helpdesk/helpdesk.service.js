@@ -138,12 +138,16 @@ async function agregarAdjunto(clinicaId, ticketId, mensajeId, usuario, archivoMu
     throw new ApiError(400, 'El archivo supera el tamaño máximo permitido (15MB)');
   }
 
+  // Se guarda en la base (el disco del servidor se borra en cada actualización en Render).
+  const datos = await fs.readFile(archivoMulter.path);
+  await fs.unlink(archivoMulter.path).catch(() => {});
   const adjunto = await repo.crearAdjunto(ticketId, mensajeId, usuario.id, {
     nombreOriginal: archivoMulter.originalname,
     nombreInterno: path.basename(archivoMulter.path),
     mimeType: archivoMulter.mimetype,
     tamanioBytes: archivoMulter.size,
-    storagePath: archivoMulter.path,
+    storagePath: null,
+    datos,
   }, RETENCION_DIAS_ADJUNTOS);
 
   await auditoria.registrar({
@@ -177,7 +181,7 @@ async function ejecutarLimpiezaRetencion() {
   let eliminados = 0;
   for (const adjunto of vencidos) {
     try {
-      await fs.unlink(adjunto.storage_path);
+      if (adjunto.storage_path) await fs.unlink(adjunto.storage_path);
     } catch (err) {
       if (err.code !== 'ENOENT') console.error('[helpdesk-retencion] error borrando archivo', adjunto.id, err.message);
       // Tolerante: si el archivo ya no existe, igual marcamos el registro.

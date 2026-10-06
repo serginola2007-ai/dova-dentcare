@@ -94,13 +94,14 @@ router.get('/bandeja', requirePermiso(...VER), h(async (req) => {
     query(`SELECT tipo, referencia_tipo, referencia_id FROM seguimiento_casos WHERE clinica_id=$1 AND referencia_id IS NOT NULL
            AND (estado='descartado' OR (estado='resuelto' AND cerrado_en > now() - interval '30 days'))`, [c]).then((r) => r.rows),
   ]);
-  const clave = (x) => `${x.tipo}|${x.referencia_tipo}|${x.referencia_id}`;
+  const clave = (x) => (x.referencia_id ? `${x.tipo}|${x.referencia_tipo}|${x.referencia_id}` : `caso|${x.id}`);
   const abiertos = new Map(casos.map((k) => [clave(k), k]));
   const omitir = new Set(cerrados.map(clave));
+  const claveDet = (d) => `${d.tipo}|${d.referencia_tipo}|${d.referencia_id}`;
   const filas = [];
   for (const d of det) {
-    if (omitir.has(clave(d))) continue;
-    const k = abiertos.get(clave(d)); if (k) abiertos.delete(clave(d));
+    if (omitir.has(claveDet(d))) continue;
+    const k = abiertos.get(claveDet(d)); if (k) abiertos.delete(claveDet(d));
     filas.push({ ...d, caso: k || null });
   }
   // Casos abiertos que ya no se detectan (o manuales): se siguen mostrando hasta cerrarlos.
@@ -125,11 +126,21 @@ router.get('/bandeja', requirePermiso(...VER), h(async (req) => {
   if (vista === 'hoy') out = out.filter((f) => !f.caso || !f.caso.proximo_contacto || String(f.caso.proximo_contacto).slice(0, 10) <= hoy);
   if (vista === 'mios') out = out.filter((f) => f.caso && f.caso.responsable_id === req.usuario.id);
   if (req.query.responsableId) out = out.filter((f) => f.caso && f.caso.responsable_id === Number(req.query.responsableId));
-  const fk = (f) => (f.fecha ? (f.fecha instanceof Date ? f.fecha.toISOString() : String(f.fecha)) : '9999');
+  // Primero lo que ya tiene contacto agendado para hoy o antes (por fecha de contacto),
+  // después lo detectado sin gestionar (lo más antiguo primero), al final lo agendado a futuro.
+  const fk = (f) => {
+    const pc = f.caso && f.caso.proximo_contacto ? String(f.caso.proximo_contacto).slice(0, 10) : null;
+    if (pc && pc <= hoy) return `0|${pc}`;
+    if (pc) return `2|${pc}`;
+    return `1|${f.fecha ? (f.fecha instanceof Date ? f.fecha.toISOString() : String(f.fecha)) : '9999'}`;
+  };
   out.sort((a, b) => fk(a).localeCompare(fk(b)));
   const resumen = {};
   for (const f of out) resumen[f.tipo] = (resumen[f.tipo] || 0) + 1;
-  return { total: out.length, resumen, tipos: TIPOS, filas: out.slice(0, 500) };
+  const porPagina = Math.min(500, Math.max(10, Number(req.query.porPagina) || 100));
+  const paginas = Math.max(1, Math.ceil(out.length / porPagina));
+  const pagina = Math.min(paginas, Math.max(1, Number(req.query.pagina) || 1));
+  return { total: out.length, resumen, tipos: TIPOS, pagina, paginas, porPagina, filas: out.slice((pagina - 1) * porPagina, pagina * porPagina) };
 }));
 
 function validarCaso(d) {

@@ -102,10 +102,11 @@ async function crearAdjunto(ticketId, mensajeId, subidoPor, archivo, retencionDi
   const res = await query(
     `INSERT INTO ticket_adjuntos (
        ticket_id, mensaje_id, subido_por, nombre_original, nombre_interno,
-       mime_type, tamanio_bytes, storage_path, eliminacion_programada_en
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+       mime_type, tamanio_bytes, storage_path, eliminacion_programada_en, archivo
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     RETURNING id, ticket_id, mensaje_id, subido_por, nombre_original, mime_type, tamanio_bytes, subido_en, eliminacion_programada_en, estado`,
     [ticketId, mensajeId, subidoPor, archivo.nombreOriginal, archivo.nombreInterno,
-      archivo.mimeType, archivo.tamanioBytes, archivo.storagePath, eliminacionProgramada]
+      archivo.mimeType, archivo.tamanioBytes, archivo.storagePath || null, eliminacionProgramada, archivo.datos || null]
   );
   return res.rows[0];
 }
@@ -129,7 +130,7 @@ async function listarAdjuntosVencidos() {
 
 async function marcarAdjuntoEliminado(id, motivo) {
   await query(
-    `UPDATE ticket_adjuntos SET estado = 'deleted_by_retention', eliminado_en = now(), motivo_eliminacion = $2 WHERE id = $1`,
+    `UPDATE ticket_adjuntos SET estado = 'deleted_by_retention', eliminado_en = now(), motivo_eliminacion = $2, archivo = NULL WHERE id = $1`,
     [id, motivo]
   );
 }

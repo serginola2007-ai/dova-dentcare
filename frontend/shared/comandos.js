@@ -21,6 +21,7 @@ const DovaComandos = (() => {
     const op = typeof DovaOperativo !== 'undefined' ? DovaOperativo : null;
     return [
       { t: 'Nuevo turno', d: 'Reservar un turno en la agenda', ic: '📅', ok: puede('agenda.create') && op, fn: () => op.modalTurno({ alGuardar: () => toast('Turno reservado', 'ok') }), claves: 'agendar reservar cita' },
+      { t: 'Buscar un tratamiento', d: 'Escribí el nombre (ej.: endodoncia) para ver precio y duración', ic: '🔎', ok: puede('tratamientos.view'), fn: () => {}, buscar: true, claves: 'precio catalogo' },
       { t: 'Nuevo paciente', d: 'Dar de alta un paciente', ic: '👤', ok: puede('pacientes.create'), fn: () => { nav('pacientes'); cuando('#btn-nuevo-paciente', (b) => b.click()); }, claves: 'alta ficha crear' },
       { t: 'Mi día', d: 'Agenda de hoy', ic: '🗓', ok: puede('agenda.view'), fn: () => nav('agenda'), claves: 'hoy agenda turnos' },
       { t: 'Abrir / ver caja', d: 'Estado de la caja del día', ic: '💵', ok: puede('caja.view', 'caja.manage'), fn: () => nav('caja'), claves: 'arqueo efectivo cierre' },
@@ -37,6 +38,9 @@ const DovaComandos = (() => {
       { t: `Abrir ficha de ${nombre}`, ic: '📁', ok: puede('pacientes.view'), fn: () => nav('paciente', p.id) },
       { t: 'Iniciar consulta', ic: '🦷', ok: puede('historia_clinica.edit'), fn: () => nav('consulta', String(p.id)) },
       { t: 'Darle un turno', ic: '📅', ok: puede('agenda.create') && op, fn: () => op.modalTurno({ fijo: { pacienteId: p.id, pacienteNombre: nombre }, alGuardar: () => toast('Turno reservado', 'ok') }) },
+      { t: 'Nueva receta', ic: '💊', ok: puede('recetas.manage'), fn: () => { nav('paciente', p.id); cuando('#ficha-tabs [data-tab="recetas"]', (b) => { b.click(); cuando('[data-panel="recetas"] [data-nueva]', (n) => n.click()); }); } },
+      { t: 'Nuevo presupuesto', ic: '🧾', ok: puede('presupuestos.manage') && op && op.modalPresupuesto, fn: () => op.modalPresupuesto(p.id, () => toast('Presupuesto creado', 'ok')) },
+      { t: 'Abrir odontograma', ic: '🦷', ok: puede('odontograma.view'), fn: () => { nav('paciente', p.id); cuando('#ficha-tabs [data-tab="odontograma"]', (b) => b.click()); } },
       { t: 'Registrar un cobro', ic: '💵', ok: puede('pagos.create') && op, fn: () => op.modalCobro(p.id, { alGuardar: () => toast('Cobro registrado', 'ok') }) },
       { t: 'Ver documentos', ic: '📄', ok: puede('pacientes.view'), fn: () => { nav('paciente', p.id); cuando('#ficha-tabs [data-tab="documentos"]', (b) => b.click()); } },
     ].filter((a) => a.ok);
@@ -57,7 +61,7 @@ const DovaComandos = (() => {
     const inp = ov.querySelector('[data-q]'); const lista = ov.querySelector('[data-lista]');
     let items = []; let sel = 0; let timer = null; let pedido = 0; let paciente = null;
     const cerrar = () => { if (!abierto) return; abierto = false; ov.remove(); document.removeEventListener('keydown', teclas, true); if (prev && prev.focus) try { prev.focus(); } catch (_e) { /* */ } };
-    const ejecutar = (it) => { if (!it) return; if (it.volver) { paciente = null; inp.value = ''; pintar(); inp.focus(); return; } if (it.sub) { paciente = it.sub; inp.value = ''; pintar(); inp.focus(); return; } cerrar(); try { it.fn(); } catch (e) { toast(e.message, 'error'); } };
+    const ejecutar = (it) => { if (!it) return; if (it.buscar) { inp.value = ''; inp.placeholder = 'Nombre del tratamiento…'; inp.focus(); return; } if (it.volver) { paciente = null; inp.value = ''; pintar(); inp.focus(); return; } if (it.sub) { paciente = it.sub; inp.value = ''; pintar(); inp.focus(); return; } cerrar(); try { it.fn(); } catch (e) { toast(e.message, 'error'); } };
     const render = (grupos, cargando) => {
       items = []; let html = '';
       for (const [titulo, arr] of grupos) {
@@ -102,6 +106,7 @@ const DovaComandos = (() => {
           ['Presupuestos', ((d && d.presupuestos) || []).map((x) => ({ t: `Presupuesto N.º ${x.id} · ${x.paciente_nombre} ${x.paciente_apellido}`, d: `${fmtF(x.fecha)} · ${x.estado} · ${gs(x.total)}`, ic: '🧾', fn: () => nav('paciente', x.paciente_id) }))],
           ['Cobros', ((d && d.pagos) || []).map((x) => ({ t: `Recibo N.º ${x.id} · ${x.paciente_nombre} ${x.paciente_apellido}`, d: `${fmtF(x.fecha)} · ${x.concepto || ''} · ${gs(x.monto)}`, ic: '💵', fn: () => nav('paciente', x.paciente_id) }))],
           ['Facturas', ((d && d.facturas) || []).map((x) => ({ t: `Factura ${x.numero_completo}`, d: `${x.cliente_nombre || ''} · ${gs(x.total)}`, ic: '🧾', fn: () => nav('facturacion', `factura/${x.id}`) }))],
+          ['Tratamientos', ((d && d.tratamientos) || []).map((x) => ({ t: x.nombre, d: `${gs(x.precio)}${x.duracion_minutos ? ` · ${x.duracion_minutos} min` : ''} — catálogo`, ic: '🦷', fn: () => nav('catalogo') }))],
           ['Tickets', ((d && d.tickets) || []).map((x) => ({ t: x.titulo || `Ticket ${x.id}`, ic: '🛠', fn: () => nav('helpdesk') }))],
           ['Usuarios', ((d && d.usuarios) || []).map((x) => ({ t: x.nombre, d: `@${x.username}`, ic: '🔑', fn: () => nav('usuarios') }))],
         ];

@@ -809,13 +809,15 @@ const DovaClinica = (() => {
   async function panelDocumentos(c, pid) {
     const clin = puede('historia_clinica.view', 'pacientes.clinical.view');
     const fin = puede('pagos.view', 'cuenta_corriente.view');
-    const [hcs, cons, planes, press, recs, pagos] = await Promise.all([
+    const verDer = puede('derivaciones.manage', 'pacientes.clinical.view');
+    const [hcs, cons, planes, press, recs, pagos, ders] = await Promise.all([
       clin ? DOVA.get(`/historia-clinica/paciente/${pid}`).catch(() => []) : [],
       puede('consentimientos.manage', 'pacientes.clinical.view') ? DOVA.get(`/clinico/consentimientos/paciente/${pid}`).catch(() => []) : [],
       puede('planes_tratamiento.view', 'planes_tratamiento.manage', 'historia_clinica.view') ? DOVA.get(`/planes-tratamiento/paciente/${pid}`).catch(() => []) : [],
       puede('presupuestos.view') ? DOVA.get(`/presupuestos/paciente/${pid}`).catch(() => []) : [],
       puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view') ? DOVA.get(`/clinico/recetas/paciente/${pid}`).catch(() => []) : [],
       puede('pagos.view') ? DOVA.get(`/pagos/paciente/${pid}`).catch(() => []) : [],
+      verDer ? DOVA.get(`/derivaciones?pacienteId=${pid}`).catch(() => []) : [],
     ]);
     const fila = (ruta, titulo, sub, extra = '') => `<li><button class="dova-btn-link" data-doc="${esc(ruta)}" data-titulo="${esc(titulo)}">📄 ${esc(titulo)}</button><span class="dova-nota">${esc(sub || '')}</span>${extra}</li>`;
     const grupo = (t, items, vacio) => `<section class="dova-cli-docgrupo"><h4>${esc(t)} <span class="dova-nota">(${items.length})</span></h4>${items.length ? `<ul class="dova-cli-doclista">${items.join('')}</ul>` : `<p class="dova-nota">${esc(vacio)}</p>`}</section>`;
@@ -829,11 +831,21 @@ const DovaClinica = (() => {
     if (planes.length || clin) grupos.push(grupo('Planes de tratamiento', planes.map((p) => fila(`/comprobantes/plan-tratamiento/${p.id}`, p.nombre, `${p.pieza ? `Pieza ${p.pieza} · ` : ''}${String(p.estado).replace(/_/g, ' ')}`)), 'Sin planes.'));
     if (puede('presupuestos.view')) grupos.push(grupo('Presupuestos', press.map((x) => fila(`/comprobantes/presupuesto/${x.id}`, `Presupuesto N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.estado} · ${fmtGs(x.total)}`)), 'Sin presupuestos.'));
     if (puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view')) grupos.push(grupo('Recetas', recs.map((r) => fila(`/comprobantes/receta/${r.id}`, `Receta N.º ${r.id}`, `${fmtFecha(r.fecha)}${r.estado === 'anulada' ? ' · anulada' : ''}`)), 'Sin recetas.'));
+    if (verDer) grupos.push(grupo('Derivaciones', ders.map((x) => fila(`/comprobantes/derivacion/${x.id}`, `Informe de derivación N.º ${x.id}`, `${fmtFecha(x.creado_en)} · a ${x.odontologo_destino_nombre || ''} · ${x.estado}`,
+      x.tiene_archivo ? `<button class="dova-btn-link" data-adj-der="${x.id}" data-nombre="${esc(x.archivo_nombre || 'adjunto')}">📎 ${esc(x.archivo_nombre || 'Adjunto')}</button>` : '')), 'Sin derivaciones.'));
     if (puede('pagos.view')) grupos.push(grupo('Recibos de pago', pagos.map((x) => fila(`/comprobantes/pago/${x.id}`, `Recibo N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.concepto || ''} · ${fmtGs(x.monto)}${x.estado === 'anulado' ? ' · anulado' : ''}`)), 'Sin pagos.'));
     c.innerHTML = `<h3 class="dova-section-title">Documentos</h3>
       <p class="dova-nota">Todos los documentos se generan en el momento con los datos guardados. Tocá uno para verlo, imprimirlo o descargarlo.</p>
       ${grupos.length ? `<div class="dova-cli-docs">${grupos.join('')}</div>` : '<p class="dova-nota">Tu usuario no tiene permiso para ver documentos de este paciente.</p>'}`;
     c.querySelectorAll('[data-doc]').forEach((b) => b.addEventListener('click', () => verPdf(b.dataset.doc, b.dataset.titulo)));
+    c.querySelectorAll('[data-adj-der]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const r = await DOVA.request(`/derivaciones/${b.dataset.adjDer}/archivo`, { raw: true });
+        if (!r.ok) { let m = 'No se pudo abrir el adjunto'; try { m = (await r.json()).error.message; } catch (_e) { /* */ } throw new Error(m); }
+        const blob = await r.blob(); const u = URL.createObjectURL(blob);
+        if (/^image\/|pdf/.test(blob.type)) window.open(u, '_blank', 'noopener'); else { const a = document.createElement('a'); a.href = u; a.download = b.dataset.nombre; document.body.appendChild(a); a.click(); a.remove(); }
+      } catch (e) { toast(e.message, 'error'); }
+    }));
   }
 
   // Resumen 360° arriba de la pestaña "Resumen": última consulta, próxima

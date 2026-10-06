@@ -378,3 +378,17 @@ La web ya no está toda en una sola página. Cada sección tiene la suya, con el
 - Celular: las pestañas de la ficha y las subpestañas van en una sola fila que se desliza, en lugar de ocupar varias filas.
 - Rendimiento: 15 índices nuevos para las consultas por paciente. La bandeja de seguimiento pasó de 0,8 s a 0,08 s y los saldos de 0,28 s a 0,03 s; todas las pantallas cargan en menos de medio segundo.
 - Seguridad: prueba nueva de la matriz de permisos con 4 roles. Cubre endpoints sensibles, falta de token, token adulterado, parámetros con inyección (nunca dan error 500) y que los accesos denegados queden auditados.
+
+## Cierre integral (migración 0038)
+- Prueba de punta a punta del recorrido completo del punto 35. Cubre: paciente → turno → llegada → sillón → consulta con diagnóstico y piezas → tratamiento con protocolo de etapas → evolución → materiales (descuenta stock) → foto vinculada → receta → odontograma → firma → turno atendido → expediente de la pieza → presupuesto → aceptado → plan → pago → saldo → factura → próxima cita → seguimiento → 7 PDF reales. Resultado: 38/38.
+- Seguimiento:
+  - Corregido: varios casos creados a mano se pisaban entre sí y solo se veía el último.
+  - Corregido: los casos con contacto agendado para hoy podían quedar fuera de la lista.
+  - La bandeja ahora tiene paginación (100 por página) y la descarga en Excel incluye todos los casos.
+- Derivaciones:
+  - El adjunto se guarda en la base y se valida por contenido. Antes quedaba en el disco del servidor, que en Render se borra, y no había forma de descargarlo.
+  - Nuevo PDF "Informe de derivación" con el motivo, las alertas y las últimas consultas, que aparece en Documentos de la ficha.
+  - El listado ya no expone la ruta interna del servidor y se valida que el profesional sea de la clínica.
+- Ayuda técnica: los adjuntos también se guardan en la base. Los viejos se siguen leyendo del disco si existen.
+- Ctrl+K: se agregaron las acciones para un paciente "Nueva receta", "Nuevo presupuesto" y "Abrir odontograma", y la búsqueda de tratamientos del catálogo.
+- Tablet: 16 pantallas sin desbordes en los 3 diseños, en vertical y en horizontal.

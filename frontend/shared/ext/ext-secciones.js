@@ -64,10 +64,10 @@ const DovaSecciones = (() => {
   const EST_CASO = { pendiente: ['Pendiente', 'atencion'], en_curso: ['En gestión', 'info'], resuelto: ['Resuelto', 'ok'], descartado: ['Descartado', 'critica'] };
   const RES_CASO = [['contactado', 'Contactado'], ['no_contesta', 'No contesta'], ['mensaje_dejado', 'Mensaje dejado'], ['agendado', 'Agendó turno'], ['volvera_a_llamar', 'Volverá a llamar'], ['pago', 'Pagó / acordó pago'], ['rechaza', 'No le interesa'], ['numero_erroneo', 'Número equivocado'], ['otro', 'Otro']];
   async function subBandeja(c, estado = {}) {
-    const st = { vista: 'hoy', tipo: '', meses: 12, ...estado };
+    const st = { vista: 'hoy', tipo: '', meses: 12, pagina: 1, ...estado };
     const maneja = puede('seguimiento.manage', 'recalls.manage');
     c.innerHTML = X.cargando;
-    const q = new URLSearchParams({ vista: st.vista, meses: st.meses, ...(st.tipo ? { tipo: st.tipo } : {}) }).toString();
+    const q = new URLSearchParams({ vista: st.vista, meses: st.meses, pagina: st.pagina, ...(st.tipo ? { tipo: st.tipo } : {}) }).toString();
     const [d, resp] = await Promise.all([DOVA.get(`/seguimiento/bandeja?${q}`), DOVA.get('/seguimiento/responsables').catch(() => [])]);
     const filas = d.filas;
     const chips = Object.entries(d.tipos).filter(([k]) => d.resumen[k] || st.tipo === k)
@@ -89,16 +89,20 @@ const DovaSecciones = (() => {
         ${maneja ? '<button type="button" class="dova-btn-primary" data-nuevo>+ Nuevo seguimiento</button>' : ''}</form>
       <p class="dova-nota">Se calcula en el momento con los datos de la clínica. Al resolver o descartar un caso deja de aparecer (los resueltos vuelven a evaluarse a los 30 días).</p>
       <div class="dova-ext-chips">${st.tipo ? '<button type="button" class="dova-ext-chip" data-tipo="">Todos</button>' : ''}${chips}</div>
-      <p class="dova-nota">${d.total} caso(s)${d.total > filas.length ? ` · se muestran los primeros ${filas.length}` : ''}.</p>
+      <p class="dova-nota">${d.total} caso(s)${d.paginas > 1 ? ` · página ${d.pagina} de ${d.paginas}` : ''}.</p>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr>${cols.map((x) => `<th>${x.t}</th>`).join('')}<th></th></tr></thead><tbody>
       ${filas.map((r, i) => `<tr class="${r.caso && r.caso.proximo_contacto && String(r.caso.proximo_contacto).slice(0, 10) < X.hoy() ? 'dova-ext-fila-aviso' : ''}">${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}
         <td class="dova-ext-acciones">${X.linkWhatsapp(r.whatsapp_link)}${maneja ? `<button class="dova-btn-link" data-gestionar="${i}">Gestionar</button>` : ''}${r.caso ? `<button class="dova-btn-link" data-historial="${r.caso.id}">Historial</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="${cols.length + 1}">No hay pacientes para contactar con estos filtros.</td></tr>`}
-      </tbody></table></div>`;
+      </tbody></table></div>
+      ${d.paginas > 1 ? `<div class="dova-ext-paginas"><button type="button" class="dova-btn-secundario" data-pag="${d.pagina - 1}" ${d.pagina <= 1 ? 'disabled' : ''}>← Anterior</button><span>Página ${d.pagina} de ${d.paginas}</span><button type="button" class="dova-btn-secundario" data-pag="${d.pagina + 1}" ${d.pagina >= d.paginas ? 'disabled' : ''}>Siguiente →</button></div>` : ''}`;
     const f = c.querySelector('[data-f]'); f.vista.value = st.vista; f.meses.value = String(st.meses);
     const recargar = (cambios = {}) => subBandeja(c, { ...st, vista: f.vista.value, meses: Number(f.meses.value), ...cambios });
-    f.addEventListener('submit', (e) => { e.preventDefault(); recargar(); });
-    c.querySelectorAll('[data-tipo]').forEach((b) => b.addEventListener('click', () => recargar({ tipo: b.dataset.tipo })));
-    c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`seguimiento-${X.hoy()}.csv`, filas, cols));
+    f.addEventListener('submit', (e) => { e.preventDefault(); recargar({ pagina: 1 }); });
+    c.querySelectorAll('[data-tipo]').forEach((b) => b.addEventListener('click', () => recargar({ tipo: b.dataset.tipo, pagina: 1 })));
+    c.querySelectorAll('[data-pag]').forEach((b) => b.addEventListener('click', () => { recargar({ pagina: Number(b.dataset.pag) }); c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+    c.querySelector('[data-csv]').addEventListener('click', async () => {
+      try { const todo = await DOVA.get(`/seguimiento/bandeja?${new URLSearchParams({ vista: st.vista, meses: st.meses, porPagina: 500, ...(st.tipo ? { tipo: st.tipo } : {}) })}`); X.descargarCsv(`seguimiento-${X.hoy()}.csv`, todo.filas, cols); } catch (e) { X.toast(e.message, 'error'); }
+    });
     const opResp = resp.map((u) => [u.id, u.nombre]);
     c.querySelectorAll('[data-gestionar]').forEach((b) => b.addEventListener('click', () => {
       const r = filas[Number(b.dataset.gestionar)];

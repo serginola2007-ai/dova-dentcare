@@ -509,3 +509,4 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-ext-subtabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .dova-ext-subtabs .dova-ext-subtab { flex: 0 0 auto; white-space: nowrap; }
 }
+.dova-ext-paginas { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }

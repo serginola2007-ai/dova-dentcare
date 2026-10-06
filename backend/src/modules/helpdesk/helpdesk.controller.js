@@ -30,7 +30,14 @@ async function agregarAdjunto(req, res, next) {
 async function descargarAdjunto(req, res, next) {
   try {
     const adjunto = await service.obtenerAdjuntoParaDescarga(req.clinicaId, req.params.adjuntoId, req.usuario);
-    res.download(adjunto.storage_path, adjunto.nombre_original);
+    if (adjunto.archivo) {
+      res.set({ 'Content-Type': adjunto.mime_type || 'application/octet-stream', 'Content-Length': adjunto.archivo.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'private, no-store',
+        'Content-Disposition': `attachment; filename="${String(adjunto.nombre_original || 'archivo').replace(/[^\w.\- ]/g, '_')}"` });
+      res.end(adjunto.archivo);
+      return;
+    }
+    if (!adjunto.storage_path) throw new ApiError(404, 'El archivo ya no está disponible');
+    res.download(adjunto.storage_path, adjunto.nombre_original, (err) => { if (err && !res.headersSent) next(new ApiError(404, 'El archivo ya no está disponible (se subió antes de guardar los adjuntos en la base). Volvé a subirlo.')); });
   } catch (e) { next(e); }
 }
 async function metricas(req, res, next) {
