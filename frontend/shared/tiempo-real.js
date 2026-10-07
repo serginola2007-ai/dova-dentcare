@@ -174,7 +174,7 @@ const DovaVivo = (() => {
     if (avisarNuevas && antes !== null && n > antes) {
       try {
         const [ult] = await DOVA.get('/notificaciones?soloNoLeidas=true');
-        if (ult && typeof Vistas !== 'undefined') Vistas.toast(`🔔 ${ult.titulo}`, 'info');
+        if (ult && typeof Vistas !== 'undefined') Vistas.toast(`${ult.titulo}`, 'info');
         if (campana) { campana.classList.remove('sonando'); void campana.offsetWidth; campana.classList.add('sonando'); }
       } catch (_e) { /* */ }
     }

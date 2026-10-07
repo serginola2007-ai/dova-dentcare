@@ -451,3 +451,10 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - Alertas médicas con una marca lateral en lugar de un recuadro de color. Login sin recuadro doble.
 - Gráfico de Facturación: textos a escala normal (antes se veían gigantes) y barras rectas.
 - Todo en `shared/sobrio.css`, que se carga después del diseño elegido. Valores de radio unificados en `base.css`, `ext.css` y los 3 `skin.css`.
+
+## Sin emojis en la interfaz
+- Se quitaron todos los emojis de las pantallas del personal, del portal y del mensaje de cumpleaños.
+- Donde el emoji era el ícono de un botón (acciones de la consulta, buscador Ctrl+K, línea de tiempo clínica, accesos del inicio, botón claro/oscuro), ahora hay íconos lineales monocromos (`shared/iconos.js`). Toman el color del texto y se ven iguales en todos los equipos.
+- Donde acompañaba a un texto ("Imprimir", "Instalar app", avisos, estados vacíos), se dejó solo el texto. La asistencia del personal usa un punto de color para el estado.
+- Se mantienen los signos tipográficos: flechas, ✓, ✕ y ☰.
+- En el celular, los montos largos de las franjas de indicadores pueden partirse y ya no desbordan la pantalla.

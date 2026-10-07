@@ -150,7 +150,7 @@ const DovaFacturacion = (() => {
   // =================================================================
   async function seccion(root, navegar, params) {
     const p = String(params || '');
-    root.innerHTML = '<h2 class="dova-view-title">Facturación</h2><p class="dova-nota dova-fac-aviso">⚠️ ' + esc(AVISO_INTERNO) + '</p><div data-subs></div>';
+    root.innerHTML = '<h2 class="dova-view-title">Facturación</h2><p class="dova-nota dova-fac-aviso">' + esc(AVISO_INTERNO) + '</p><div data-subs></div>';
     const cont = root.querySelector('[data-subs]');
     if (p.startsWith('factura/')) return detalle(cont, navegar, Number(p.split('/')[1]));
     if (p.startsWith('nueva')) {
@@ -172,7 +172,7 @@ const DovaFacturacion = (() => {
     const e = await DOVA.get('/facturacion/estadisticas');
     const kpi = (v, t, sub, alerta) => `<div class="dova-ext-kpi ${alerta ? 'alerta' : ''}"><div class="dova-ext-kpi-valor">${v}</div><div class="dova-ext-kpi-label">${esc(t)}</div>${sub ? `<div class="dova-ext-kpi-sub">${sub}</div>` : ''}</div>`;
     if (!e.emitidas && !e.anuladas) {
-      c.innerHTML = `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">🧾</div><h3>Todavía no hay facturas</h3>
+      c.innerHTML = `<div class="dova-fac-vacio"><h3>Todavía no hay facturas</h3>
         <p class="dova-nota">Cuando emitas la primera, acá vas a ver lo facturado del día y del mes, lo cobrado y lo pendiente.</p>
         ${puede('facturacion.crear') ? '<button class="dova-btn-primary" data-ir-nueva>+ Emitir la primera factura</button>' : ''}</div>`;
       const b = c.querySelector('[data-ir-nueva]'); if (b) b.addEventListener('click', () => navegar('facturacion', 'nueva'));
@@ -233,7 +233,7 @@ const DovaFacturacion = (() => {
     let data;
     try { data = await DOVA.get(`/facturacion?${params}`); } catch (e) { res.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; return; }
     if (!data.items.length) {
-      res.innerHTML = `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">🔎</div><h3>No hay facturas con esos filtros</h3><p class="dova-nota">Probá con otras fechas o limpiá los filtros.</p></div>`;
+      res.innerHTML = `<div class="dova-fac-vacio"><h3>No hay facturas con esos filtros</h3><p class="dova-nota">Probá con otras fechas o limpiá los filtros.</p></div>`;
       return;
     }
     const th = (k, t) => `<th><button type="button" class="dova-fac-orden ${fl.orden === k ? 'activo' : ''}" data-orden="${k}">${t}${fl.orden === k ? (fl.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
@@ -375,7 +375,7 @@ const DovaFacturacion = (() => {
     let b = { items: [], pagoIds: [], pagosDisponibles: [], presupuestos: [], advertencias: [], config: {} };
     try { b = await DOVA.get(`/facturacion/borrador?${new URLSearchParams(Object.entries(prefijo).filter(([, v]) => v))}`); } catch (e) { toast(e.message, 'error'); }
     if (b.facturaExistente) {
-      c.innerHTML = `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">🧾</div><h3>Factura generada</h3><p>Este cobro ya tiene la factura <strong>${esc(b.facturaExistente.numero)}</strong>.</p>
+      c.innerHTML = `<div class="dova-fac-vacio"><h3>Factura generada</h3><p>Este cobro ya tiene la factura <strong>${esc(b.facturaExistente.numero)}</strong>.</p>
         <p class="dova-nota">Para volver a facturarlo, primero hay que anular esa factura.</p><button class="dova-btn-primary" data-ir>Ver la factura ${esc(b.facturaExistente.numero)}</button></div>`;
       c.querySelector('[data-ir]').addEventListener('click', () => navegar('facturacion', `factura/${b.facturaExistente.id}`));
       return;
@@ -422,7 +422,7 @@ const DovaFacturacion = (() => {
       </form>`;
     const form = c.querySelector('[data-form]');
     const tbody = form.querySelector('[data-items]');
-    const avisos = (l) => { form.querySelector('[data-avisos]').innerHTML = (l || []).map((a) => `<p class="dova-nota dova-nota-alerta">⚠️ ${esc(a)}</p>`).join(''); };
+    const avisos = (l) => { form.querySelector('[data-avisos]').innerHTML = (l || []).map((a) => `<p class="dova-nota dova-nota-alerta">${esc(a)}</p>`).join(''); };
     avisos(b.advertencias);
 
     // Conceptos
@@ -602,7 +602,7 @@ const DovaFacturacion = (() => {
         <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Detalle</th><th>Facturas</th><th>Facturado</th><th>Cobrado</th><th>Pendiente</th></tr></thead><tbody>
         ${rep.filas.map((f) => `<tr><td>${esc(f.etiqueta)}</td><td>${f.facturas}</td><td>${fmtGs(f.total)}</td><td>${fmtGs(f.cobrado)}</td><td>${f.pendiente ? `<strong>${fmtGs(f.pendiente)}</strong>` : fmtGs(0)}</td></tr>`).join('')}
         </tbody></table></div><div data-g></div>`
-        : '<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">📊</div><h3>Sin facturas en este período</h3><p class="dova-nota">Elegí otro período.</p></div>'}`;
+        : '<div class="dova-fac-vacio"><h3>Sin facturas en este período</h3><p class="dova-nota">Elegí otro período.</p></div>'}`;
     if (!rep.filas.length) return;
     if (['dia', 'mes'].includes(st.agrupar) && rep.filas.length >= 2) {
       const s = { titulo: 'Facturado', etiquetas: rep.filas.map((f) => f.etiqueta.slice(0, 5)), valores: rep.filas.map((f) => f.total), formato: 'gs' };

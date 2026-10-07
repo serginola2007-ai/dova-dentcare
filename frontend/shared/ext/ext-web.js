@@ -100,7 +100,7 @@ const DovaWeb = (() => {
       <div class="dova-web-filtros">${filtro('estado', 'pendiente', `Pendientes (${r.pendientes})`)}${filtro('estado', '', 'Todas')}
         <span class="dova-web-sep"></span>${filtro('tipo', '', 'Todo')}${filtro('tipo', 'turno', 'Turnos')}${filtro('tipo', 'registro', 'Fichas')}${filtro('tipo', 'consulta', 'Consultas')}${filtro('tipo', 'codigo', 'Códigos')}</div>
       ${r.items.length ? `<div class="dova-web-lista">${r.items.map(tarjeta).join('')}</div>`
-        : `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">📭</div><h3>${fl.estado === 'pendiente' ? 'No hay nada pendiente' : 'Todavía no llegó nada'}</h3>
+        : `<div class="dova-fac-vacio"><h3>${fl.estado === 'pendiente' ? 'No hay nada pendiente' : 'Todavía no llegó nada'}</h3>
            <p class="dova-nota">Cuando alguien reserve un turno, complete su ficha o mande una consulta desde la página, aparece acá y te llega un aviso.</p></div>`}`;
     const recargar = (cambio) => solicitudes(c, navegar, { ...fl, ...cambio });
     X.vivo(c, ['web_solicitudes', 'pacientes', 'web_cuentas'], () => recargar({}));
@@ -162,7 +162,7 @@ const DovaWeb = (() => {
             <button class="dova-btn-secundario" data-pac="${x.paciente_id}">Ver ficha</button>
             ${x.estado === 'pendiente' && puede('pagos.create') ? `<button class="dova-btn-primary" data-aprobar="${x.id}">Aprobar</button><button class="dova-btn-link dova-ext-peligro" data-rechazar="${x.id}">Rechazar</button>` : ''}</div>
         </article>`).join('')}</div>`
-        : `<div class="dova-fac-vacio"><div class="dova-fac-vacio-icono">💳</div><h3>${fl.estado === 'pendiente' ? 'No hay pagos para revisar' : 'Todavía no hay pagos desde la web'}</h3><p class="dova-nota">Cuando un paciente envíe un comprobante desde su cuenta, aparece acá y te llega un aviso.</p></div>`}`;
+        : `<div class="dova-fac-vacio"><h3>${fl.estado === 'pendiente' ? 'No hay pagos para revisar' : 'Todavía no hay pagos desde la web'}</h3><p class="dova-nota">Cuando un paciente envíe un comprobante desde su cuenta, aparece acá y te llega un aviso.</p></div>`}`;
     const recargar = (cambio) => pagosWeb(c, navegar, { ...fl, ...cambio });
     c.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => recargar({ estado: b.dataset.f })));
     c.querySelectorAll('[data-pac]').forEach((b) => b.addEventListener('click', () => navegar('paciente', b.dataset.pac)));
@@ -197,7 +197,7 @@ const DovaWeb = (() => {
   function tarjeta(s) {
     const d = s.datos || {};
     const salud = Object.entries(d.salud || {}).filter(([, v]) => v && v.r === 'si');
-    const contacto = [s.telefono && `📞 ${esc(s.telefono)}`, s.email && `✉️ ${esc(s.email)}`, s.ci && `C.I. ${esc(s.ci)}`].filter(Boolean).join(' &nbsp; ');
+    const contacto = [s.telefono && `Tel. ${esc(s.telefono)}`, s.email && `${esc(s.email)}`, s.ci && `C.I. ${esc(s.ci)}`].filter(Boolean).join(' &nbsp; ');
     const wa = s.telefono ? `https://wa.me/${(() => { const n = s.telefono.replace(/\D/g, ''); return n.startsWith('0') ? `595${n.slice(1)}` : n; })()}` : null;
     let cuerpo = '';
     if (s.tipo === 'turno') {

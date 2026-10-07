@@ -691,7 +691,7 @@ const DovaFicha = (() => {
       const cont = box.querySelector('[data-lista]');
       try {
         const lista = await DOVA.get(`/clinico/laboratorio/${t.id}/archivos`);
-        cont.innerHTML = lista.length ? `<ul class="dova-cli-doclista">${lista.map((a) => `<li><span><button class="dova-btn-link" data-ver="${a.id}" data-nombre="${esc(a.nombre)}">${a.mime === 'model/stl' ? '🧊' : a.mime === 'application/pdf' ? '📄' : '🖼'} ${esc(a.nombre)}</button>
+        cont.innerHTML = lista.length ? `<ul class="dova-cli-doclista">${lista.map((a) => `<li><span><button class="dova-btn-link" data-ver="${a.id}" data-nombre="${esc(a.nombre)}">${esc(a.nombre)} <span class="dova-nota">${a.mime === 'model/stl' ? 'STL' : a.mime === 'application/pdf' ? 'PDF' : 'Imagen'}</span></button>
           ${ed && (a.subido_por === (DOVA.usuarioActual() || {}).id || puede('usuarios.manage')) ? `<button class="dova-btn-link dova-ext-peligro" data-borrar="${a.id}">Quitar</button>` : ''}</span><span class="dova-nota">${tam(a.tamano)} · ${esc(a.subido_por_nombre || '')} · ${X.fmtFechaHora(a.creado_en)}</span></li>`).join('')}</ul>` : '<p class="dova-nota">Todavía no hay archivos.</p>';
         cont.querySelectorAll('[data-ver]').forEach((b) => b.addEventListener('click', async () => {
           try {

@@ -257,7 +257,7 @@ const DovaExt = (() => {
     div.className = 'dova-ext-alertas-medicas';
     div.setAttribute('role', 'alert');
     div.innerHTML = `
-      <div class="dova-ext-alertas-cab"><strong>⚕ Alertas médicas</strong>
+      <div class="dova-ext-alertas-cab"><strong>Alertas médicas</strong>
         ${data.resumen.criticas ? badge(`${data.resumen.criticas} crítica(s)`, 'critica') : ''} ${data.resumen.atencion ? badge(`${data.resumen.atencion} de atención`, 'atencion') : ''}
         <button class="dova-btn-link" data-toggle-alertas>Ver detalle</button></div>
       <ul class="dova-ext-alertas-lista" style="display:${data.resumen.criticas ? '' : 'none'}">

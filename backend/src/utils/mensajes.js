@@ -32,7 +32,7 @@ const PLANTILLAS = {
   recordatorio_turno: ({ nombre, clinica, fecha, hora, odontologo }) =>
     `Hola ${nombre}, te recordamos tu turno en ${clinica} el ${fmtDia(fecha)} a las ${String(hora || '').slice(0, 5)}${odontologo ? ` con ${odontologo}` : ''}. Por favor confirmá respondiendo SÍ, o avisanos si necesitás reprogramar.`,
   cumpleanos: ({ nombre, clinica }) =>
-    `¡Feliz cumpleaños, ${nombre}! Todo el equipo de ${clinica} te desea un excelente día. 🎉`,
+    `¡Feliz cumpleaños, ${nombre}! Todo el equipo de ${clinica} te desea un excelente día.`,
   reactivacion: ({ nombre, clinica, meses }) =>
     `Hola ${nombre}, te extrañamos en ${clinica}. Hace ${meses} meses de tu última visita: un control a tiempo evita tratamientos más largos. ¿Te reservamos un turno?`,
   tratamiento_pendiente: ({ nombre, clinica, tratamiento }) =>

@@ -12,7 +12,7 @@ DovaApp.iniciar({
     if (actual === 'dark' || actual === 'light') return actual;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  function actualizarIcono() { btn.textContent = temaActual() === 'dark' ? '☀️' : '🌙'; }
+  function actualizarIcono() { btn.innerHTML = DovaIcono(temaActual() === 'dark' ? 'sol' : 'luna', 16); }
   btn.addEventListener('click', function () {
     var nuevo = temaActual() === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', nuevo);

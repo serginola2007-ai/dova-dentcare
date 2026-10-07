@@ -325,10 +325,10 @@ const Vistas = (() => {
   function vistaDashboardSinReportes(usuario) {
     const nombre = usuario && (usuario.nombre || usuario.username) ? esc(usuario.nombre || usuario.username) : '';
     const accesos = [
-      { ruta: 'pacientes', label: 'Pacientes', icono: '🧑‍⚕️' },
-      { ruta: 'agenda', label: 'Agenda', icono: '📅' },
-      { ruta: 'inventario', label: 'Inventario', icono: '📦' },
-      { ruta: 'helpdesk', label: 'Helpdesk', icono: '🎫' },
+      { ruta: 'pacientes', label: 'Pacientes', icono: 'pacientes' },
+      { ruta: 'agenda', label: 'Agenda', icono: 'calendario' },
+      { ruta: 'inventario', label: 'Inventario', icono: 'caja' },
+      { ruta: 'helpdesk', label: 'Helpdesk', icono: 'ticket' },
     ].filter((a) => DOVA.tienePermiso(`${a.ruta}.view`));
     return `
       <h2 class="dova-view-title">Inicio</h2>
@@ -336,7 +336,7 @@ const Vistas = (() => {
       <div class="dova-cards-grid">
         ${accesos.map((a) => `
           <button type="button" class="dova-card dova-card-info dova-card-clicable" data-ir-a="${esc(a.ruta)}">
-            <div class="dova-card-valor">${a.icono}</div>
+            <div class="dova-card-valor dova-card-icono">${DovaIcono(a.icono, 22)}</div>
             <div class="dova-card-label">${esc(a.label)}</div>
           </button>`).join('')}
       </div>
@@ -353,16 +353,16 @@ const Vistas = (() => {
   // Mis tratamientos, Mis pendientes, Resumen — sin datos administrativos
   // ni financieros salvo que tenga permiso explícito para verlos.
   const CATEGORIAS_PENDIENTES = [
-    { key: 'tratamientosAbiertos', label: 'Tratamientos abiertos', icono: '📋' },
-    { key: 'pacientesSinProximaCita', label: 'Sin próxima cita', icono: '📅' },
-    { key: 'evolucionesSinFirmar', label: 'Evoluciones sin firmar', icono: '✍️' },
-    { key: 'estudiosPendientes', label: 'Estudios sin resultado', icono: '🩻' },
-    { key: 'consentimientosPendientes', label: 'Consentimientos pendientes', icono: '📝' },
-    { key: 'controlesVencidos', label: 'Controles postop. vencidos', icono: '🩹' },
-    { key: 'pacientesParaRevisar', label: 'Pacientes para revisar', icono: '⚠️' },
-    { key: 'derivacionesRecibidas', label: 'Derivaciones recibidas', icono: '↪️' },
-    { key: 'recetasPendientes', label: 'Recetas pendientes', icono: '💊' },
-    { key: 'presupuestosPendientes', label: 'Presupuestos sin aceptar', icono: '🧾' },
+    { key: 'tratamientosAbiertos', label: 'Tratamientos abiertos', icono: 'lista' },
+    { key: 'pacientesSinProximaCita', label: 'Sin próxima cita', icono: 'calendario' },
+    { key: 'evolucionesSinFirmar', label: 'Evoluciones sin firmar', icono: 'firma' },
+    { key: 'estudiosPendientes', label: 'Estudios sin resultado', icono: 'estudio' },
+    { key: 'consentimientosPendientes', label: 'Consentimientos pendientes', icono: 'firma' },
+    { key: 'controlesVencidos', label: 'Controles postop. vencidos', icono: 'curacion' },
+    { key: 'pacientesParaRevisar', label: 'Pacientes para revisar', icono: 'alerta' },
+    { key: 'derivacionesRecibidas', label: 'Derivaciones recibidas', icono: 'flecha' },
+    { key: 'recetasPendientes', label: 'Recetas pendientes', icono: 'medicamento' },
+    { key: 'presupuestosPendientes', label: 'Presupuestos sin aceptar', icono: 'comprobante' },
   ];
 
   function nombrePaciente(item) {
@@ -430,7 +430,7 @@ const Vistas = (() => {
       <h3 class="dova-section-title">Mis pendientes</h3>
       <div class="dova-tabs" id="pendientes-tabs">
         ${CATEGORIAS_PENDIENTES.map((c, i) => `
-          <button class="dova-tab ${i === 0 ? 'activo' : ''}" data-tab-pend="${c.key}">${c.icono} ${esc(c.label)} (${(pendientes[c.key] || []).length})</button>
+          <button class="dova-tab ${i === 0 ? 'activo' : ''}" data-tab-pend="${c.key}">${esc(c.label)} (${(pendientes[c.key] || []).length})</button>
         `).join('')}
       </div>
       ${CATEGORIAS_PENDIENTES.map((c, i) => `
@@ -616,8 +616,8 @@ const Vistas = (() => {
   // Todo lo relacionado a un paciente vive en esta única pantalla.
 
   const ICONOS_TIMELINE = {
-    evolucion: '🩺', sesion: '🦷', foto: '📷', estudio: '🩻', consentimiento: '📝', receta: '💊',
-    control_postop: '🩹', derivacion: '↪️',
+    evolucion: 'evolucion', sesion: 'diente', foto: 'camara', estudio: 'estudio', consentimiento: 'firma', receta: 'medicamento',
+    control_postop: 'curacion', derivacion: 'flecha',
   };
   const LABELS_TIMELINE = {
     evolucion: 'Evolución', sesion: 'Sesión de tratamiento', foto: 'Fotografía',
@@ -851,7 +851,7 @@ const Vistas = (() => {
         <div class="dova-timeline">
           ${(timeline || []).map((ev) => `
             <div class="dova-timeline-item">
-              <div class="dova-timeline-icono">${ICONOS_TIMELINE[ev.tipo] || '•'}</div>
+              <div class="dova-timeline-icono">${(ICONOS_TIMELINE[ev.tipo] && DovaIcono(ICONOS_TIMELINE[ev.tipo], 14)) || '•'}</div>
               <div class="dova-timeline-contenido">
                 <div class="dova-timeline-fecha">${fmtFecha(ev.fecha)} — ${LABELS_TIMELINE[ev.tipo] || ev.tipo}</div>
                 <div class="dova-timeline-titulo">${esc(ev.titulo || 'Sin título')}</div>
@@ -1190,17 +1190,17 @@ const Vistas = (() => {
     const enCurso = (planes || []).filter((p) => p.estado === 'en_proceso');
 
     const acciones = [
-      { accion: 'evolucion', icono: '🩺', label: 'Nueva evolución', permiso: 'historia_clinica.edit' },
-      { accion: 'odontograma', icono: '🦷', label: 'Odontograma', permiso: 'odontograma.edit' },
-      { accion: 'tratamiento', icono: '📋', label: 'Tratamiento', permiso: 'planes_tratamiento.manage' },
-      { accion: 'foto', icono: '📷', label: 'Foto clínica', permiso: 'fotos_clinicas.manage' },
-      { accion: 'estudio', icono: '🩻', label: 'Estudio', permiso: 'estudios.manage' },
-      { accion: 'receta', icono: '💊', label: 'Receta', permiso: 'recetas.manage' },
-      { accion: 'consentimiento', icono: '📝', label: 'Consentimiento', permiso: 'consentimientos.manage' },
-      { accion: 'control-postop', icono: '🩹', label: 'Control postoperatorio', permiso: 'controles_postoperatorios.manage' },
-      { accion: 'derivar', icono: '↪️', label: 'Derivar paciente', permiso: 'derivaciones.manage' },
-      { accion: 'proxima-cita', icono: '📅', label: 'Próxima cita', permiso: null },
-      { accion: 'ficha', icono: '👤', label: 'Ver ficha completa', permiso: null },
+      { accion: 'evolucion', icono: 'evolucion', label: 'Nueva evolución', permiso: 'historia_clinica.edit' },
+      { accion: 'odontograma', icono: 'diente', label: 'Odontograma', permiso: 'odontograma.edit' },
+      { accion: 'tratamiento', icono: 'lista', label: 'Tratamiento', permiso: 'planes_tratamiento.manage' },
+      { accion: 'foto', icono: 'camara', label: 'Foto clínica', permiso: 'fotos_clinicas.manage' },
+      { accion: 'estudio', icono: 'estudio', label: 'Estudio', permiso: 'estudios.manage' },
+      { accion: 'receta', icono: 'medicamento', label: 'Receta', permiso: 'recetas.manage' },
+      { accion: 'consentimiento', icono: 'firma', label: 'Consentimiento', permiso: 'consentimientos.manage' },
+      { accion: 'control-postop', icono: 'curacion', label: 'Control postoperatorio', permiso: 'controles_postoperatorios.manage' },
+      { accion: 'derivar', icono: 'flecha', label: 'Derivar paciente', permiso: 'derivaciones.manage' },
+      { accion: 'proxima-cita', icono: 'calendario', label: 'Próxima cita', permiso: null },
+      { accion: 'ficha', icono: 'persona', label: 'Ver ficha completa', permiso: null },
     ].filter((a) => !a.permiso || DOVA.tienePermiso(a.permiso));
 
     return `
@@ -1218,7 +1218,7 @@ const Vistas = (() => {
 
       <h3 class="dova-section-title">Acciones rápidas</h3>
       <div class="dova-consulta-acciones">
-        ${acciones.map((a) => `<button class="dova-consulta-accion" data-accion-consulta="${a.accion}">${a.icono}<br>${esc(a.label)}</button>`).join('')}
+        ${acciones.map((a) => `<button class="dova-consulta-accion" data-accion-consulta="${a.accion}">${DovaIcono(a.icono, 20)}<br>${esc(a.label)}</button>`).join('')}
       </div>
 
       <div id="consulta-panel-root"></div>

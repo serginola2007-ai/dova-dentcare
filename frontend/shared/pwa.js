@@ -40,7 +40,7 @@ const DovaPWA = (() => {
     if (!b) {
       b = document.createElement('button');
       b.id = 'dova-instalar-btn'; b.type = 'button'; b.className = 'dova-instalar-btn';
-      b.textContent = '📲 Instalar app'; b.title = 'Instalar DOVA como app en este dispositivo';
+      b.textContent = 'Instalar app'; b.title = 'Instalar DOVA como app en este dispositivo';
       b.addEventListener('click', instalar);
       const salir = document.getElementById('logout-btn');
       barra.insertBefore(b, salir || null);
@@ -53,7 +53,7 @@ const DovaPWA = (() => {
     if (esApp()) return '<h3 class="dova-section-title">App</h3><p class="dova-nota">✓ Estás usando DOVA como app instalada en este dispositivo.</p>';
     return `<h3 class="dova-section-title">Instalar como app</h3>
       <div class="dova-card dova-card-clave"><p class="dova-nota">Instalá DOVA en este dispositivo (celular, tablet o compu): queda con su ícono, se abre en pantalla completa sin la barra del navegador y arranca más rápido.</p>
-      ${disponible() ? '<button type="button" class="dova-btn-primary" data-instalar-app>📲 Instalar DOVA</button>'
+      ${disponible() ? '<button type="button" class="dova-btn-primary" data-instalar-app>Instalar DOVA</button>'
         : '<p class="dova-nota">Si no ves el botón: en Chrome o Edge usá el menú ⋮ → <strong>Instalar DOVA</strong> (o "Agregar a la pantalla principal"); en iPhone, Safari → Compartir → <strong>Agregar a inicio</strong>.</p>'}</div>`;
   }
   function activarTarjeta(scope) { const b = (scope || document).querySelector('[data-instalar-app]'); if (b) b.addEventListener('click', instalar); }

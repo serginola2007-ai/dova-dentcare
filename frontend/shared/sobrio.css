@@ -67,4 +67,22 @@
 
 @media (max-width: 768px) {
   .dova-submenu, .dova-submenu2 { box-shadow: none; }
+  /* En el celular los montos largos pueden partirse y nunca empujan la pantalla */
+  .dova-cards-grid > *, .dova-ext-kpis > *, .dova-contexto-grid > *, .dova-cli-360-grid > * { min-width: 0; }
+  .dova-card-valor, .dova-ext-kpi-valor { white-space: normal; font-size: 19px; overflow-wrap: anywhere; }
 }
+
+/* ---------- Íconos lineales (shared/iconos.js) en lugar de emojis ---------- */
+.dova-ico { display: inline-block; vertical-align: -0.18em; flex-shrink: 0; }
+.dova-cmd-ic { color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; }
+.dova-cmd-barra .dova-ico { color: var(--ink-soft); }
+.dova-cmd-btn .dova-ico { color: inherit; }
+.dova-card-icono { color: var(--terracotta); line-height: 1; margin-bottom: 4px; }
+.dova-consulta-accion .dova-ico { color: var(--ink-soft); margin-bottom: 2px; }
+.dova-cli-accion:hover .dova-ico, .dova-consulta-accion:hover .dova-ico { color: var(--terracotta); }
+.dova-timeline-icono { display: flex; align-items: center; justify-content: center; height: 24px; color: var(--ink-soft); }
+.dova-theme-toggle .dova-ico { vertical-align: middle; }
+/* Estado con punto de color (asistencia del personal) */
+.dova-punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); margin-right: 8px; vertical-align: 0.05em; }
+.dova-punto-ok { background: var(--sage, #5B8A5E); }
+.dova-punto-atencion { background: #C9932B; }

@@ -353,7 +353,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-acciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
 .dova-cli-accion { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; background: var(--white); border: 1px solid var(--border);
   border-radius: 2px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: center; min-height: 72px; justify-content: center; }
-.dova-cli-accion span { font-size: 20px; }
+.dova-cli-accion .dova-ico { color: var(--ink-soft); }
 .dova-cli-accion:hover, .dova-cli-accion.activo { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 7%, var(--white)); }
 .dova-cli-panel { margin-top: 14px; }
 .dova-cli-resumen { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }

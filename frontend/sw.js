@@ -7,10 +7,10 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v29';
+const VERSION = 'dova-v30';
 const PRECARGA = [
   '/moderno/', '/minimalista/', '/tecnico/',
-  '/shared/base.css', '/shared/ext/ext.css', '/shared/sobrio.css', '/shared/config.js', '/shared/api.js', '/shared/tiempo-real.js', '/shared/comandos.js', '/shared/pre-diseno.js', '/shared/arranque.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js',
+  '/shared/base.css', '/shared/ext/ext.css', '/shared/sobrio.css', '/shared/config.js', '/shared/api.js', '/shared/tiempo-real.js', '/shared/iconos.js', '/shared/comandos.js', '/shared/pre-diseno.js', '/shared/arranque.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js',
   '/shared/ext/ext-core.js', '/shared/ext/ext-ficha.js', '/shared/ext/ext-secciones.js', '/shared/ext/ext-operativo.js', '/shared/ext/ext-facturacion.js', '/shared/ext/ext-web.js', '/shared/ext/ext-clinica.js',
   '/moderno/skin.css', '/minimalista/skin.css', '/tecnico/skin.css',
   '/manifest.webmanifest', '/iconos/icono-192.png', '/iconos/icono-512.png',

@@ -685,7 +685,7 @@
     p.innerHTML = `<h2>Lo que te queda por pagar</h2>
       ${deudas.length ? `<ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}${d.vencida ? ' · vencida' : ''}</span></div>
           <div class="turno-acc"><strong class="monto">${d.aCuenta ? 'Falta ' : ''}${gs(d.monto)}</strong>${!e.pagosActivos ? '' : d.enRevision ? '<span class="estado">En revisión</span>' : `<button type="button" class="boton boton-chico" data-pagar="${i}">Pagar</button>`}</div></li>`).join('')}</ul>`
-        : '<p class="vacio">No tenés pagos pendientes. 🎉</p>'}
+        : '<p class="vacio">No tenés pagos pendientes.</p>'}
       ${!e.pagosActivos ? '<p class="ayuda">Los pagos online no están activos. Podés pagar en la clínica.</p>' : `<p style="margin-top:12px"><button type="button" class="boton-texto" data-pagar="libre">Hacer otro pago (seña o a cuenta)</button></p>`}
       <div data-form-pago></div>
       <h2 style="margin-top:32px">Pagos que enviaste</h2>

@@ -98,18 +98,18 @@ const DovaClinica = (() => {
     const medTxt = [...ctx.medicacion.map((m) => [m.medicamento, m.dosis, m.frecuencia].filter(Boolean).join(' ')), ...(p.medicamentos ? [p.medicamentos] : [])];
 
     const ACCIONES = [
-      ['odontograma', '🦷', 'Odontograma', puede('odontograma.edit')],
-      ['tratamiento', '📋', 'Plan de tratamiento', puede('planes_tratamiento.manage')],
-      ['foto', '📷', 'Agregar fotografía', puede('fotos_clinicas.manage')],
-      ['estudio', '🩻', 'Agregar estudio', puede('estudios.manage')],
-      ['receta', '💊', 'Nueva receta', puede('recetas.manage')],
-      ['consentimiento', '📝', 'Consentimiento', puede('consentimientos.manage')],
-      ['presupuesto', '🧾', 'Presupuesto', puede('presupuestos.view')],
-      ['pago', '💳', 'Registrar pago', puede('pagos.create')],
-      ['proxima', '📅', 'Próxima cita', puede('agenda.create')],
-      ['control-postop', '🩹', 'Control postoperatorio', puede('controles_postoperatorios.manage')],
-      ['derivar', '↪️', 'Derivar', puede('derivaciones.manage')],
-      ['historial', '🕘', 'Consultas anteriores', puede('historia_clinica.view', 'pacientes.clinical.view')],
+      ['odontograma', 'diente', 'Odontograma', puede('odontograma.edit')],
+      ['tratamiento', 'lista', 'Plan de tratamiento', puede('planes_tratamiento.manage')],
+      ['foto', 'camara', 'Agregar fotografía', puede('fotos_clinicas.manage')],
+      ['estudio', 'estudio', 'Agregar estudio', puede('estudios.manage')],
+      ['receta', 'medicamento', 'Nueva receta', puede('recetas.manage')],
+      ['consentimiento', 'firma', 'Consentimiento', puede('consentimientos.manage')],
+      ['presupuesto', 'comprobante', 'Presupuesto', puede('presupuestos.view')],
+      ['pago', 'tarjeta', 'Registrar pago', puede('pagos.create')],
+      ['proxima', 'calendario', 'Próxima cita', puede('agenda.create')],
+      ['control-postop', 'curacion', 'Control postoperatorio', puede('controles_postoperatorios.manage')],
+      ['derivar', 'flecha', 'Derivar', puede('derivaciones.manage')],
+      ['historial', 'historial', 'Consultas anteriores', puede('historia_clinica.view', 'pacientes.clinical.view')],
     ].filter((a) => a[3]);
 
     root.innerHTML = `
@@ -161,7 +161,7 @@ const DovaClinica = (() => {
             </form>` : '<p class="dova-nota">No tenés permiso para registrar consultas.</p>'}
           </section>
           ${ACCIONES.length ? `<h3 class="dova-section-title">Accesos rápidos</h3>
-          <div class="dova-cli-acciones">${ACCIONES.map(([a, ic, t]) => `<button type="button" class="dova-cli-accion" data-accion="${a}"><span aria-hidden="true">${ic}</span>${esc(t)}</button>`).join('')}</div>` : ''}
+          <div class="dova-cli-acciones">${ACCIONES.map(([a, ic, t]) => `<button type="button" class="dova-cli-accion" data-accion="${a}">${DovaIcono(ic, 18)}<span>${esc(t)}</span></button>`).join('')}</div>` : ''}
           <div data-panel class="dova-cli-panel"></div>
         </main>
       </div>
@@ -307,7 +307,7 @@ const DovaClinica = (() => {
   function resumenFinalizada(h) {
     return `<dl class="dova-cli-resumen">${CAMPOS.map(([k, l]) => { const v = valorHC(h, k); return v ? `<dt>${esc(l)}</dt><dd>${esc(v)}</dd>` : ''; }).join('')}</dl>
       <p class="dova-nota">Para corregirla, usá "Enmendar" en el Historial clínico de la ficha (queda registrado quién, cuándo y por qué).</p>
-      <button type="button" class="dova-btn-secundario" data-imprimir-consulta="${h.id}">🖨 Imprimir consulta</button>`;
+      <button type="button" class="dova-btn-secundario" data-imprimir-consulta="${h.id}">Imprimir consulta</button>`;
   }
 
   async function historialCompacto(c, pid) {
@@ -418,7 +418,7 @@ const DovaClinica = (() => {
       <div data-form-estudio></div>
       <div class="dova-cli-estudios">${estudios.length ? estudios.map((e) => `
         <article class="dova-cli-estudio">
-          <div class="dova-cli-estudio-ico" aria-hidden="true">${e.mime === 'application/pdf' ? 'PDF' : e.mime === 'application/dicom' ? 'DICOM' : e.tiene_archivo ? '🩻' : '—'}</div>
+          <div class="dova-cli-estudio-ico" aria-hidden="true">${e.mime === 'application/pdf' ? 'PDF' : e.mime === 'application/dicom' ? 'DICOM' : e.tiene_archivo ? 'Imagen' : '—'}</div>
           <div><strong>${esc(TIPO_NOMBRE[e.tipo] || e.tipo)}</strong>${e.pieza ? ` · pieza ${esc(e.pieza)}` : ''} <span class="dova-nota">${esc(fmtFecha(e.fecha))}${e.odontologo_nombre ? ` · ${esc(e.odontologo_nombre)}` : ''}</span>
             ${e.descripcion ? `<p>${esc(e.descripcion)}</p>` : ''}${e.observaciones ? `<p class="dova-nota">${esc(e.observaciones)}</p>` : ''}</div>
           <div class="dova-cli-estudio-acc">${e.tiene_archivo ? `<button class="dova-btn-secundario" data-ver-estudio="${e.id}">Ver</button>` : '<span class="dova-nota">Sin archivo</span>'}
@@ -819,7 +819,7 @@ const DovaClinica = (() => {
       puede('pagos.view') ? DOVA.get(`/pagos/paciente/${pid}`).catch(() => []) : [],
       verDer ? DOVA.get(`/derivaciones?pacienteId=${pid}`).catch(() => []) : [],
     ]);
-    const fila = (ruta, titulo, sub, extra = '') => `<li><button class="dova-btn-link" data-doc="${esc(ruta)}" data-titulo="${esc(titulo)}">📄 ${esc(titulo)}</button><span class="dova-nota">${esc(sub || '')}</span>${extra}</li>`;
+    const fila = (ruta, titulo, sub, extra = '') => `<li><button class="dova-btn-link" data-doc="${esc(ruta)}" data-titulo="${esc(titulo)}">${esc(titulo)}</button><span class="dova-nota">${esc(sub || '')}</span>${extra}</li>`;
     const grupo = (t, items, vacio) => `<section class="dova-cli-docgrupo"><h4>${esc(t)} <span class="dova-nota">(${items.length})</span></h4>${items.length ? `<ul class="dova-cli-doclista">${items.join('')}</ul>` : `<p class="dova-nota">${esc(vacio)}</p>`}</section>`;
     const grupos = [];
     const generales = [];
@@ -832,7 +832,7 @@ const DovaClinica = (() => {
     if (puede('presupuestos.view')) grupos.push(grupo('Presupuestos', press.map((x) => fila(`/comprobantes/presupuesto/${x.id}`, `Presupuesto N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.estado} · ${fmtGs(x.total)}`)), 'Sin presupuestos.'));
     if (puede('recetas.manage', 'pacientes.clinical.view', 'historia_clinica.view')) grupos.push(grupo('Recetas', recs.map((r) => fila(`/comprobantes/receta/${r.id}`, `Receta N.º ${r.id}`, `${fmtFecha(r.fecha)}${r.estado === 'anulada' ? ' · anulada' : ''}`)), 'Sin recetas.'));
     if (verDer) grupos.push(grupo('Derivaciones', ders.map((x) => fila(`/comprobantes/derivacion/${x.id}`, `Informe de derivación N.º ${x.id}`, `${fmtFecha(x.creado_en)} · a ${x.odontologo_destino_nombre || ''} · ${x.estado}`,
-      x.tiene_archivo ? `<button class="dova-btn-link" data-adj-der="${x.id}" data-nombre="${esc(x.archivo_nombre || 'adjunto')}">📎 ${esc(x.archivo_nombre || 'Adjunto')}</button>` : '')), 'Sin derivaciones.'));
+      x.tiene_archivo ? `<button class="dova-btn-link" data-adj-der="${x.id}" data-nombre="${esc(x.archivo_nombre || 'adjunto')}">${esc(x.archivo_nombre || 'Adjunto')}</button>` : '')), 'Sin derivaciones.'));
     if (puede('pagos.view')) grupos.push(grupo('Recibos de pago', pagos.map((x) => fila(`/comprobantes/pago/${x.id}`, `Recibo N.º ${x.id}`, `${fmtFecha(x.fecha)} · ${x.concepto || ''} · ${fmtGs(x.monto)}${x.estado === 'anulado' ? ' · anulado' : ''}`)), 'Sin pagos.'));
     c.innerHTML = `<h3 class="dova-section-title">Documentos</h3>
       <p class="dova-nota">Todos los documentos se generan en el momento con los datos guardados. Tocá uno para verlo, imprimirlo o descargarlo.</p>

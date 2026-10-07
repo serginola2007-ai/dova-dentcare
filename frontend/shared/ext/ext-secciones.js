@@ -174,7 +174,7 @@ const DovaSecciones = (() => {
       const q = new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v !== ''))).toString();
       filas = await DOVA.get(`/recalls/lista?${q}`);
       l.innerHTML = `<p class="dova-nota">${filas.length} paciente(s).</p><div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr>${cols.map((x) => `<th>${x.t}</th>`).join('')}<th></th></tr></thead><tbody>
-        ${filas.map((r, i) => `<tr>${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}<td class="dova-ext-acciones">${X.linkWhatsapp(r.whatsapp_link)}${puede('recalls.manage') ? `<button class="dova-btn-link" data-contacto="${i}">Registrar contacto</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Nada pendiente con estos filtros. 🎉</td></tr>'}
+        ${filas.map((r, i) => `<tr>${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}<td class="dova-ext-acciones">${X.linkWhatsapp(r.whatsapp_link)}${puede('recalls.manage') ? `<button class="dova-btn-link" data-contacto="${i}">Registrar contacto</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Nada pendiente con estos filtros.</td></tr>'}
       </tbody></table></div>`;
       l.querySelectorAll('[data-contacto]').forEach((b) => b.addEventListener('click', () => DovaFicha.modalContactoRecall(filas[Number(b.dataset.contacto)], cargar)));
     };
@@ -339,7 +339,7 @@ const DovaSecciones = (() => {
     const est = await DOVA.get('/operaciones/fichaje/estado');
     const acciones = { fuera: [['entrada', 'Marcar entrada']], trabajando: [['inicio_pausa', 'Iniciar pausa'], ['salida', 'Marcar salida']], en_pausa: [['fin_pausa', 'Terminar pausa'], ['salida', 'Marcar salida']] }[est.estado];
     const inicioMes = `${X.hoy().slice(0, 7)}-01`;
-    c.innerHTML = `<div class="dova-ext-caja"><div class="dova-ext-fichaje"><span class="dova-ext-estado-grande">${est.estado === 'trabajando' ? '🟢 Trabajando' : est.estado === 'en_pausa' ? '🟡 En pausa' : '⚪ Fuera'}</span>
+    c.innerHTML = `<div class="dova-ext-caja"><div class="dova-ext-fichaje"><span class="dova-ext-estado-grande">${est.estado === 'trabajando' ? '<span class="dova-punto dova-punto-ok"></span>Trabajando' : est.estado === 'en_pausa' ? '<span class="dova-punto dova-punto-atencion"></span>En pausa' : '<span class="dova-punto"></span>Fuera'}</span>
       ${est.ultimo ? `<span class="dova-nota">Última marca: ${esc(etiqueta(est.ultimo.tipo))} · ${X.fmtFechaHora(est.ultimo.fecha)}</span>` : ''}
       ${acciones.map(([t, txt]) => `<button class="dova-btn-primary" data-marcar="${t}">${txt}</button>`).join('')}</div></div>
       <form class="dova-ext-filtros" data-f><div><label>Desde</label><input type="date" name="desde" value="${inicioMes}"/></div><div><label>Hasta</label><input type="date" name="hasta" value="${X.hoy()}"/></div><button class="dova-btn-secundario">Ver horas</button></form><div data-rep></div>`;
