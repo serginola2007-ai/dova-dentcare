@@ -1,27 +1,25 @@
 @echo off
 setlocal
-
-set "PATH=C:\Program Files\nodejs;%PATH%"
+REM DOVA local: un solo servidor (API + pantallas) en http://localhost:4000
+REM Requisitos: Node.js 22, PostgreSQL y backend\.env creado desde backend\.env.example
 set BASE=%~dp0
-set BACKEND=%BASE%backend
-set FRONTEND=%BASE%frontend
+cd /d "%BASE%backend"
 
-echo Iniciando backend DOVA (puerto 4000)...
-start "DOVA Backend" cmd /k "set PATH=C:\Program Files\nodejs;%PATH% && cd /d "%BACKEND%" && node src\server.js"
+if not exist node_modules (
+  echo Instalando dependencias...
+  call npm install
+)
+echo Actualizando la base de datos...
+call npm run migrate:up
+call npm run seed
 
-timeout /t 3 /nobreak >nul
-
-echo Iniciando frontend DOVA (puerto 8080)...
-start "DOVA Frontend" cmd /k "set PATH=C:\Program Files\nodejs;%PATH% && cd /d "%FRONTEND%" && npx --yes serve -l 8080 ."
-
-timeout /t 5 /nobreak >nul
-
-echo.
-echo Listo. Abriendo el navegador...
-start http://localhost:8080/moderno/index.html
+echo Iniciando DOVA en http://localhost:4000 ...
+start "DOVA" cmd /k "cd /d "%BASE%backend" && npm run dev"
+timeout /t 4 /nobreak >nul
+start http://localhost:4000/moderno/
 
 echo.
-echo DOVA esta corriendo. No cierres las ventanas "DOVA Backend" y "DOVA Frontend".
-echo Usuario: admin / Contrasena: admin
+echo DOVA esta corriendo. No cierres la ventana "DOVA".
+echo Usuario inicial en desarrollo: admin / admin (pide cambiar la contrasena).
 echo.
 pause
