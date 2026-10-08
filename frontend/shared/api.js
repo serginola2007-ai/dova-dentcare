@@ -51,6 +51,8 @@ const DOVA = (() => {
       accessToken = data.accessToken;
       const actual = getPerfil() || perfil;
       if (Array.isArray(data.permisos) && actual.usuario) actual.usuario.permisos = data.permisos;
+      // Vínculo con el odontólogo (se puede cambiar desde Usuarios sin volver a entrar).
+      if (actual.usuario && 'odontologoId' in data) actual.usuario.odontologoId = data.odontologoId;
       setPerfil(actual); // también borra cualquier token viejo del navegador
       return accessToken;
     })();

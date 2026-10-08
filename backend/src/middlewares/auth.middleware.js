@@ -17,7 +17,7 @@ async function estadoUsuario(id, rolIdDesconocido) {
   const authRepo = require('../modules/auth/auth.repository');
   const u = await authRepo.findUsuarioById(id);
   const v = u && u.activo
-    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id }
+    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
     : { activo: false };
   cache.set(id, { t: ahora, v });
   if (cache.size > 5000) cache.clear();
@@ -56,7 +56,8 @@ async function authMiddleware(req, res, next) {
       clinicaId: payload.clinicaId,
       rolCodigo: payload.rolCodigo,
       nombre: payload.nombre,
-      odontologoId: payload.odontologoId || null,
+      // Vínculo con el odontólogo: siempre el de la base (cambiarlo en Usuarios rige al instante).
+      odontologoId: est.odontologoId || null,
       permisos: est.permisos,
     };
     req.tokenExp = payload.exp;

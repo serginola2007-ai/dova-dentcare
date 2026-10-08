@@ -458,3 +458,11 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - Donde acompañaba a un texto ("Imprimir", "Instalar app", avisos, estados vacíos), se dejó solo el texto. La asistencia del personal usa un punto de color para el estado.
 - Se mantienen los signos tipográficos: flechas, ✓, ✕ y ☰.
 - En el celular, los montos largos de las franjas de indicadores pueden partirse y ya no desbordan la pantalla.
+
+## Vincular usuarios a odontólogos desde Usuarios
+- Administración → Usuarios tiene la columna "Odontólogo" y el botón "Vincular odontólogo" o "Cambiar odontólogo" en cada fila. Se puede elegir uno o dejarlo "Sin vincular".
+- "Nuevo usuario" permite vincular el odontólogo en el alta (es opcional).
+- Un odontólogo se vincula a un solo usuario activo; los ya tomados aparecen deshabilitados con el nombre de quién los tiene. El servidor lo valida (409), igual que que sea de la misma clínica, y también al reactivar a un usuario dado de baja.
+- El cambio rige al instante: el servidor toma el vínculo de la base en cada pedido, no del token, y la renovación de sesión actualiza "Mi día" sin volver a entrar. No se cierra la sesión de nadie.
+- Queda en el historial de cambios (antes y después). Requiere el permiso `usuarios.manage`.
+- El listado de usuarios muestra hasta 200 (antes 20). El tamaño de página queda acotado.

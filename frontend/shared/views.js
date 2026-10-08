@@ -1600,7 +1600,7 @@ const Vistas = (() => {
   // backend, con las protecciones administrativas ya aplicadas server-side.
   async function vistaUsuariosAdmin() {
     const [usuarios, roles] = await Promise.all([
-      manejarError(() => DOVA.get('/usuarios')),
+      manejarError(() => DOVA.get('/usuarios?pageSize=200')),
       manejarError(() => DOVA.get('/usuarios/roles')),
     ]);
     const items = usuarios.data || usuarios.items || usuarios;
@@ -1616,15 +1616,16 @@ const Vistas = (() => {
           ${DOVA.tienePermiso('usuarios.manage') ? '<button id="btn-nuevo-usuario" class="dova-btn-primary">+ Nuevo usuario</button>' : ''}
         </div>
         <table class="dova-tabla">
-          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Odontólogo</th><th>Estado</th><th></th></tr></thead>
           <tbody>
             ${items.map((u) => `
               <tr>
                 <td>${esc(u.nombre)}</td><td>${esc(u.username)}</td><td>${esc(u.rol_nombre)}</td>
+                <td>${u.odontologo_nombre ? esc(u.odontologo_nombre) : '<span class="dova-nota">Sin vincular</span>'}</td>
                 <td>${u.activo ? 'Activo' : 'Inactivo'}${u.es_admin_protegido ? ' · Admin protegido' : ''}</td>
-                <td><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button></td>
+                <td class="dova-ext-acciones"><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button>${DOVA.tienePermiso('usuarios.manage') ? ` <button class="dova-btn-link" data-vincular-odo="${u.id}">${u.odontologo_id ? 'Cambiar odontólogo' : 'Vincular odontólogo'}</button>` : ''}</td>
               </tr>
-            `).join('') || '<tr><td colspan="5">Sin usuarios.</td></tr>'}
+            `).join('') || '<tr><td colspan="6">Sin usuarios.</td></tr>'}
           </tbody>
         </table>
         <div id="usuario-detalle-root"></div>
@@ -1771,7 +1772,52 @@ const Vistas = (() => {
       </div>`;
   }
 
+  // Odontólogos para vincular a un usuario. Un odontólogo se vincula a un solo
+  // usuario activo (su agenda, "Mi día" y sus cobros); el servidor lo valida.
+  async function opcionesOdontologos(usuarioId, actualId) {
+    const [odos, usuarios] = await Promise.all([DOVA.get('/odontologos'), DOVA.get('/usuarios?pageSize=500')]);
+    const lista = usuarios.items || usuarios.data || usuarios;
+    const tomado = {};
+    lista.forEach((u) => { if (u.activo && u.odontologo_id && Number(u.id) !== Number(usuarioId)) tomado[u.odontologo_id] = u.nombre; });
+    return `<option value="">Sin vincular</option>${odos.map((o) => `<option value="${o.id}" ${Number(o.id) === Number(actualId) ? 'selected' : ''} ${tomado[o.id] ? 'disabled' : ''}>${esc(o.nombre)}${o.especialidad ? ` · ${esc(o.especialidad)}` : ''}${tomado[o.id] ? ` (vinculado a ${esc(tomado[o.id])})` : ''}</option>`).join('')}`;
+  }
+
   function initUsuariosAdmin(recargar) {
+    document.querySelectorAll('[data-vincular-odo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.vincularOdo;
+        try {
+          const u = await DOVA.get(`/usuarios/${id}`);
+          const opciones = await opcionesOdontologos(id, u.odontologo_id);
+          abrirModal(`
+            <h3>Odontólogo de ${esc(u.nombre)}</h3>
+            <p class="dova-nota">El usuario ve su agenda en "Mi día", inicia consultas a su nombre y sus cobros y comisiones quedan a su nombre. Un odontólogo se vincula a un solo usuario.</p>
+            <form id="form-vincular-odo">
+              <label for="vo-odo">Odontólogo</label>
+              <select id="vo-odo">${opciones}</select>
+              <div class="dova-modal-actions">
+                <button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button>
+                <button type="submit" class="dova-btn-primary">Guardar</button>
+              </div>
+            </form>
+          `);
+          document.getElementById('form-vincular-odo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const v = document.getElementById('vo-odo').value;
+            try {
+              await DOVA.put(`/usuarios/${id}`, { odontologoId: v ? Number(v) : null });
+            } catch (er) { toast(er.message, 'error'); return; }
+            document.getElementById('modal-root').innerHTML = '';
+            toast(v ? 'Odontólogo vinculado' : 'Se quitó el vínculo con el odontólogo', 'ok');
+            // Si es el propio usuario, su sesión toma el cambio enseguida.
+            const yo = DOVA.usuarioActual();
+            if (yo && Number(yo.id) === Number(id) && DOVA.actualizarSesion) await DOVA.actualizarSesion().catch(() => {});
+            recargar();
+          });
+        } catch (e) { toast(e.message, 'error'); }
+      });
+    });
+
     document.querySelectorAll('[data-tab]').forEach((tab) => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('#admin-tabs .dova-tab').forEach((t) => t.classList.remove('activo'));
@@ -1885,6 +1931,7 @@ const Vistas = (() => {
     if (btnNuevoUsuario) {
       btnNuevoUsuario.addEventListener('click', async () => {
         const roles = await manejarError(() => DOVA.get('/usuarios/roles'));
+        const opcionesOdo = await opcionesOdontologos(null, null).catch(() => '<option value="">Sin vincular</option>');
         abrirModal(`
           <h3>Nuevo usuario</h3>
           <form id="form-nuevo-usuario">
@@ -1895,6 +1942,8 @@ const Vistas = (() => {
             <select id="nu-rol">
               ${roles.map((r) => `<option value="${r.id}">${esc(r.nombre)}</option>`).join('')}
             </select>
+            <label for="nu-odo">Odontólogo vinculado <span class="dova-nota">(solo si atiende pacientes)</span></label>
+            <select id="nu-odo">${opcionesOdo}</select>
             <div class="dova-modal-actions">
               <button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button>
               <button type="submit" class="dova-btn-primary">Crear</button>
@@ -1908,6 +1957,7 @@ const Vistas = (() => {
             username: document.getElementById('nu-username').value,
             password: document.getElementById('nu-password').value,
             rolId: Number(document.getElementById('nu-rol').value),
+            ...(document.getElementById('nu-odo').value ? { odontologoId: Number(document.getElementById('nu-odo').value) } : {}),
           }));
           document.getElementById('modal-root').innerHTML = '';
           toast('Usuario creado', 'ok');

@@ -28,8 +28,8 @@ async function listar(req, res, next) {
     const { incluirInactivos, page, pageSize } = req.query;
     res.json(await service.listar(req.clinicaId, {
       incluirInactivos: incluirInactivos === 'true',
-      page: page ? Number(page) : 1,
-      pageSize: pageSize ? Number(pageSize) : 20,
+      page: Math.max(1, Math.trunc(Number(page)) || 1),
+      pageSize: Math.min(500, Math.max(1, Math.trunc(Number(pageSize)) || 20)),
     }));
   } catch (e) { next(e); }
 }

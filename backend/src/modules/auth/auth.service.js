@@ -156,7 +156,7 @@ async function refresh(refreshTokenRaw, { deCuerpo = false } = {}) {
     if (registro.motivo === 'rotado' && registro.en_gracia) {
       // Otra pestaña acaba de renovar: se entrega solo un acceso nuevo.
       const permisos = await authRepo.getPermisosEfectivos(usuario.id, usuario.rol_id);
-      return { accessToken: firmarAcceso(usuario, permisos), permisos };
+      return { accessToken: firmarAcceso(usuario, permisos), permisos, odontologoId: usuario.odontologo_id || null };
     }
     if (registro.motivo === 'rotado') {
       await sesiones.invalidarSesiones(usuario.id, 'reutilizacion');
@@ -167,7 +167,7 @@ async function refresh(refreshTokenRaw, { deCuerpo = false } = {}) {
   await authRepo.revocarRefreshToken(tokenHash, 'rotado');
   const s2 = await emitirSesion(usuario, { sesionId: registro.sesion_id, sesionInicio: registro.sesion_inicio });
   // Permisos actuales: la pantalla los actualiza sin tener que volver a iniciar sesión.
-  return { accessToken: s2.accessToken, refreshToken: s2.refreshToken, refreshVence: s2.refreshVence, permisos: s2.permisos };
+  return { accessToken: s2.accessToken, refreshToken: s2.refreshToken, refreshVence: s2.refreshVence, permisos: s2.permisos, odontologoId: usuario.odontologo_id || null };
 }
 
 async function logout(refreshTokenRaw, authorization) {

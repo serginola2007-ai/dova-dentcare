@@ -124,14 +124,18 @@ async function crear(clinicaId, datos, actor) {
   return usuario;
 }
 
-// El profesional vinculado tiene que ser de la MISMA clínica (evita enlazar datos ajenos).
-async function odontologoDeLaClinica(clinicaId, odontologoId) {
+// El profesional vinculado tiene que ser de la MISMA clínica (evita enlazar
+// datos ajenos) y no puede estar vinculado a otro usuario activo: su agenda,
+// "Mi día" y sus cobros serían de dos personas a la vez.
+async function odontologoDeLaClinica(clinicaId, odontologoId, usuarioId = null) {
   if (odontologoId === undefined || odontologoId === null || odontologoId === '') return null;
   const id = Number(odontologoId);
   if (!Number.isInteger(id) || id < 1) throw new ApiError(400, 'Profesional inválido');
   const { query } = require('../../config/db');
-  const r = await query('SELECT id FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
+  const r = await query('SELECT id, nombre FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
   if (!r.rowCount) throw new ApiError(400, 'El profesional indicado no existe en esta clínica');
+  const otro = (await query('SELECT nombre, username FROM usuarios WHERE clinica_id=$1 AND odontologo_id=$2 AND activo AND ($3::int IS NULL OR id<>$3) LIMIT 1', [clinicaId, id, usuarioId])).rows[0];
+  if (otro) throw new ApiError(409, `${r.rows[0].nombre} ya está vinculado al usuario ${otro.nombre} (${otro.username}). Desvinculalo primero.`);
   return id;
 }
 
@@ -146,7 +150,14 @@ async function actualizar(clinicaId, id, datos, actor) {
   const campos = {};
   if (datos.nombre !== undefined) campos.nombre = datos.nombre;
   if (datos.email !== undefined) campos.email = datos.email;
-  if (datos.odontologoId !== undefined) campos.odontologo_id = await odontologoDeLaClinica(clinicaId, datos.odontologoId);
+  if (datos.odontologoId !== undefined) {
+    const nuevo = await odontologoDeLaClinica(clinicaId, datos.odontologoId, id);
+    if ((nuevo || null) !== (usuario.odontologo_id || null)) campos.odontologo_id = nuevo;
+  }
+  // Reactivar a alguien cuyo odontólogo ya tomó otro usuario activo: no.
+  if (datos.activo === true && !usuario.activo && usuario.odontologo_id && campos.odontologo_id === undefined) {
+    await odontologoDeLaClinica(clinicaId, usuario.odontologo_id, id);
+  }
 
   if (datos.username !== undefined && datos.username !== usuario.username) {
     const yaExiste = await repo.existeUsername(clinicaId, datos.username, id);
