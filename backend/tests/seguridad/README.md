@@ -30,6 +30,8 @@ python3 tests/seguridad/enumerar-rutas.py      # inventario de rutas → rutas.j
 | `endurecimiento.test.js` | Las correcciones de la auditoría: contraseñas, cambio obligatorio de contraseña, anti-escalada de privilegios, cierre de sesiones, rotación de tokens, sesión en cookie HttpOnly con anti-CSRF, datos clínicos, archivos, errores, CORS, cabeceras, límites, auditoría inmutable y registros. |
 | `auditoria2.test.js` | Segunda auditoría: token vencido o adulterado, usuario desactivado, asignación masiva, escalada de privilegios, importes y estados financieros, archivos (ajenos, rutas manipuladas, path traversal), exportaciones sin permiso y tiempo real (SSE) sin sesión o de otra clínica. Necesita `JWT_SECRET`. |
 | `ui-sesiones.js` | En un navegador real (Playwright): nada sensible en `localStorage`, la sesión sobrevive a recargar, "cerrar en todos los dispositivos", migración de sesiones viejas, cookie del portal y `/salir`. Necesita `PLAYWRIGHT_MODULE` y `CHROMIUM_PATH` si no están instalados globalmente. |
+| `vinculo-odontologo.test.js` | Vincular usuarios a odontólogos: un odontólogo por usuario activo, misma clínica, permiso, auditoría y efecto inmediato. |
+| `eliminar-usuario.test.js` | Eliminar usuarios: borrado completo si nunca usó DOVA; si no, baja con historial intacto, sesión cortada y nombre/odontólogo liberados; protecciones (uno mismo, admin protegido, otra clínica, sin permiso). |
 | `inyeccion-fk.js` | La Clínica B llama a todas las altas mandando en el cuerpo IDs de la Clínica A; después revisa que ninguna fila quede en la A ni apunte a la A. Correrlo solo. |
 
 Ver también `SECURITY-TESTS.md` (raíz del repositorio): cómo correr la app con el usuario de base de mínimo privilegio y el resultado de la última corrida.

@@ -17,7 +17,8 @@ const DovaApp = (() => {
   const GRUPOS = [['movimientos', 'Movimientos'], ['reportes', 'Reportes'], ['administracion', 'Administración']];
   const MENU = [
     // Movimientos: el trabajo del día
-    { grupo: 'movimientos', ruta: 'dashboard', label: 'Inicio', permiso: null },
+    // Inicio va suelto en la barra, a la izquierda de Movimientos (sin desplegable).
+    { grupo: null, ruta: 'dashboard', label: 'Inicio', permiso: null },
     { grupo: 'movimientos', ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view', subs: [['dia', 'Turnos'], ['espera', 'Lista de espera', 'lista_espera.manage']] },
     { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'], subs: [['hoy', 'Caja del día'], ['hist', 'Cierres anteriores']] },
     { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'],
@@ -120,7 +121,9 @@ const DovaApp = (() => {
   let cierreGlobalListo = false;
   function renderMenu() {
     if (!elMenu) return;
-    elMenu.innerHTML = GRUPOS.map(([id, nombre]) => {
+    const sueltos = MENU.filter((m) => !m.grupo && tieneAcceso(m.permiso))
+      .map((m) => `<button type="button" class="dova-menu-item dova-menu-suelto" data-ruta="${m.ruta}">${m.label}</button>`).join('');
+    elMenu.innerHTML = sueltos + GRUPOS.map(([id, nombre]) => {
       const items = MENU.filter((m) => m.grupo === id && tieneAcceso(m.permiso));
       if (!items.length) return '';
       return `<div class="dova-menu-grupo" data-grupo="${id}">
@@ -139,12 +142,14 @@ const DovaApp = (() => {
         if (abrir) { const primero = g.querySelector('.dova-submenu-item'); if (primero && e.detail === 0) primero.focus(); }
       });
     });
+    // Un solo temporizador para todas las herramientas: pasar rápido de una a
+    // otra no cierra la que se acaba de abrir.
+    let timerFila = null;
     elMenu.querySelectorAll('.dova-submenu-fila').forEach((f) => {
       const padre = f.querySelector('.dova-submenu-padre');
-      let timer = null;
-      f.addEventListener('mouseenter', () => { if (sinHover()) return; clearTimeout(timer); abrirFila(f); });
+      f.addEventListener('mouseenter', () => { if (sinHover()) return; clearTimeout(timerFila); abrirFila(f); });
       // Un margen corto al salir: se puede llegar al panel en diagonal sin que se cierre.
-      f.addEventListener('mouseleave', () => { if (sinHover()) return; clearTimeout(timer); timer = setTimeout(() => cerrarFilas(), 220); });
+      f.addEventListener('mouseleave', () => { if (sinHover()) return; clearTimeout(timerFila); timerFila = setTimeout(() => cerrarFilas(), 220); });
       padre.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirFila(f); f.querySelector('.dova-submenu2 .dova-submenu-item').focus(); }
       });

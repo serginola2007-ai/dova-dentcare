@@ -1615,7 +1615,7 @@ const Vistas = (() => {
         <div class="dova-toolbar">
           ${DOVA.tienePermiso('usuarios.manage') ? '<button id="btn-nuevo-usuario" class="dova-btn-primary">+ Nuevo usuario</button>' : ''}
         </div>
-        <table class="dova-tabla">
+        <div class="dova-ext-tabla-wrap"><table class="dova-tabla dova-tabla-usuarios">
           <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Odontólogo</th><th>Estado</th><th></th></tr></thead>
           <tbody>
             ${items.map((u) => `
@@ -1623,11 +1623,11 @@ const Vistas = (() => {
                 <td>${esc(u.nombre)}</td><td>${esc(u.username)}</td><td>${esc(u.rol_nombre)}</td>
                 <td>${u.odontologo_nombre ? esc(u.odontologo_nombre) : '<span class="dova-nota">Sin vincular</span>'}</td>
                 <td>${u.activo ? 'Activo' : 'Inactivo'}${u.es_admin_protegido ? ' · Admin protegido' : ''}</td>
-                <td class="dova-ext-acciones"><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button>${DOVA.tienePermiso('usuarios.manage') ? ` <button class="dova-btn-link" data-vincular-odo="${u.id}">${u.odontologo_id ? 'Cambiar odontólogo' : 'Vincular odontólogo'}</button>` : ''}</td>
+                <td class="dova-usuario-acciones"><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button>${DOVA.tienePermiso('usuarios.manage') ? ` <button class="dova-btn-link" data-vincular-odo="${u.id}">${u.odontologo_id ? 'Cambiar odontólogo' : 'Vincular odontólogo'}</button>` : ''}${DOVA.tienePermiso('usuarios.manage') && !u.es_admin_protegido && Number(u.id) !== Number((DOVA.usuarioActual() || {}).id) ? ` <button class="dova-btn-link dova-link-peligro" data-eliminar-usuario="${u.id}" data-nombre="${esc(u.nombre)}">Eliminar</button>` : ''}</td>
               </tr>
             `).join('') || '<tr><td colspan="6">Sin usuarios.</td></tr>'}
           </tbody>
-        </table>
+        </table></div>
         <div id="usuario-detalle-root"></div>
       </div>
 
@@ -1783,6 +1783,31 @@ const Vistas = (() => {
   }
 
   function initUsuariosAdmin(recargar) {
+    document.querySelectorAll('[data-eliminar-usuario]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.eliminarUsuario;
+        abrirModal(`
+          <h3>Eliminar a ${esc(btn.dataset.nombre)}</h3>
+          <p>Deja de poder entrar a DOVA y se cierran sus sesiones abiertas.</p>
+          <p class="dova-nota">Si nunca usó el sistema, se borra por completo. Si ya registró algo (turnos, cobros, consultas), su nombre se mantiene en ese historial, pero sale de la lista de usuarios y quedan libres su nombre de usuario y su odontólogo para usarlos de nuevo.</p>
+          <div class="dova-modal-actions">
+            <button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button>
+            <button type="button" class="dova-btn-secundario dova-btn-peligro" id="btn-confirmar-eliminar">Eliminar usuario</button>
+          </div>
+        `);
+        const ok = document.getElementById('btn-confirmar-eliminar');
+        ok.addEventListener('click', async () => {
+          ok.disabled = true;
+          try {
+            await DOVA.request(`/usuarios/${id}`, { method: 'DELETE' });
+          } catch (e) { ok.disabled = false; toast(e.message, 'error'); return; }
+          document.getElementById('modal-root').innerHTML = '';
+          toast('Usuario eliminado', 'ok');
+          recargar();
+        });
+      });
+    });
+
     document.querySelectorAll('[data-vincular-odo]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.vincularOdo;

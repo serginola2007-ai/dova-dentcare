@@ -16,7 +16,9 @@ function leer(req, nombre) {
 
 function poner(req, res, { nombre, ruta }, valor, maxAgeSeg) {
   const secure = seg.cookies.siempreSecure || req.secure;
-  const partes = [`${nombre}=${encodeURIComponent(valor)}`, `Path=${ruta}`, 'HttpOnly', `SameSite=${seg.cookies.sameSite === 'lax' ? 'Lax' : 'Strict'}`, `Max-Age=${Math.max(0, Math.floor(maxAgeSeg))}`];
+  const partes = [`${nombre}=${encodeURIComponent(valor)}`, `Path=${ruta}`, 'HttpOnly', `SameSite=${seg.cookies.sameSite === 'lax' ? 'Lax' : 'Strict'}`];
+  // Sin duración (null): cookie de sesión del navegador, se borra al cerrarlo.
+  if (maxAgeSeg !== null && maxAgeSeg !== undefined) partes.push(`Max-Age=${Math.max(0, Math.floor(maxAgeSeg))}`);
   if (secure) partes.push('Secure');
   res.append('Set-Cookie', partes.join('; '));
 }

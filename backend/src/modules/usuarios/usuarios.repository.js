@@ -57,11 +57,11 @@ async function listarPermisos() {
 
 // ---- Usuarios ----
 async function listar(clinicaId, { incluirInactivos = false, page = 1, pageSize = 20 } = {}) {
-  const cond = incluirInactivos ? 'u.clinica_id = $1' : 'u.clinica_id = $1 AND u.activo = true';
+  const cond = incluirInactivos ? 'u.clinica_id = $1 AND u.eliminado_en IS NULL' : 'u.clinica_id = $1 AND u.activo = true AND u.eliminado_en IS NULL';
   const offset = (page - 1) * pageSize;
   const res = await query(
     `SELECT u.id, u.nombre, u.username, u.email, u.activo, u.es_admin_protegido,
-            u.odontologo_id, o.nombre AS odontologo_nombre, u.ultimo_login, u.creado_en, r.id AS rol_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre
+            u.odontologo_id, o.nombre AS odontologo_nombre, u.ultimo_login, u.creado_en, u.eliminado_en, r.id AS rol_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u JOIN roles r ON r.id = u.rol_id LEFT JOIN odontologos o ON o.id = u.odontologo_id AND o.clinica_id = u.clinica_id
      WHERE ${cond} ORDER BY u.nombre LIMIT $2 OFFSET $3`,
     [clinicaId, pageSize, offset]
@@ -73,7 +73,7 @@ async function listar(clinicaId, { incluirInactivos = false, page = 1, pageSize 
 async function obtener(clinicaId, id) {
   const res = await query(
     `SELECT u.id, u.nombre, u.username, u.email, u.activo, u.es_admin_protegido,
-            u.odontologo_id, o.nombre AS odontologo_nombre, u.ultimo_login, u.creado_en, r.id AS rol_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre
+            u.odontologo_id, o.nombre AS odontologo_nombre, u.ultimo_login, u.creado_en, u.eliminado_en, r.id AS rol_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u JOIN roles r ON r.id = u.rol_id LEFT JOIN odontologos o ON o.id = u.odontologo_id AND o.clinica_id = u.clinica_id
      WHERE u.clinica_id = $1 AND u.id = $2`,
     [clinicaId, id]

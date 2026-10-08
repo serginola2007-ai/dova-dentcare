@@ -61,7 +61,8 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Importes con `utils/montos.js`. Estados y totales los calcula el servidor.
 - Sesión del personal:
   - el access token vive solo en memoria;
-  - el refresh token va en la cookie HttpOnly `dova_rt` (Path `/api/auth`);
+  - el refresh token va en la cookie HttpOnly `dova_rt` (Path `/api/auth`), cookie de navegador sin `Max-Age`;
+  - la sesión vale solo en la pestaña donde se inició (`sessionStorage` `dova_pestana`): al abrir DOVA siempre se pide la contraseña;
   - el portal usa la cookie `dova_portal`;
   - los endpoints con cookie exigen la cabecera `X-DOVA-CSRF: 1`;
   - nunca guardar tokens en `localStorage`.

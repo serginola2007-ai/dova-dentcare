@@ -8,6 +8,8 @@ Continúa la primera auditoría (`SEGURIDAD.md`). Se trabajó sobre el proyecto 
 
 El backend es la autoridad: cada control de esta lista está en el servidor y tiene una prueba automática que lo ataca (ver `SECURITY-TESTS.md`).
 
+> **Actualización:** la sesión del personal ahora vale solo en la pestaña donde se inició, y la cookie `dova_rt` es de navegador (sin `Max-Age`): al abrir DOVA siempre se pide la contraseña. Ver `CORRECCIONES.md`.
+
 > No se declara que el sistema sea "100 % seguro". Se corrigió lo que se encontró, se probó, y lo que depende de la infraestructura queda marcado como **REQUIERE CONFIGURACIÓN DE INFRAESTRUCTURA**.
 
 Estados posibles:

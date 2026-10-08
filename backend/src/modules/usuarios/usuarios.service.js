@@ -141,7 +141,7 @@ async function odontologoDeLaClinica(clinicaId, odontologoId, usuarioId = null) 
 
 async function actualizar(clinicaId, id, datos, actor) {
   const usuario = await repo.obtener(clinicaId, id);
-  if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+  if (!usuario || usuario.eliminado_en) throw new ApiError(404, 'Usuario no encontrado');
   soloAdminSobreAdmin(actor, usuario);
   if (Number(actor.id) === Number(id) && ((datos.rolId !== undefined && Number(datos.rolId) !== Number(usuario.rol_id)) || (datos.activo !== undefined && datos.activo !== usuario.activo))) {
     throw new ApiError(403, 'No podés cambiar tu propio rol ni darte de baja');
@@ -264,6 +264,65 @@ async function quitarOverride(clinicaId, usuarioId, codigoPermiso, actor) {
   return overrides;
 }
 
+/* Eliminar un usuario.
+   - Si nunca registró nada en DOVA (lo crearon por error), se borra por completo.
+   - Si ya trabajó en el sistema, borrarlo dejaría turnos, cobros e historias
+     sin autor (y la auditoría es inmutable): queda ELIMINADO. No puede entrar,
+     no aparece en la lista, se liberan su nombre de usuario y su odontólogo,
+     y su nombre sigue en el historial de lo que hizo. */
+const TABLAS_PROPIAS = ['refresh_tokens', 'permisos_usuario', 'notificaciones'];
+async function tieneActividad(id) {
+  // Todas las columnas de la base que apuntan a usuarios (catálogo del sistema,
+  // no datos del pedido), salvo las tablas propias del usuario que se borran con él.
+  // Se lee de pg_catalog: information_schema solo muestra las tablas propias y la
+  // aplicación puede correr con un usuario de base restringido (dova_app).
+  const fks = (await query(`
+    SELECT c.relname AS t, a.attname AS c
+      FROM pg_constraint k
+      JOIN pg_class c ON c.oid = k.conrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+      JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = ANY (k.conkey)
+     WHERE k.contype = 'f' AND k.confrelid = 'public.usuarios'::regclass`)).rows
+    .filter((f) => !TABLAS_PROPIAS.includes(f.t) && /^[a-z_][a-z0-9_]*$/.test(f.t) && /^[a-z_][a-z0-9_]*$/.test(f.c));
+  if (!fks.length) return false;
+  const sql = fks.map((f) => `SELECT 1 FROM ${f.t} WHERE ${f.c} = $1`).join(' UNION ALL ');
+  return (await query(`SELECT EXISTS (${sql}) AS hay`, [id])).rows[0].hay;
+}
+
+async function eliminar(clinicaId, id, actor) {
+  const usuario = await repo.obtener(clinicaId, id);
+  if (!usuario || usuario.eliminado_en) throw new ApiError(404, 'Usuario no encontrado');
+  if (Number(actor.id) === Number(id)) throw new ApiError(403, 'No podés eliminar tu propio usuario');
+  soloAdminSobreAdmin(actor, usuario);
+  if (usuario.es_admin_protegido) throw new ApiError(403, 'El administrador protegido no se puede eliminar');
+  if (usuario.rol_codigo === 'admin' && usuario.activo && (await repo.contarAdminsActivos(clinicaId, id)) === 0) {
+    throw new ApiError(403, 'No se puede eliminar: la clínica quedaría sin administradores activos');
+  }
+  const { conCandado } = require('../../config/db');
+  const modo = await conCandado([`usuario:${id}`], async () => {
+    await sesiones.invalidarSesiones(id, 'eliminado');
+    if (!(await tieneActividad(id))) {
+      // Si igual algo lo impide (por ejemplo, la auditoría inmutable), se hace la baja.
+      await query('SAVEPOINT borrar_usuario');
+      try {
+        await query('DELETE FROM usuarios WHERE clinica_id=$1 AND id=$2', [clinicaId, id]);
+        return 'borrado';
+      } catch (_e) {
+        await query('ROLLBACK TO SAVEPOINT borrar_usuario');
+      }
+    }
+    await query(`UPDATE usuarios SET activo=false, eliminado_en=now(), odontologo_id=NULL,
+                        username = left(username, 60) || '~eliminado-' || id
+                  WHERE clinica_id=$1 AND id=$2`, [clinicaId, id]);
+    return 'baja';
+  });
+  await auditoria.registrar({
+    clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'eliminar_usuario', modulo: 'administracion', entidadId: id,
+    detalle: { nombre: usuario.nombre, username: usuario.username, rol: usuario.rol_codigo, odontologoId: usuario.odontologo_id || null, modo },
+  });
+  return { ok: true, modo };
+}
+
 async function cerrarSesiones(clinicaId, id, actor) {
   const usuario = await repo.obtener(clinicaId, id);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
@@ -296,5 +355,5 @@ module.exports = {
   listarRoles, detalleRol, crearRol, actualizarPermisosRol: conOlvido(actualizarPermisosRol, null), listarPermisos,
   listar, obtenerConPermisos, crear, actualizar: conOlvido(actualizar, 1), cambiarPassword,
   setOverride: conOlvido(setOverride, 1), quitarOverride: conOlvido(quitarOverride, 1),
-  actualizarMiDisenoPreferido, cerrarSesiones,
+  actualizarMiDisenoPreferido, cerrarSesiones, eliminar: conOlvido(eliminar, 1),
 };

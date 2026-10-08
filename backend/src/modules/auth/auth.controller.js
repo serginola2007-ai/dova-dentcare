@@ -8,7 +8,9 @@ const seg = require('../../config/seguridad');
 const COOKIE = seg.cookies.personal;
 function ponerCookie(req, res, r) {
   if (!r || !r.refreshToken) return;
-  cookies.poner(req, res, COOKIE, r.refreshToken, (new Date(r.refreshVence).getTime() - Date.now()) / 1000);
+  // Cookie de sesión del navegador (se borra al cerrarlo). El servidor igual
+  // controla la inactividad y el máximo absoluto de la sesión.
+  cookies.poner(req, res, COOKIE, r.refreshToken, null);
 }
 const sinSecretos = (r) => { const { refreshToken, refreshVence, ...resto } = r; void refreshToken; void refreshVence; return resto; };
 

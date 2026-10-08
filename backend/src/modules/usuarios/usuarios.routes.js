@@ -27,6 +27,7 @@ router.get('/:id', requirePermiso('usuarios.manage'), controller.obtener);
 router.post('/', requirePermiso('usuarios.manage'), controller.crear);
 router.put('/:id', requirePermiso('usuarios.manage'), controller.actualizar);
 router.post('/:id/password', requirePermiso('usuarios.manage'), controller.cambiarPassword);
+router.delete('/:id', requirePermiso('usuarios.manage'), controller.eliminar);
 // Cerrar todas las sesiones abiertas de una persona (por ejemplo, si perdió el celular).
 router.post('/:id/cerrar-sesiones', requirePermiso('usuarios.manage'), controller.cerrarSesiones);
 

@@ -466,3 +466,24 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - El cambio rige al instante: el servidor toma el vínculo de la base en cada pedido, no del token, y la renovación de sesión actualiza "Mi día" sin volver a entrar. No se cierra la sesión de nadie.
 - Queda en el historial de cambios (antes y después). Requiere el permiso `usuarios.manage`.
 - El listado de usuarios muestra hasta 200 (antes 20). El tamaño de página queda acotado.
+
+## Eliminar usuarios (migración 0042) e Inicio fuera de Movimientos
+- Administración → Usuarios tiene el botón "Eliminar" en cada fila, con una confirmación que explica qué pasa. No aparece para uno mismo ni para el administrador protegido.
+- Si el usuario nunca usó DOVA (creado por error), se borra por completo.
+- Si ya registró algo (turnos, cobros, consultas, auditoría), queda eliminado:
+  - no puede entrar y se cortan sus sesiones al instante;
+  - sale de la lista;
+  - se liberan su nombre de usuario y su odontólogo;
+  - su nombre se mantiene en el historial de lo que hizo.
+
+  Borrarlo dejaría registros clínicos y de caja sin autor.
+- Protecciones en el servidor: permiso `usuarios.manage`, solo un admin elimina a otro admin, la clínica nunca queda sin administradores activos, cada clínica solo ve sus usuarios. Queda en el historial de cambios.
+- La revisión de "¿tiene actividad?" usa `pg_catalog`, así funciona también con el usuario de base restringido `dova_app`. Si igual algo impide el borrado, se hace la baja.
+- "Inicio" quedó como botón propio en la barra, a la izquierda de Movimientos, en los 3 diseños y en el menú del celular.
+
+## Al abrir DOVA siempre se pide la contraseña
+- La sesión vale solo en la pestaña donde se inició. Recargar la página o cambiar de diseño no la cierra (es la misma pestaña).
+- Una pestaña o ventana nueva, el navegador recién abierto o la app instalada piden usuario y contraseña.
+- La cookie de sesión `dova_rt` pasó a ser de navegador, sin `Max-Age`: se borra al cerrarlo. El servidor sigue controlando la inactividad (7 días) y el máximo absoluto (30 días).
+- Las sesiones guardadas por versiones anteriores también piden ingresar una vez.
+- Menú: pasar rápido el cursor de una herramienta a otra ya no cierra el panel recién abierto (un solo temporizador compartido).

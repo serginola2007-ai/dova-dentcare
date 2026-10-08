@@ -18,6 +18,14 @@ const DOVA = (() => {
   let accessToken = null;
   let renovando = null;
 
+  /* Al abrir DOVA siempre se pide la contraseña: la sesión vale solo en la
+     pestaña donde se inició (sobrevive a recargar la página o cambiar de
+     diseño, que es la misma pestaña). Una pestaña, ventana o app nueva
+     arranca en la pantalla de ingreso. */
+  const MARCA_PESTANA = 'dova_pestana';
+  function pestanaConSesion() { try { return sessionStorage.getItem(MARCA_PESTANA) === '1'; } catch (_e) { return false; } }
+  function marcarPestana(si) { try { if (si) sessionStorage.setItem(MARCA_PESTANA, '1'); else sessionStorage.removeItem(MARCA_PESTANA); } catch (_e) { /* sin almacenamiento */ } }
+
   function getPerfil() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (_e) { return null; }
   }
@@ -30,8 +38,11 @@ const DOVA = (() => {
   }
   function clearSession() {
     accessToken = null;
+    marcarPestana(false);
     try { localStorage.removeItem(STORAGE_KEY); } catch (_e) { /* no crítico */ }
   }
+  // Pestaña nueva con una sesión guardada de antes: se pide ingresar de nuevo.
+  if (getPerfil() && !pestanaConSesion()) clearSession();
 
   // Una sola renovación a la vez por pestaña (varios pedidos pueden vencer juntos).
   function refrescarToken() {
@@ -105,6 +116,7 @@ const DOVA = (() => {
     const data = await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false });
     accessToken = data.accessToken;
     setPerfil({ usuario: data.usuario, clinica: data.clinica });
+    marcarPestana(true);
     return data;
   }
 

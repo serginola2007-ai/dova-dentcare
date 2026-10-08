@@ -86,3 +86,8 @@
 .dova-punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); margin-right: 8px; vertical-align: 0.05em; }
 .dova-punto-ok { background: var(--sage, #5B8A5E); }
 .dova-punto-atencion { background: #C9932B; }
+
+/* Usuarios: las acciones de cada fila bajan de renglón si no entran (tablet) */
+.dova-usuario-acciones { white-space: normal; }
+.dova-usuario-acciones .dova-btn-link { white-space: nowrap; margin-right: 10px; }
+.dova-usuario-acciones .dova-btn-link:last-child { margin-right: 0; }

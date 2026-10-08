@@ -333,6 +333,7 @@ body.dova-menu-abierto .dova-menu-overlay {
 /* ---- Menú agrupado: Movimientos / Reportes / Administración ---- */
 .dova-menu-grupo { position: relative; }
 .dova-menu-grupo-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.dova-menu-suelto { cursor: pointer; }
 .dova-menu-flecha { font-size: 0.75em; transition: transform 0.15s ease; }
 .dova-menu-grupo.abierto .dova-menu-flecha { transform: rotate(180deg); }
 .dova-submenu {
@@ -372,6 +373,7 @@ body.dova-menu-abierto .dova-menu-overlay {
   body.dova-menu-abierto .dova-menu { max-height: 85vh !important; overflow-y: auto; }
   .dova-menu-grupo { width: 100%; }
   .dova-menu-grupo-btn { width: 100%; justify-content: space-between; font-weight: 600; }
+  .dova-menu-suelto { width: 100%; text-align: left; font-weight: 600; }
   .dova-submenu { position: static; min-width: 0; box-shadow: none; border: 0; background: transparent; padding: 0 0 6px 14px; }
   .dova-submenu .dova-menu-item { padding: 11px 12px; }
 }
@@ -426,3 +428,5 @@ body.dova-menu-abierto .dova-menu-overlay {
   .dova-topbar:has(.dova-campana) .dova-logout { order: 2; margin-left: 8px; }
   .dova-campana-panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; }
 }
+
+.dova-link-peligro { color: var(--rust) !important; }
