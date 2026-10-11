@@ -35,17 +35,6 @@ async function login(req, res, next) {
   }
 }
 
-async function login2fa(req, res, next) {
-  try {
-    const { desafio, codigo } = req.body || {};
-    const resultado = await authService.login2fa({ desafio, codigo, ...ctx(req) });
-    ponerCookie(req, res, resultado);
-    res.json(sinSecretos(resultado));
-  } catch (err) {
-    next(err);
-  }
-}
-
 async function refresh(req, res, next) {
   try {
     const t = tokenRenovacion(req);
@@ -88,12 +77,6 @@ async function cambiarClave(req, res, next) {
 
 const h = (fn) => async (req, res, next) => { try { res.json(await fn(req, res)); } catch (err) { next(err); } };
 
-// Verificación en dos pasos (la propia cuenta).
-const estado2fa = h((req) => authService.estado2fa(req.usuario.id));
-const iniciar2fa = h((req) => authService.iniciar2fa(req.usuario, req.body || {}));
-const confirmar2fa = h((req) => authService.confirmar2fa(req.usuario, req.body || {}));
-const desactivar2fa = h((req) => authService.desactivar2fa(req.usuario, req.body || {}));
-const nuevosCodigos2fa = h((req) => authService.nuevosCodigos2fa(req.usuario, req.body || {}));
 // Sesiones abiertas de la propia cuenta.
 const sesiones = h((req) => authService.listarSesiones(req.usuario, req.sesionId));
 const cerrarSesion = h(async (req, res) => {
@@ -117,4 +100,4 @@ async function desbloquear(req, res, next) {
   }
 }
 
-module.exports = { login, login2fa, refresh, logout, logoutTodas, cambiarClave, estado2fa, iniciar2fa, confirmar2fa, desactivar2fa, nuevosCodigos2fa, sesiones, cerrarSesion, politica, bloquear, desbloquear };
+module.exports = { login, refresh, logout, logoutTodas, cambiarClave, sesiones, cerrarSesion, politica, bloquear, desbloquear };

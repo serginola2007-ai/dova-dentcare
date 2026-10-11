@@ -12,7 +12,10 @@ const COMUNES = new Set(['admin', 'administrador', 'password', 'contraseña', 'c
   'qwerty123', 'password1', 'admin123', 'admin1234', 'clave123', 'clave1234', 'abc12345', 'asuncion1', 'paraguay1', '11111111', '00000000']);
 
 function validarClaveFuerte(clave, { username, nombre } = {}) {
-  const c = String(clave || '');
+  if (typeof clave !== 'string') throw new ApiError(400, 'La contraseña debe tener al menos 8 caracteres');
+  const c = clave;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(c)) throw new ApiError(400, 'La contraseña tiene caracteres no válidos');
   if (c.length < 8) throw new ApiError(400, 'La contraseña debe tener al menos 8 caracteres');
   if (c.length > 128) throw new ApiError(400, 'La contraseña es demasiado larga (máximo 128 caracteres)');
   if (!/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(c) || !/\d/.test(c)) throw new ApiError(400, 'La contraseña tiene que tener letras y números');

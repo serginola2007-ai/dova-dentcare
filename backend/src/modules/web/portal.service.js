@@ -47,7 +47,8 @@ async function clinicaConCuentas() {
 }
 
 function validarClave(clave) {
-  const c = String(clave || '');
+  if (typeof clave !== 'string') throw new ApiError(400, 'La contraseña tiene que tener al menos 8 caracteres');
+  const c = clave;
   if (c.length < 8) throw new ApiError(400, 'La contraseña tiene que tener al menos 8 caracteres');
   if (c.length > 100) throw new ApiError(400, 'La contraseña es demasiado larga');
   if (!/[A-Za-z]/.test(c) || !/\d/.test(c)) throw new ApiError(400, 'La contraseña tiene que tener letras y números');
@@ -190,9 +191,13 @@ function sesion(cuenta, p) {
 async function ingresar({ usuario, clave }, ip) {
   w.limitar(ip, 'portal-ingresar', 15, 15);
   const { c } = await contextoClinica();
-  const u = String(usuario || '').trim().toLowerCase();
   const error = new ApiError(401, 'Cédula/email o contraseña incorrectos');
-  if (!u || !clave) throw error;
+  // Solo texto plano (nada de listas u objetos) y sin caracteres de control.
+  // eslint-disable-next-line no-control-regex
+  const texto = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max && !/[\u0000-\u001f\u007f]/.test(v);
+  if (!texto(usuario, 150) || !texto(clave, 200)) throw error;
+  const u = usuario.trim().toLowerCase();
+  if (!u) throw error;
   const cuenta = (await query(`SELECT wc.*, p.nombre, p.apellido, p.activo AS paciente_activo FROM web_cuentas wc JOIN pacientes p ON p.id=wc.paciente_id
                                 WHERE wc.clinica_id=$1 AND (lower(wc.email)=$2 OR p.ci=$3) ORDER BY wc.id LIMIT 1`, [c.id, u, ciLimpia(usuario)])).rows[0];
   if (!cuenta) { await bcrypt.compare(String(clave), HASH_FALSO); throw error; }
@@ -246,7 +251,7 @@ async function sesionNueva(pt) {
 
 async function cambiarClave(pt, { actual, nueva }) {
   const c = (await query('SELECT * FROM web_cuentas WHERE id=$1', [pt.cuentaId])).rows[0];
-  if (!(await bcrypt.compare(String(actual || ''), c.clave_hash))) throw new ApiError(400, 'La contraseña actual no es correcta');
+  if (typeof actual !== 'string' || !(await bcrypt.compare(actual.slice(0, 200), c.clave_hash))) throw new ApiError(400, 'La contraseña actual no es correcta');
   const h = await bcrypt.hash(validarClave(nueva), 10);
   const r = (await query('UPDATE web_cuentas SET clave_hash=$2, version_token=version_token+1 WHERE id=$1 RETURNING *', [c.id, h])).rows[0];
   return sesion(r, pt);

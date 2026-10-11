@@ -117,22 +117,17 @@ if (env.nodeEnv !== 'test') {
   const { limitar, porUsuario } = require('./middlewares/limite.middleware');
   const L = require('./config/seguridad').limites;
   const lim = (nombre, [max, ventanaSeg], extra = {}) => limitar({ nombre, max, ventanaSeg, ...extra });
-  const limite2fa = lim('2fa', [20, 600], { compartido: true, clave: porUsuario });
   // Por usuario+IP (fuerza bruta sobre una cuenta) y por IP (relleno de credenciales);
   // una clínica entera detrás de la misma IP queda holgada.
   const limiteLoginUsuario = lim('login-usuario', L.loginUsuario, { compartido: true, clave: (req) => `${req.ip}|${String((req.body && req.body.username) || '').toLowerCase().slice(0, 60)}` });
-  // El segundo paso (/login/2fa) no lleva usuario: tiene su propio contador
-  // por cuenta en la base (5 fallos = 15 min, 15 en el día = 24 h) y el de IP.
-  app.use('/api/auth/login', (req, res, next) => (req.path === '/' ? limiteLoginUsuario(req, res, next) : next()));
+  app.use('/api/auth/login', limiteLoginUsuario);
   app.use('/api/auth/login', lim('login-ip', L.loginIp, { compartido: true }));
   app.use('/api/auth/refresh', lim('refresh', L.refresh, { compartido: true }));
   app.use('/api/auth/cambiar-clave', lim('clave', L.cambiarClave, { compartido: true }));
-  // Desbloqueo de pantalla y alta/baja de la verificación en dos pasos: piden
-  // la contraseña, así que tienen el mismo freno que el cambio de contraseña.
+  // Desbloqueo de pantalla: pide la contraseña.
   // Por IP + sesión: varias personas de la clínica comparten la IP; los
   // intentos de contraseña igual cuentan para el bloqueo de cada usuario.
   app.use('/api/auth/desbloquear', lim('desbloqueo', [20, 600], { compartido: true, clave: (req) => `${req.ip}|${String((req.headers.cookie || '').match(/dova_rt=([^;]{0,16})/)?.[1] || '')}` }));
-  app.use('/api/auth/2fa', (req, res, next) => (req.method === 'POST' ? limite2fa(req, res, next) : next()));
   app.use('/api/web/cuenta/ingresar', lim('portal-login', L.portalLogin, { compartido: true }));
   app.use('/api/web/publico', lim('web-publica', L.webPublica));
   app.use('/api/busqueda', lim('busqueda', L.busqueda, { clave: porUsuario }));

@@ -21,6 +21,8 @@ function errorHandler(err, req, res, next) {
       '22008': [400, 'Fecha u hora fuera de rango.'],
       '22003': [400, 'Un número está fuera del rango permitido.'],
       '22001': [400, 'Un texto supera el largo máximo permitido.'],
+      '22021': [400, 'Algún texto tiene caracteres no válidos.'],
+      '22P05': [400, 'Algún texto tiene caracteres no válidos.'],
       '23502': [400, 'Falta un dato obligatorio.'],
       '23503': [409, 'La operación hace referencia a un registro inexistente o que está en uso por otros datos.'],
       '23505': [409, 'Ya existe un registro con esos datos (duplicado).'],

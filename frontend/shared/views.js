@@ -110,19 +110,13 @@ const Vistas = (() => {
       const errorEl = document.getElementById('login-error');
       errorEl.style.display = 'none';
       try {
-        const r = await DOVA.login(username, password);
-        const seguir = () => {
-          const u = DOVA.usuarioActual();
-          if (u && u.debeCambiarClave) { pedirCambioDeClave(password, () => seguir2fa()); return; }
-          seguir2fa();
-        };
-        const seguir2fa = () => {
-          const u = DOVA.usuarioActual();
-          if (u && u.debeActivar2fa && window.DovaSeguridad) { DovaSeguridad.activacionObligatoria(document.querySelector('.dova-login-card'), () => onSuccess(disenoElegido)); return; }
-          onSuccess(disenoElegido);
-        };
-        if (r && r.requiere2fa && window.DovaSeguridad) { DovaSeguridad.pasoDosLogin(document.querySelector('.dova-login-card'), r.desafio, seguir); return; }
-        seguir();
+        await DOVA.login(username, password);
+        const u = DOVA.usuarioActual();
+        if (u && u.debeCambiarClave) {
+          pedirCambioDeClave(password, () => onSuccess(disenoElegido));
+          return;
+        }
+        onSuccess(disenoElegido);
       } catch (err) {
         errorEl.textContent = err.message || 'No se pudo iniciar sesión. Revisá tu conexión a internet.';
         errorEl.style.display = 'block';
@@ -1630,8 +1624,8 @@ const Vistas = (() => {
               <tr>
                 <td>${esc(u.nombre)}</td><td>${esc(u.username)}</td><td>${esc(u.rol_nombre)}</td>
                 <td>${u.odontologo_nombre ? esc(u.odontologo_nombre) : '<span class="dova-nota">Sin vincular</span>'}</td>
-                <td>${u.activo ? 'Activo' : 'Inactivo'}${u.es_admin_protegido ? ' · Admin protegido' : ''}${u.totp_activo ? ' <span class="dova-etiqueta-2fa" title="Verificación en dos pasos activa">2 pasos</span>' : ''}</td>
-                <td class="dova-usuario-acciones"><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button>${DOVA.tienePermiso('usuarios.manage') && u.totp_activo && Number(u.id) !== Number((DOVA.usuarioActual() || {}).id) ? ` <button class="dova-btn-link" data-reiniciar-2fa="${u.id}" data-nombre="${esc(u.nombre)}">Reiniciar 2 pasos</button>` : ''}${DOVA.tienePermiso('usuarios.manage') ? ` <button class="dova-btn-link" data-vincular-odo="${u.id}">${u.odontologo_id ? 'Cambiar odontólogo' : 'Vincular odontólogo'}</button>` : ''}${DOVA.tienePermiso('usuarios.manage') && !u.es_admin_protegido && Number(u.id) !== Number((DOVA.usuarioActual() || {}).id) ? ` <button class="dova-btn-link dova-link-peligro" data-eliminar-usuario="${u.id}" data-nombre="${esc(u.nombre)}">Eliminar</button>` : ''}</td>
+                <td>${u.activo ? 'Activo' : 'Inactivo'}${u.es_admin_protegido ? ' · Admin protegido' : ''}</td>
+                <td class="dova-usuario-acciones"><button class="dova-btn-link" data-ver-usuario="${u.id}">Permisos</button>${DOVA.tienePermiso('usuarios.manage') ? ` <button class="dova-btn-link" data-vincular-odo="${u.id}">${u.odontologo_id ? 'Cambiar odontólogo' : 'Vincular odontólogo'}</button>` : ''}${DOVA.tienePermiso('usuarios.manage') && !u.es_admin_protegido && Number(u.id) !== Number((DOVA.usuarioActual() || {}).id) ? ` <button class="dova-btn-link dova-link-peligro" data-eliminar-usuario="${u.id}" data-nombre="${esc(u.nombre)}">Eliminar</button>` : ''}</td>
               </tr>
             `).join('') || '<tr><td colspan="6">Sin usuarios.</td></tr>'}
           </tbody>
@@ -1811,30 +1805,6 @@ const Vistas = (() => {
           } catch (e) { ok.disabled = false; toast(e.message, 'error'); return; }
           document.getElementById('modal-root').innerHTML = '';
           toast('Usuario eliminado', 'ok');
-          recargar();
-        });
-      });
-    });
-
-    // Perdió el celular: se le borra la verificación en dos pasos y se cierran sus sesiones.
-    document.querySelectorAll('[data-reiniciar-2fa]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-reiniciar-2fa');
-        abrirModal(`
-          <h3>Reiniciar la verificación en dos pasos de ${esc(btn.dataset.nombre)}</h3>
-          <p>Usalo si perdió o cambió el celular y no tiene sus códigos de recuperación.</p>
-          <p class="dova-nota">Se cierran sus sesiones abiertas. La próxima vez entra solo con la contraseña y tiene que volver a activarla desde Configuración → Seguridad. Asegurate de que el pedido venga de esa persona.</p>
-          <div class="dova-modal-actions">
-            <button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button>
-            <button type="button" class="dova-btn-primary" id="btn-confirmar-reinicio-2fa">Reiniciar</button>
-          </div>
-        `);
-        const ok = document.getElementById('btn-confirmar-reinicio-2fa');
-        ok.addEventListener('click', async () => {
-          ok.disabled = true;
-          try { await DOVA.post(`/usuarios/${id}/reiniciar-2fa`); } catch (e) { ok.disabled = false; toast(e.message, 'error'); return; }
-          document.getElementById('modal-root').innerHTML = '';
-          toast('Verificación reiniciada. Se cerraron sus sesiones.', 'ok');
           recargar();
         });
       });

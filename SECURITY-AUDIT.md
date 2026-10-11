@@ -20,38 +20,54 @@ Estados posibles:
 
 ---
 
-## 0. Tercera ronda (octubre 2026): segundo factor, sesiones y bloqueo de pantalla
+## 0. Tercera ronda (octubre 2026): intrusión desde afuera, sesiones y bloqueo de pantalla
 
-Las dos rondas anteriores cerraron los huecos encontrados. Esta ronda suma defensas para el caso en que **la contraseña ya no alcanza**: alguien la vio, la adivinó o encontró una compu de la clínica abierta. Migración `0043_2fa_sesiones_bloqueo.js` (solo agrega).
+Objetivo: que **nadie sin usuario y contraseña** pueda entrar ni sacar información. Por decisión de la clínica **no se usa verificación en dos pasos**: se probó y se retiró. La migración `0044_sin_2fa.js` limpia cualquier dato que hubiera quedado; las columnas `totp_*` y `clinicas.exigir_2fa_admin` quedan sin uso.
+
+### Prueba de intrusión externa (`intrusion-externa.test.js`)
+
+Un atacante sin credenciales, contra el servidor en modo producción:
+
+| Ataque | Resultado |
+|---|---|
+| Bajar archivos del servidor (`.env`, `.git`, código, `package.json`, documentación, carpetas): 25 rutas, con `../` codificado, doble codificación y barras invertidas | Ninguno se entrega. Solo se sirve la carpeta `frontend/` y los archivos ocultos se ignoran. |
+| Leer la API sin sesión (pacientes, usuarios, caja, facturación, búsqueda, tiempo real…) | 401 en todo (más el barrido de las 524 rutas). |
+| Tokens falsificados (`alg: none`, secretos adivinados como `secret`, `dova` o el de ejemplo, HS512, firma cortada, tokens gigantes) y cookies de sesión inventadas | Rechazados. |
+| Inyección SQL y de objetos en el ingreso del personal y del portal (`' OR '1'='1`, `{$ne: null}`, listas, `\0`, textos de 100.000 caracteres, `<script>`) | Nunca entra. Ver I1 e I2. |
+| JSON roto, anidado 5.000 niveles o de 3 MB | 400 / 413, sin detalles internos. |
+| Adivinar la contraseña de una cuenta | A los 5 intentos se bloquea 15 min, aunque después acierte. |
+| Probar una contraseña en muchos usuarios (relleno de credenciales) | Se bloquea la IP. |
+| Averiguar qué usuarios existen | Mismo mensaje, código y tiempo de respuesta exista o no. |
+| CORS desde otro sitio, `TRACE`, cabeceras | Sin permiso para otros sitios, `TRACE` no refleja nada, sin `X-Powered-By`, con CSP, HSTS, `nosniff`, anti-iframe y `Referrer-Policy`. |
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| I1 | El ingreso aceptaba usuario y contraseña como **listas** (`["admin"]` se convertía en `"admin"`). No dejaba entrar sin la contraseña correcta, pero es una confusión de tipos que no debe existir. Pasaba igual en el portal del paciente. | Usuario y contraseña tienen que ser texto plano, de largo razonable y sin caracteres de control. Aplica al ingreso, al cambio de contraseña, al desbloqueo y al portal. | **FIXED** |
+| I2 | Un carácter nulo (`\0`) en el usuario hacía fallar la consulta a la base: **error 500**. | Se rechaza antes de llegar a la base. Además, cualquier texto inválido para la base responde 400 (códigos `22021`/`22P05`). | **FIXED** |
+
+### Defensas agregadas
 
 | # | Riesgo | Qué se hizo | Prueba | Estado |
 |---|---|---|---|---|
-| T1 | Con la contraseña sola se entra a toda la información clínica y de caja. | **Verificación en dos pasos (TOTP, RFC 6238)** opcional por persona, con app del celular:<ul><li>Activación con contraseña, QR y código.</li><li>El secreto se guarda cifrado (AES-256-GCM).</li><li>Cada código sirve una sola vez (anti-repetición).</li><li>10 códigos de recuperación, guardados solo como hash HMAC y gastados de forma atómica.</li><li>Desactivarla o generar códigos nuevos pide contraseña y código.</li><li>Un admin la reinicia a quien perdió el celular: se cierran sus sesiones y queda auditado.</li></ul> | `dos-pasos.test.js`, `ui-seguridad-cuenta.js` | **FIXED** |
-| T2 | Fuerza bruta sobre el segundo paso. | <ul><li>La contraseña correcta solo devuelve un desafío firmado de 5 minutos y un solo uso (no abre sesión, no pone cookie).</li><li>5 códigos mal: 15 minutos de bloqueo.</li><li>15 en el día: 24 horas.</li><li>Se avisa a la persona y a los administradores (es señal de que la contraseña se filtró).</li></ul> | `dos-pasos.test.js` | **FIXED** |
-| T3 | Administradores sin segundo factor. | Política de la clínica "Exigir verificación en dos pasos a los administradores":<ul><li>Hasta activarla, la API solo deja usar lo necesario para hacerlo (403 `DEBE_ACTIVAR_2FA`), no solo la pantalla.</li><li>Para exigirla, quien la activa tiene que tenerla.</li><li>Con la exigencia, un admin no puede desactivar la suya.</li></ul> | `dos-pasos.test.js`, `ui-seguridad-cuenta.js` | **FIXED** (apagada por defecto: la enciende la clínica) |
-| T4 | Compu de recepción o de un consultorio que queda abierta. | **Bloqueo de pantalla por inactividad** (15 min por defecto; 5–120 o nunca, según la clínica):<ul><li>Cuenta la actividad de todas las pestañas.</li><li>El bloqueo es del **servidor**: la sesión responde 423 a todo pedido y a la renovación, aunque se recargue la página o se borre el candado desde las herramientas del navegador.</li><li>Se desbloquea con la contraseña, usando la cookie de la sesión y la cabecera anti-CSRF.</li><li>5 fallos cierran la sesión y avisan a los administradores.</li><li>Lo que se estaba escribiendo queda en pantalla debajo del candado.</li></ul> | `dos-pasos.test.js`, `ui-seguridad-cuenta.js` (incluye reloj adelantado 16 min) | **FIXED** |
-| T5 | Un token de acceso robado servía hasta 15 minutos aunque se cerrara la sesión. | Tabla `sesiones` (una por ingreso). El token de acceso lleva el id de la sesión (`sid`): cerrar, bloquear o invalidar una sesión lo corta **al instante** (el estado se consulta con caché de 10 s y se limpia en el acto en este servidor). | `dos-pasos.test.js` | **FIXED** |
-| T6 | No se veía desde dónde estaba abierta la cuenta. | Configuración → Seguridad → **Sesiones abiertas**: dispositivo, IP, inicio, última actividad, y "Cerrar" por sesión. Solo las propias (otra persona: 404). | `dos-pasos.test.js`, `ui-seguridad-cuenta.js` | **FIXED** |
-| T7 | Los ataques quedaban en la auditoría, pero nadie se enteraba a tiempo. | **Avisos de seguridad** en la campanita de los administradores (y de la persona afectada), sin repetir el mismo aviso más de una vez cada 10 min:<ul><li>usuario bloqueado por contraseñas mal;</li><li>token de sesión reutilizado (posible robo);</li><li>segundo paso fallido 5 veces;</li><li>ingreso con código de recuperación;</li><li>2FA desactivada o reiniciada;</li><li>desbloqueo de pantalla fallido.</li></ul> | `dos-pasos.test.js` | **FIXED** |
-| T8 | El límite de 10 logins por minuto contaba también el segundo paso (que no lleva usuario). | El segundo paso tiene su contador por cuenta en la base. El desbloqueo cuenta por IP + sesión (varias personas comparten la IP de la clínica). | `dos-pasos.test.js` | **FIXED** |
+| T1 | Compu de recepción o de un consultorio que queda abierta. | **Bloqueo de pantalla por inactividad** (15 min por defecto; 5–120 o nunca, según la clínica):<ul><li>Cuenta la actividad de todas las pestañas.</li><li>El bloqueo es del **servidor**: la sesión responde 423 a todo pedido y a la renovación, aunque se recargue la página o se borre el candado desde las herramientas del navegador.</li><li>Se desbloquea con la contraseña, usando la cookie de la sesión y la cabecera anti-CSRF.</li><li>5 fallos cierran la sesión y avisan a los administradores.</li></ul> | `sesiones-bloqueo.test.js`, `ui-seguridad-cuenta.js` (reloj adelantado 16 min) | **FIXED** |
+| T2 | Un token de acceso robado servía hasta 15 minutos aunque se cerrara la sesión. | Tabla `sesiones` (una por ingreso). El token lleva el id de la sesión (`sid`): cerrar, bloquear o invalidar una sesión lo corta **al instante**. | `sesiones-bloqueo.test.js` | **FIXED** |
+| T3 | No se veía desde dónde estaba abierta la cuenta. | Configuración → Seguridad → **Sesiones abiertas**: dispositivo, IP, inicio, última actividad, y "Cerrar" por sesión. Solo las propias (otra persona: 404). | `sesiones-bloqueo.test.js`, `ui-seguridad-cuenta.js` | **FIXED** |
+| T4 | Los ataques quedaban en la auditoría, pero nadie se enteraba a tiempo. | **Avisos de seguridad** en la campanita de los administradores (y de la persona afectada), sin repetir el mismo aviso más de una vez cada 10 min:<ul><li>cuenta bloqueada por contraseñas mal;</li><li>token de sesión reutilizado (posible robo);</li><li>desbloqueo de pantalla fallido.</li></ul> | `sesiones-bloqueo.test.js` | **FIXED** |
 
-**Clave de cifrado del segundo factor.** Sale de `TOTP_CLAVE_CIFRADO` si existe; si no, de `JWT_REFRESH_SECRET` (HKDF). Con la base sola no se pueden generar códigos.
-- Si alguna vez se regenera `JWT_REFRESH_SECRET`, antes hay que poner su valor **anterior** en `TOTP_CLAVE_CIFRADO`. Si no, las verificaciones activas dejan de funcionar: la persona entra con un código de recuperación o un admin se la reinicia.
-- Conviene definir `TOTP_CLAVE_CIFRADO` (valor aleatorio largo) **antes** de que alguien active la verificación.
-
-Riesgos residuales:
+Riesgo residual:
 - El candado tapa la pantalla, pero lo que ya estaba dibujado sigue en la memoria del navegador hasta desbloquear. Quien abra las herramientas de desarrollo puede leer esa pantalla, aunque no puede pedir nada nuevo al servidor (**MITIGATED**).
-- Los avisos dependen de que un administrador mire la campanita: no hay correo ni SMS (**ACCEPTED RISK** por ahora).
+- Sin segundo factor, quien obtenga una contraseña válida entra. Lo frenan la contraseña fuerte obligatoria, el bloqueo por intentos, los avisos y "Sesiones abiertas" (**ACCEPTED RISK**, decisión de la clínica).
+- Bloquear una cuenta con 5 contraseñas mal también le sirve a un atacante para molestar a esa persona 15 minutos. Es el costo habitual del freno a la fuerza bruta (**ACCEPTED RISK**).
 
 ---
 
 ## 1. Inventario de rutas
 
-`backend/tests/seguridad/rutas.json` se genera con `enumerar-rutas.py` leyendo `app.js` y cada `*.routes.js`. Hay **531 rutas** (516 de la 2.ª ronda + 15 de la 3.ª), más `GET /api/eventos` (tiempo real), que se declara en `app.js`.
+`backend/tests/seguridad/rutas.json` se genera con `enumerar-rutas.py` leyendo `app.js` y cada `*.routes.js`. Hay **524 rutas** (516 de la 2.ª ronda + 8 de la 3.ª), más `GET /api/eventos` (tiempo real), que se declara en `app.js`.
 
 | Módulo | Rutas | Con permiso (`requirePermiso`) | Solo sesión o pública |
 |---|---|---|---|
-| auth | 16 | 0 | 16: login, segundo paso, refresh, logout, desbloquear (cookie + CSRF + contraseña) y las de la propia cuenta con sesión (contraseña, 2FA, sesiones, política, bloquear) |
+| auth | 10 | 0 | 10: login, refresh, logout, desbloquear (cookie + CSRF + contraseña) y las de la propia cuenta con sesión (contraseña, cerrar todas, sesiones, política, bloquear) |
 | clinica | 5 | 3 | 2: `branding-publico` (pública, solo logo y colores) y `GET /clinica` (con sesión) |
 | pacientes | 10 | 10 | — |
 | odontologos | 5 | 3 | 2 lecturas con sesión (agenda) |
@@ -67,7 +83,7 @@ Riesgos residuales:
 | inventario | 10 | 10 | — |
 | helpdesk | 10 | 10 | — |
 | notificaciones | 4 | 0 | 4: solo las propias del usuario |
-| usuarios | 15 | 14 | 1: `me/preferencias` (solo el diseño propio) |
+| usuarios | 14 | 13 | 1: `me/preferencias` (solo el diseño propio) |
 | clinico | 33 | 33 | — |
 | reportes | 9 | 9 | — |
 | comprobantes | 9 | 9 | — |
@@ -268,8 +284,7 @@ Riesgos residuales:
    - `REFRESH_LIMITE_POR_MINUTO`, `PORTAL_LOGIN_LIMITE_POR_MINUTO`
    - `WEB_LIMITE_POR_MINUTO`, `EXPORT_LIMITE_POR_MINUTO`, `API_LIMITE_POR_MINUTO`
    - `SSE_MAX_POR_USUARIO`, `SSE_MAX_TOTAL`
-6. **Rotación de secretos.** No se encontró ningún secreto en el código, así que no hace falta rotar por filtración. Si alguna vez se compartió el `.env` de producción, regenerar `JWT_SECRET` y `JWT_REFRESH_SECRET` en Render (cierra todas las sesiones). Antes, copiar el valor viejo de `JWT_REFRESH_SECRET` a `TOTP_CLAVE_CIFRADO` (ver sección 0).
-7. **`TOTP_CLAVE_CIFRADO`** (opcional, recomendado): valor aleatorio largo en Render → dova → Environment, **antes** de que alguien active la verificación en dos pasos. No se agregó al Blueprint con `generateValue` a propósito: si Render la generara después, las verificaciones ya activas dejarían de funcionar.
+6. **Rotación de secretos.** No se encontró ningún secreto en el código, así que no hace falta rotar por filtración. Si alguna vez se compartió el `.env` de producción, regenerar `JWT_SECRET` y `JWT_REFRESH_SECRET` en Render (cierra todas las sesiones).
 
 ## 6. Migraciones de esta ronda (solo nuevas, no destructivas)
 
@@ -279,9 +294,7 @@ Riesgos residuales:
   - disparador de tiempo real con la clínica derivada para `cuotas` y `caja_movimientos`.
 - `0041_limites_compartidos.js`: tabla UNLOGGED `limites_pedidos`, para el almacén `postgres` de los límites.
 
-- `0043_2fa_sesiones_bloqueo.js` (3.ª ronda):
-  - `usuarios`: columnas de la verificación en dos pasos (secreto cifrado, último paso usado, hashes de recuperación);
-  - tabla `sesiones`;
-  - `clinicas.bloqueo_inactividad_min` (0–240, 15 por defecto) y `clinicas.exigir_2fa_admin`.
+- `0043_2fa_sesiones_bloqueo.js` (3.ª ronda): tabla `sesiones`, `clinicas.bloqueo_inactividad_min` (0–240, 15 por defecto) y las columnas de la verificación en dos pasos (que quedaron sin uso).
+- `0044_sin_2fa.js`: limpia los datos de la verificación en dos pasos (se decidió no usarla).
 
 No se editó ninguna migración anterior.

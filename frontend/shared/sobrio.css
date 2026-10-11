@@ -188,7 +188,7 @@ textarea { padding: 6px 9px; font-size: 13px; }
   textarea { font-size: 16px; }
 }
 
-/* ---------- Seguridad: candado por inactividad, 2 pasos, sesiones ---------- */
+/* ---------- Seguridad: candado por inactividad y sesiones abiertas ---------- */
 body.dova-bloqueada #shell-root, body.dova-bloqueada #modal-root, body.dova-bloqueada #dova-toasts { visibility: hidden; }
 .dova-candado {
   position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
@@ -202,23 +202,12 @@ body.dova-bloqueada #shell-root, body.dova-bloqueada #modal-root, body.dova-bloq
 .dova-candado-icono { color: var(--terracotta); }
 .dova-candado-icono svg { width: 28px; height: 28px; }
 .dova-candado-acciones { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.dova-etiqueta-2fa {
+.dova-etiqueta {
   display: inline-block; padding: 1px 6px; font-size: 11px; font-weight: 600; letter-spacing: .02em;
   color: var(--sage-dark); border: 1px solid var(--sage); border-radius: var(--radius-s); vertical-align: 1px; white-space: nowrap;
 }
 .dova-check { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; cursor: pointer; }
 .dova-check input { width: auto; margin: 0; }
-.dova-2fa-paso { max-width: 460px; }
-.dova-2fa-pasos { margin: 0 0 8px; padding-left: 20px; font-size: 13px; line-height: 1.5; }
-.dova-2fa-qr { margin: 4px 0 8px; }
-.dova-2fa-qr img { display: block; background: #fff; border: 1px solid var(--border); image-rendering: pixelated; }
-.dova-2fa-clave { font-size: 13px; letter-spacing: .06em; word-break: break-all; }
-.dova-campo-codigo { font-family: ui-monospace, Consolas, monospace; letter-spacing: .2em; max-width: 220px; }
-.dova-2fa-codigos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; list-style: none; padding: 10px 12px; margin: 8px 0 12px; background: var(--cream); }
-.dova-2fa-codigos code { font-size: 14px; letter-spacing: .08em; }
-.dova-2fa-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
-.dova-2fa-ayuda { margin: 8px 0; font-size: 13px; }
-.dova-2fa-ayuda summary { cursor: pointer; color: var(--ink-soft); }
 .dova-seguridad-bloque { margin-bottom: 8px; }
 .dova-seguridad-bloque select { max-width: 260px; }
 .dova-tabla-sesiones td { vertical-align: middle; }

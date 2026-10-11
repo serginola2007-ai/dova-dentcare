@@ -1,8 +1,7 @@
 /* Avisos de seguridad para los administradores de la clínica (campanita).
    Se disparan ante hechos que merecen una mirada humana: cuentas bloqueadas
-   por intentos fallidos, un token de sesión robado y reutilizado, cambios en
-   la verificación en dos pasos, alguien que falla el segundo paso con la
-   contraseña correcta. Un mismo aviso no se repite más de una vez cada
+   por intentos fallidos, un token de sesión robado y reutilizado, intentos
+   fallidos de desbloquear una pantalla. Un mismo aviso no se repite más de una vez cada
    10 minutos. Nunca interrumpen el flujo que los dispara. */
 const { query } = require('../config/db');
 

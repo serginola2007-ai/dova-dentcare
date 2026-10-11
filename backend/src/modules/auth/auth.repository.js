@@ -3,12 +3,10 @@ const { query } = require('../../config/db');
 async function findUsuarioByUsername(clinicaId, username) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.password_hash,
-            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version, u.totp_activo,
-            (u.totp_activo = false AND r.codigo = 'admin' AND c.exigir_2fa_admin) AS debe_activar_2fa,
+            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
-     JOIN clinicas c ON c.id = u.clinica_id
      WHERE u.clinica_id = $1 AND u.username = $2`,
     [clinicaId, username]
   );
@@ -18,12 +16,10 @@ async function findUsuarioByUsername(clinicaId, username) {
 async function findUsuarioById(id) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.activo,
-            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version, u.totp_activo,
-            (u.totp_activo = false AND r.codigo = 'admin' AND c.exigir_2fa_admin) AS debe_activar_2fa,
+            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
-     JOIN clinicas c ON c.id = u.clinica_id
      WHERE u.id = $1`,
     [id]
   );
@@ -109,22 +105,8 @@ async function hashDeUsuario(usuarioId) {
   const r = await query('SELECT password_hash, username FROM usuarios WHERE id=$1', [usuarioId]);
   return r.rows[0] || null;
 }
-// Datos de la verificación en dos pasos (secretos cifrados: nunca salen al cliente).
-async function datos2fa(usuarioId) {
-  const r = await query(`SELECT id, clinica_id, username, nombre, password_hash, totp_activo, totp_secreto, totp_pendiente, totp_pendiente_en,
-      totp_activado_en, totp_ultimo_paso, COALESCE(array_length(totp_recuperacion, 1), 0) AS recuperacion_restantes, totp_recuperacion
-    FROM usuarios WHERE id=$1`, [usuarioId]);
-  return r.rows[0] || null;
-}
-/* Fallos del segundo paso en una ventana (minutos), desde el último acierto. */
-async function fallos2fa(clave, minutos) {
-  const r = await query(`SELECT count(*)::int AS n FROM login_intentos WHERE clave=$1 AND NOT exitoso AND creado_en > now() - ($2::int * interval '1 minute')
-      AND creado_en > COALESCE((SELECT max(creado_en) FROM login_intentos WHERE clave=$1 AND exitoso), '-infinity')`, [clave, minutos]);
-  return r.rows[0].n;
-}
-
 module.exports = {
-  registrarIntentoLogin, estadoIntentosLogin, marcarClaveCambiada, hashDeUsuario, datos2fa, fallos2fa,
+  registrarIntentoLogin, estadoIntentosLogin, marcarClaveCambiada, hashDeUsuario,
   findUsuarioByUsername,
   findUsuarioById,
   getPermisosEfectivos,

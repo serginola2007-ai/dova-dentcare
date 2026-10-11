@@ -79,12 +79,8 @@ async function cerrarSesiones(req, res, next) {
   try { res.json(await service.cerrarSesiones(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
 }
 
-async function reiniciar2fa(req, res, next) {
-  try { res.json(await service.reiniciar2fa(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
-}
-
 module.exports = {
-  eliminar, reiniciar2fa,
+  eliminar,
   cerrarSesiones,
   listarRoles, detalleRol, crearRol, actualizarPermisosRol, listarPermisos,
   listar, obtener, crear, actualizar, cambiarPassword, setOverride, quitarOverride,

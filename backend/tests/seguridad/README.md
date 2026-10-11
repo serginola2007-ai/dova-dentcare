@@ -22,7 +22,7 @@ python3 tests/seguridad/enumerar-rutas.py      # inventario de rutas → rutas.j
 
 | Archivo | Qué comprueba |
 |---|---|
-| `barrido-rutas.js` | Las 531 rutas de la API: sin sesión responden 401 y un usuario sin permisos recibe 403. |
+| `barrido-rutas.js` | Las 524 rutas de la API: sin sesión responden 401 y un usuario sin permisos recibe 403. |
 | `idor-clinicas.js <idPaciente>` | El administrador de otra clínica intenta leer y modificar unos 5.500 recursos del paciente indicado, cambiando los IDs. |
 | `integridad-clinicas.js` | Revisa las 190 relaciones de la base y confirma que ninguna fila apunta a datos de otra clínica. |
 | `multiclinica.test.js` | Listados, búsquedas, reportes y exportaciones de otra clínica no traen datos ajenos. |
@@ -32,7 +32,8 @@ python3 tests/seguridad/enumerar-rutas.py      # inventario de rutas → rutas.j
 | `ui-sesiones.js` | En un navegador real (Playwright): nada sensible en `localStorage`, la sesión sobrevive a recargar, "cerrar en todos los dispositivos", migración de sesiones viejas, cookie del portal y `/salir`. Necesita `PLAYWRIGHT_MODULE` y `CHROMIUM_PATH` si no están instalados globalmente. |
 | `vinculo-odontologo.test.js` | Vincular usuarios a odontólogos: un odontólogo por usuario activo, misma clínica, permiso, auditoría y efecto inmediato. |
 | `eliminar-usuario.test.js` | Eliminar usuarios: borrado completo si nunca usó DOVA; si no, baja con historial intacto, sesión cortada y nombre/odontólogo liberados; protecciones (uno mismo, admin protegido, otra clínica, sin permiso). |
-| `dos-pasos.test.js` | Verificación en dos pasos (activar, ingresar, códigos de recuperación, anti-repetición, bloqueo por fallos, reinicio por admin), exigencia para administradores, sesiones abiertas y bloqueo de pantalla (API). |
+| `intrusion-externa.test.js` | Un atacante sin credenciales: archivos del servidor, API sin sesión, tokens falsificados, inyección en el ingreso (personal y portal), JSON abusivo, fuerza bruta, relleno de credenciales, enumeración de usuarios, CORS y cabeceras. Tarda ~2 min (espera la ventana del límite por minuto). |
+| `sesiones-bloqueo.test.js` | Sesiones abiertas (cerrar al instante), bloqueo de pantalla del lado del servidor, avisos a los administradores y política de minutos de bloqueo (API). |
 | `ui-seguridad-cuenta.js` | Lo mismo en un navegador real: los 3 diseños, celular y tablet, candado por inactividad con el reloj adelantado. Necesita Playwright como `ui-sesiones.js`. |
 | `inyeccion-fk.js` | La Clínica B llama a todas las altas mandando en el cuerpo IDs de la Clínica A; después revisa que ninguna fila quede en la A ni apunte a la A. Correrlo solo. |
 

@@ -466,14 +466,6 @@ const DovaApp = (() => {
       DOVA.logout().catch(() => {}).finally(() => location.reload());
       return;
     }
-    // La clínica exige verificación en dos pasos y todavía no la activó.
-    if (usuario && usuario.debeActivar2fa && window.DovaSeguridad) {
-      elShell.style.display = 'none';
-      elLogin.style.display = '';
-      elLogin.innerHTML = Vistas.vistaLogin(temaActual());
-      DovaSeguridad.activacionObligatoria(elLogin.querySelector('.dova-login-card'), () => decidirDestinoTrasSesionExistente(elLogin, elShell));
-      return;
-    }
     const pref = normalizarTema(usuario && usuario.disenoPreferido) || 'moderno';
     const actual = temaActual();
     if (actual && pref !== actual) {

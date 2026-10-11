@@ -17,7 +17,7 @@ async function estadoUsuario(id, rolIdDesconocido) {
   const authRepo = require('../modules/auth/auth.repository');
   const u = await authRepo.findUsuarioById(id);
   const v = u && u.activo
-    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, debeActivar2fa: !!u.debe_activar_2fa, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
+    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
     : { activo: false };
   cache.set(id, { t: ahora, v });
   if (cache.size > 5000) cache.clear();
@@ -58,11 +58,6 @@ async function authMiddleware(req, res, next) {
     // (antes solo lo exigía la pantalla y la API respondía igual).
     if (est.debeCambiarClave && !(req.method === 'POST' && ruta === '/api/auth/cambiar-clave')) {
       return next(new ApiError(403, 'Tenés que cambiar la contraseña inicial antes de seguir.', { codigo: 'DEBE_CAMBIAR_CLAVE' }));
-    }
-    // La clínica exige verificación en dos pasos a los administradores: hasta
-    // activarla, solo se puede usar lo necesario para hacerlo (o salir).
-    if (est.debeActivar2fa && !/^\/api\/auth\/(2fa(\/iniciar|\/confirmar)?|logout|logout-todas|politica|bloquear)$/.test(ruta)) {
-      return next(new ApiError(403, 'La clínica exige la verificación en dos pasos a los administradores. Activala para seguir.', { codigo: 'DEBE_ACTIVAR_2FA' }));
     }
     req.usuario = {
       id: payload.sub,

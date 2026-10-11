@@ -498,13 +498,21 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - Hover en botones, pestañas, campos, filas de tablas con acciones, resultados del buscador, indicadores y tarjetas. Foco visible al navegar con teclado.
 - Si el sistema pide menos movimiento, las animaciones se desactivan.
 
-## Seguridad, 3.ª ronda: verificación en dos pasos, sesiones abiertas y bloqueo de pantalla (migración 0043)
-- **Verificación en dos pasos** (Configuración → Seguridad → Activar):
-  - con una app del celular (Google Authenticator, Microsoft Authenticator, Authy);
-  - al entrar, después de la contraseña, se pide el código de 6 números;
-  - 10 códigos de recuperación para cuando no está el celular (cada uno sirve una vez);
-  - si alguien pierde el celular, el admin la reinicia desde Usuarios ("Reiniciar 2 pasos");
-  - la lista de usuarios marca quién la tiene.
+## Seguridad, 3.ª ronda: intrusión desde afuera, sesiones abiertas y bloqueo de pantalla (migraciones 0043 y 0044)
+- **Sin verificación en dos pasos:** se probó y se retiró por decisión de la clínica. Se entra con usuario y contraseña.
+- **Prueba de intrusión desde afuera:** un atacante sin usuario ni contraseña intentó:
+  - bajar archivos del servidor;
+  - leer la API;
+  - falsificar sesiones;
+  - inyectar SQL;
+  - adivinar contraseñas;
+  - averiguar qué usuarios existen.
+
+  No entró en ningún caso. Aparecieron dos fallas, ya corregidas:
+  - el ingreso aceptaba usuario y contraseña mandados como listas;
+  - un carácter nulo en el usuario hacía fallar al servidor (error 500).
+
+  Ninguna dejaba entrar sin la contraseña correcta.
 - **Bloqueo de pantalla por inactividad:**
   - a los 15 minutos sin usar DOVA (en ninguna pestaña) aparece un candado que pide la contraseña;
   - lo que estabas haciendo queda abajo;
@@ -513,14 +521,9 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - **Sesiones abiertas** (Configuración → Seguridad):
   - lista de dónde está abierta la cuenta (navegador, IP, última actividad);
   - "Cerrar" en cada una, que corta esa sesión al instante.
-- **Política de la clínica** (solo admin, Configuración → Seguridad):
-  - minutos hasta el bloqueo (5 a 120, o nunca);
-  - "Exigir verificación en dos pasos a los administradores".
+- **Política de la clínica** (admin, Configuración → Seguridad): minutos hasta el bloqueo (5 a 120, o nunca).
 - **Avisos de seguridad en la campanita** para los administradores:
-  - usuario bloqueado por contraseñas mal;
+  - cuenta bloqueada por contraseñas mal;
   - sesión robada y reutilizada;
-  - segundo paso fallido varias veces;
-  - ingreso con código de recuperación;
-  - 2FA desactivada o reiniciada;
   - desbloqueo fallido.
 - Detalle técnico y pruebas en `SECURITY-AUDIT.md` (sección 0) y `SECURITY-TESTS.md`.

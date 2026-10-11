@@ -140,15 +140,8 @@ const DOVA = (() => {
     marcarPestana(true);
     return data;
   }
-  // Con verificación en dos pasos devuelve { requiere2fa, desafio } y la
-  // sesión recién se abre con login2fa().
   async function login(username, password) {
-    const data = await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false });
-    if (data.requiere2fa) return data;
-    return abrirSesion(data);
-  }
-  async function login2fa(desafio, codigo) {
-    return abrirSesion(await request('/auth/login/2fa', { method: 'POST', body: { desafio, codigo }, reintentar: false }));
+    return abrirSesion(await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false }));
   }
   // Bloqueo de pantalla: el servidor deja de aceptar esta sesión hasta que
   // se ingrese la contraseña (aunque se recargue la página).
@@ -167,7 +160,6 @@ const DOVA = (() => {
   }
   // Otra pestaña desbloqueó: esta pide un acceso nuevo cuando lo necesite.
   function marcarDesbloqueada() { bloqueada = false; accessToken = null; }
-  function actualizarUsuario(campos) { const p = getPerfil(); if (p && p.usuario) { Object.assign(p.usuario, campos); setPerfil(p); } }
   function marcarBloqueada() { bloqueada = true; accessToken = null; }
 
   async function logout() {
@@ -263,7 +255,7 @@ const DOVA = (() => {
     tokenActual: () => accessToken,
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
-    request, login, login2fa, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, actualizarUsuario, estaBloqueada: () => bloqueada, limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
+    request, login, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, estaBloqueada: () => bloqueada, limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),

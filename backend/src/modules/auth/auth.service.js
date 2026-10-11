@@ -7,13 +7,18 @@ const authRepo = require('./auth.repository');
 const clinicaRepo = require('../clinica/clinica.repository');
 const auditoria = require('../../utils/auditoria');
 const sesiones = require('../../utils/sesiones');
-const totp = require('../../utils/totp');
 const { alertarAdmins } = require('../../utils/alertas');
 const { query } = require('../../config/db');
 // Para que el tiempo de respuesta no revele si un usuario existe.
 const HASH_FALSO = bcrypt.hashSync('usuario-inexistente-dova', 10);
 const segCfg = require('../../config/seguridad');
 const DIA_MS = 24 * 60 * 60 * 1000;
+
+// Usuario y contraseña tienen que ser texto, sin caracteres de control, de largo razonable.
+function textoCredencial(v, max) {
+  // eslint-disable-next-line no-control-regex
+  return typeof v === 'string' && v.length > 0 && v.length <= max && !/[\u0000-\u001f\u007f]/.test(v);
+}
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -54,12 +59,11 @@ async function emitirSesion(usuario, { sesionId, sesionInicio, ip, agente } = {}
    default. */
 const MAX_FALLIDOS_USUARIO = 5;
 const MAX_FALLIDOS_IP = 30;
-// Segundo paso: 5 fallos seguidos bloquean 15 min; 15 en un día, 24 h.
-const MAX_FALLIDOS_2FA = 5;
-const MAX_FALLIDOS_2FA_DIA = 15;
 
 async function login({ username, password, clinicaSlug = 'dentcarerc', ip, agente }) {
-  if (!username || !password) {
+  // Solo texto plano: nada de listas, objetos ni caracteres de control
+  // (["admin"] se convertía en "admin"; un \0 hacía fallar a la base).
+  if (!textoCredencial(username, 100) || !textoCredencial(password, 200)) {
     throw new ApiError(400, 'Usuario y contraseña son obligatorios');
   }
   // Freno a la fuerza bruta: 5 intentos fallidos seguidos de un usuario (o
@@ -77,12 +81,6 @@ async function login({ username, password, clinicaSlug = 'dentcarerc', ip, agent
   try {
     const { usuario, clinica } = await verificarCredenciales({ username, password, clinicaSlug });
     await authRepo.registrarIntentoLogin(clave, ip, true);
-    // Con verificación en dos pasos: la contraseña sola no abre sesión.
-    if (usuario.totp_activo) {
-      const desafio = jwt.sign({ sub: usuario.id, p: '2fa', tv: Number(usuario.token_version) || 0 }, env.jwtSecret, { expiresIn: '5m', algorithm: 'HS256', jwtid: crypto.randomBytes(12).toString('hex') });
-      await auditoria.registrar({ clinicaId: clinica.id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'login_paso1', modulo: 'seguridad', ip });
-      return { requiere2fa: true, desafio };
-    }
     const r = await completarLogin(usuario, clinica, { ip, agente });
     await auditoria.registrar({ clinicaId: clinica.id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'login', modulo: 'seguridad', ip });
     return r;
@@ -131,8 +129,6 @@ async function completarLogin(usuario, clinica, ctx) {
       permisos: s.permisos,
       disenoPreferido: usuario.diseno_preferido || null,
       debeCambiarClave: !!usuario.debe_cambiar_clave,
-      debeActivar2fa: !!usuario.debe_activar_2fa,
-      tiene2fa: !!usuario.totp_activo,
     },
     clinica: {
       id: clinica.id,
@@ -144,64 +140,6 @@ async function completarLogin(usuario, clinica, ctx) {
       colorSecundario: clinica.color_secundario,
     },
   };
-}
-
-/* Usa un código de la app (una sola vez) o un código de recuperación (se
-   gasta). Devuelve 'totp' | 'recuperacion' | null. */
-async function consumirSegundoFactor(usuarioId, codigo) {
-  const d = await authRepo.datos2fa(usuarioId);
-  if (!d || !d.totp_activo) return null;
-  const c = String(codigo || '').trim();
-  if (totp.pareceRecuperacion(c) && !/^\d{6}$/.test(c.replace(/\s/g, ''))) {
-    const h = totp.hashRecuperacion(c);
-    // Se gasta de forma atómica: el mismo código no sirve dos veces ni en paralelo.
-    const r = await query('UPDATE usuarios SET totp_recuperacion = array_remove(totp_recuperacion, $2) WHERE id=$1 AND $2 = ANY(totp_recuperacion) RETURNING id', [usuarioId, h]);
-    return r.rowCount ? 'recuperacion' : null;
-  }
-  const secreto = totp.descifrar(d.totp_secreto);
-  if (!secreto) return null;
-  const paso = totp.verificar(secreto, c, { ultimoPaso: d.totp_ultimo_paso });
-  if (paso === null) return null;
-  const r = await query('UPDATE usuarios SET totp_ultimo_paso=$2 WHERE id=$1 AND (totp_ultimo_paso IS NULL OR totp_ultimo_paso < $2) RETURNING id', [usuarioId, paso]);
-  return r.rowCount ? 'totp' : null;
-}
-
-async function login2fa({ desafio, codigo, ip, agente }) {
-  let pl;
-  try { pl = jwt.verify(String(desafio || ''), env.jwtSecret, { algorithms: ['HS256'] }); } catch (_e) { pl = null; }
-  if (!pl || pl.p !== '2fa' || !pl.jti) throw new ApiError(401, 'El ingreso venció. Volvé a poner usuario y contraseña.');
-  if (await sesiones.jtiRevocado(pl.jti)) throw new ApiError(401, 'El ingreso venció. Volvé a poner usuario y contraseña.');
-  const usuario = await authRepo.findUsuarioById(Number(pl.sub));
-  if (!usuario || !usuario.activo || (Number(usuario.token_version) || 0) !== Number(pl.tv)) throw new ApiError(401, 'El ingreso venció. Volvé a poner usuario y contraseña.');
-  const clave = `2fa|${usuario.id}`;
-  const corto = await authRepo.fallos2fa(clave, 15);
-  const dia = await authRepo.fallos2fa(clave, 24 * 60);
-  if (corto >= MAX_FALLIDOS_2FA || dia >= MAX_FALLIDOS_2FA_DIA) {
-    await auditoria.registrar({ clinicaId: usuario.clinica_id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'login_2fa_bloqueado', modulo: 'seguridad', resultado: 'denegado', ip });
-    throw new ApiError(429, dia >= MAX_FALLIDOS_2FA_DIA
-      ? 'Demasiados códigos incorrectos hoy. Por seguridad, el segundo paso quedó bloqueado 24 horas. Pedile al administrador que revise tu cuenta.'
-      : 'Demasiados códigos incorrectos. Esperá 15 minutos y volvé a intentar.');
-  }
-  const tipo = await consumirSegundoFactor(usuario.id, codigo);
-  if (!tipo) {
-    await authRepo.registrarIntentoLogin(clave, ip, false);
-    await auditoria.registrar({ clinicaId: usuario.clinica_id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'login_2fa_fallido', modulo: 'seguridad', resultado: 'fallido', ip });
-    if (corto + 1 >= MAX_FALLIDOS_2FA) {
-      await alertarAdmins(usuario.clinica_id, { clave: `2fa|${usuario.id}`, alUsuario: usuario.id, titulo: `Segundo paso fallido: ${usuario.nombre}`, mensaje: `Alguien puso bien la contraseña de «${usuario.username}» pero falló ${MAX_FALLIDOS_2FA} veces el código de verificación (IP ${ip || 'desconocida'}). Si no fue esa persona, cambiá su contraseña ya.` });
-    }
-    throw new ApiError(401, 'Código incorrecto o vencido. Revisá la hora del celular y probá con el código nuevo.');
-  }
-  await authRepo.registrarIntentoLogin(clave, ip, true);
-  await sesiones.revocarJti(pl.jti, pl.exp); // el desafío no sirve dos veces
-  const clinica = await clinicaRepo.findById(usuario.clinica_id);
-  const r = await completarLogin(usuario, clinica, { ip, agente });
-  await auditoria.registrar({ clinicaId: usuario.clinica_id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'login', modulo: 'seguridad', ip, detalle: { segundoPaso: tipo } });
-  if (tipo === 'recuperacion') {
-    const d = await authRepo.datos2fa(usuario.id);
-    r.usuario.codigosRecuperacionRestantes = Number(d.recuperacion_restantes) || 0;
-    await alertarAdmins(usuario.clinica_id, { clave: `rec|${usuario.id}|${Date.now()}`, alUsuario: usuario.id, titulo: `Ingreso con código de recuperación: ${usuario.nombre}`, mensaje: `«${usuario.username}» entró con un código de recuperación (le quedan ${r.usuario.codigosRecuperacionRestantes}). Si perdió el celular, conviene reiniciar su verificación en dos pasos.` });
-  }
-  return r;
 }
 
 /* Refresh con ROTACIÓN: cada uso entrega un refresh token nuevo y revoca el
@@ -272,7 +210,7 @@ async function logout(refreshTokenRaw, authorization) {
 /* Cambio de la contraseña propia (y obligatorio en el primer ingreso con la
    contraseña inicial). */
 async function cambiarClavePropia(usuarioId, { actual, nueva } = {}, ctx = {}) {
-  if (!actual || !nueva) throw new ApiError(400, 'Indicá la contraseña actual y la nueva');
+  if (!textoCredencial(actual, 200) || !textoCredencial(nueva, 200)) throw new ApiError(400, 'Indicá la contraseña actual y la nueva');
   const u = await authRepo.hashDeUsuario(usuarioId);
   if (!u) throw new ApiError(404, 'Usuario no encontrado');
   if (!(await bcrypt.compare(String(actual).slice(0, 200), u.password_hash))) throw new ApiError(400, 'La contraseña actual no es correcta');
@@ -292,69 +230,6 @@ async function cambiarClavePropia(usuarioId, { actual, nueva } = {}, ctx = {}) {
 async function logoutTodas(usuario) {
   await sesiones.invalidarSesiones(usuario.id, 'logout_todas');
   await auditoria.registrar({ clinicaId: usuario.clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'logout_todas', modulo: 'seguridad' });
-}
-
-/* ---------------- Verificación en dos pasos ---------------- */
-async function exigirClave(usuarioId, clave) {
-  const u = await authRepo.hashDeUsuario(usuarioId);
-  if (!u || !clave || !(await bcrypt.compare(String(clave).slice(0, 200), u.password_hash))) throw new ApiError(400, 'La contraseña no es correcta');
-}
-
-async function estado2fa(usuarioId) {
-  const d = await authRepo.datos2fa(usuarioId);
-  if (!d) throw new ApiError(404, 'Usuario no encontrado');
-  return { activo: !!d.totp_activo, activadoEn: d.totp_activado_en || null, codigosRestantes: d.totp_activo ? Number(d.recuperacion_restantes) || 0 : 0 };
-}
-
-async function iniciar2fa(usuario, { clave } = {}) {
-  await exigirClave(usuario.id, clave);
-  const d = await authRepo.datos2fa(usuario.id);
-  if (d.totp_activo) throw new ApiError(409, 'La verificación en dos pasos ya está activa.');
-  const secreto = totp.nuevoSecreto();
-  await query('UPDATE usuarios SET totp_pendiente=$2, totp_pendiente_en=now() WHERE id=$1', [usuario.id, totp.cifrar(secreto)]);
-  const uri = totp.uri({ secreto, cuenta: `${d.username}` });
-  return { secreto: secreto.match(/.{1,4}/g).join(' '), uri, qrSvg: totp.qrSvg(uri) };
-}
-
-async function confirmar2fa(usuario, { codigo } = {}) {
-  const d = await authRepo.datos2fa(usuario.id);
-  if (d.totp_activo) throw new ApiError(409, 'La verificación en dos pasos ya está activa.');
-  const secreto = totp.descifrar(d.totp_pendiente);
-  // El código QR pendiente vale 15 minutos.
-  if (!secreto || !d.totp_pendiente_en || Date.now() - new Date(d.totp_pendiente_en).getTime() > 15 * 60000) throw new ApiError(400, 'El código QR venció. Empezá de nuevo.');
-  const paso = totp.verificar(secreto, codigo);
-  if (paso === null) throw new ApiError(400, 'El código no coincide. Revisá que la hora del celular esté bien y probá con el código nuevo.');
-  const { codigos, hashes } = totp.nuevosCodigosRecuperacion();
-  await query(`UPDATE usuarios SET totp_secreto=totp_pendiente, totp_pendiente=NULL, totp_pendiente_en=NULL, totp_activo=true,
-      totp_activado_en=now(), totp_ultimo_paso=$2, totp_recuperacion=$3 WHERE id=$1`, [usuario.id, paso, hashes]);
-  require('../../middlewares/auth.middleware').olvidarUsuario(usuario.id);
-  await auditoria.registrar({ clinicaId: usuario.clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'activar_2fa', modulo: 'seguridad' });
-  return { ok: true, codigos };
-}
-
-async function desactivar2fa(usuario, { clave, codigo } = {}) {
-  await exigirClave(usuario.id, clave);
-  const d = await authRepo.datos2fa(usuario.id);
-  if (!d.totp_activo) throw new ApiError(409, 'La verificación en dos pasos no está activa.');
-  const c = await query(`SELECT c.exigir_2fa_admin, r.codigo FROM usuarios u JOIN clinicas c ON c.id=u.clinica_id JOIN roles r ON r.id=u.rol_id WHERE u.id=$1`, [usuario.id]);
-  if (c.rows[0] && c.rows[0].exigir_2fa_admin && c.rows[0].codigo === 'admin') throw new ApiError(409, 'La clínica exige verificación en dos pasos a los administradores: no se puede desactivar.');
-  if (!(await consumirSegundoFactor(usuario.id, codigo))) throw new ApiError(400, 'Código incorrecto o vencido.');
-  await query('UPDATE usuarios SET totp_activo=false, totp_secreto=NULL, totp_ultimo_paso=NULL, totp_recuperacion=NULL, totp_activado_en=NULL WHERE id=$1', [usuario.id]);
-  require('../../middlewares/auth.middleware').olvidarUsuario(usuario.id);
-  await auditoria.registrar({ clinicaId: usuario.clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'desactivar_2fa', modulo: 'seguridad' });
-  await alertarAdmins(usuario.clinicaId, { clave: `des2fa|${usuario.id}`, alUsuario: usuario.id, titulo: `Verificación en dos pasos desactivada: ${usuario.nombre}`, mensaje: 'Si no lo hizo esa persona, cambiá su contraseña y cerrá sus sesiones desde Usuarios.' });
-  return { ok: true };
-}
-
-async function nuevosCodigos2fa(usuario, { clave, codigo } = {}) {
-  await exigirClave(usuario.id, clave);
-  const d = await authRepo.datos2fa(usuario.id);
-  if (!d.totp_activo) throw new ApiError(409, 'La verificación en dos pasos no está activa.');
-  if (!(await consumirSegundoFactor(usuario.id, codigo))) throw new ApiError(400, 'Código incorrecto o vencido.');
-  const { codigos, hashes } = totp.nuevosCodigosRecuperacion();
-  await query('UPDATE usuarios SET totp_recuperacion=$2 WHERE id=$1', [usuario.id, hashes]);
-  await auditoria.registrar({ clinicaId: usuario.clinicaId, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'nuevos_codigos_2fa', modulo: 'seguridad' });
-  return { ok: true, codigos };
 }
 
 /* ---------------- Sesiones abiertas ---------------- */
@@ -406,7 +281,7 @@ async function desbloquear(refreshTokenRaw, { clave, ip, agente } = {}) {
     throw new ApiError(401, 'Demasiados intentos. Se cerró la sesión por seguridad.');
   }
   const u = await authRepo.hashDeUsuario(usuario.id);
-  if (!clave || !(await bcrypt.compare(String(clave).slice(0, 200), u.password_hash))) {
+  if (!textoCredencial(clave, 200) || !(await bcrypt.compare(clave, u.password_hash))) {
     await authRepo.registrarIntentoLogin(claveLogin, ip, false);
     await auditoria.registrar({ clinicaId: usuario.clinica_id, usuarioId: usuario.id, usuarioNombre: usuario.nombre, accion: 'desbloqueo_fallido', modulo: 'seguridad', resultado: 'fallido', ip });
     const restantes = MAX_FALLIDOS_USUARIO - (est.fallidos_usuario + 1);
@@ -425,13 +300,12 @@ async function desbloquear(refreshTokenRaw, { clave, ip, agente } = {}) {
 }
 
 async function politica(clinicaId) {
-  const r = await query('SELECT bloqueo_inactividad_min, exigir_2fa_admin FROM clinicas WHERE id=$1', [clinicaId]);
+  const r = await query('SELECT bloqueo_inactividad_min FROM clinicas WHERE id=$1', [clinicaId]);
   const c = r.rows[0] || {};
-  return { bloqueoMin: Number(c.bloqueo_inactividad_min ?? 15), exigir2faAdmin: !!c.exigir_2fa_admin };
+  return { bloqueoMin: Number(c.bloqueo_inactividad_min ?? 15) };
 }
 
 module.exports = {
-  login, login2fa, refresh, logout, logoutTodas, cambiarClavePropia,
-  estado2fa, iniciar2fa, confirmar2fa, desactivar2fa, nuevosCodigos2fa,
+  login, refresh, logout, logoutTodas, cambiarClavePropia,
   listarSesiones, cerrarSesionPropia, bloquear, desbloquear, politica,
 };
