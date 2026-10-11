@@ -125,7 +125,7 @@ const DovaSecciones = (() => {
       const k = await DOVA.get(`/seguimiento/casos/${b.dataset.historial}`);
       X.modal(`Historial — ${k.paciente_nombre} ${k.paciente_apellido}`, `<p>${badge(k.tipo_nombre, 'info')} ${esc(k.motivo || '')}</p>
         <p class="dova-nota">Abierto el ${X.fmtFechaHora(k.creado_en)}${k.responsable_nombre ? ` · responsable: ${esc(k.responsable_nombre)}` : ''}</p>
-        <ul class="dova-cli-lista">${k.historial.map((x) => `<li><strong>${X.fmtFechaHora(x.fecha)}</strong> · ${esc(etiqueta(x.canal))}${x.resultado ? ` · ${esc(etiqueta(x.resultado))}` : ''} · ${esc(x.usuario_nombre || '')}${x.contenido ? `<br>${esc(x.contenido)}` : ''}</li>`).join('') || '<li class="dova-nota">Sin gestiones todavía.</li>'}</ul>
+        <ul class="dova-cli-lista">${k.historial.map((x) => `<li><strong>${X.fmtFechaHora(x.fecha)}</strong> · ${esc(etiqueta(x.canal))}${x.resultado ? ` · ${esc(etiqueta(x.resultado))}` : ''} · ${esc(x.usuario_nombre || '')}${x.contenido ? `<br>${esc(x.contenido)}` : ''}</li>`).join('') || '<li class="dova-vacio">Sin gestiones todavía.</li>'}</ul>
         <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>`);
     }));
     const bn = c.querySelector('[data-nuevo]');
@@ -547,7 +547,7 @@ const DovaSecciones = (() => {
     const cargar = async () => {
       const r = await DOVA.get(`/finanzas/metas-progreso?periodo=${f.periodo.value}`);
       const val = (m, v) => (['produccion', 'cobranza'].includes(m.tipo) ? fmtGs(v) : m.tipo === 'tasa_aceptacion' ? `${v}%` : v);
-      c.querySelector('[data-prog]').innerHTML = `<div class="dova-ext-kpis">${r.metas.map((m) => `<div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${m.avancePct ?? 0}%</div><div class="dova-ext-kpi-label">${esc(etiqueta(m.tipo))}${m.odontologo_nombre ? ` — ${esc(m.odontologo_nombre)}` : ''}</div><div class="dova-ext-progreso" role="progressbar" aria-valuenow="${m.avancePct || 0}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(m.avancePct || 0, 100)}%"></span></div><div class="dova-ext-kpi-sub">${val(m, m.actual)} de ${val(m, Number(m.objetivo))}</div></div>`).join('') || '<p class="dova-nota">No hay metas cargadas para este mes.</p>'}</div>`;
+      c.querySelector('[data-prog]').innerHTML = `<div class="dova-ext-kpis">${r.metas.map((m) => `<div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${m.avancePct ?? 0}%</div><div class="dova-ext-kpi-label">${esc(etiqueta(m.tipo))}${m.odontologo_nombre ? ` — ${esc(m.odontologo_nombre)}` : ''}</div><div class="dova-ext-progreso" role="progressbar" aria-valuenow="${m.avancePct || 0}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(m.avancePct || 0, 100)}%"></span></div><div class="dova-ext-kpi-sub">${val(m, m.actual)} de ${val(m, Number(m.objetivo))}</div></div>`).join('') || '<p class="dova-vacio">No hay metas cargadas para este mes.</p>'}</div>`;
       if (puede('metas.manage')) X.tablaCrud({
         root: c.querySelector('[data-crud]'), titulo: 'Metas del mes', endpoint: '/finanzas/metas', query: `periodo=${f.periodo.value}`, fijos: { periodo: f.periodo.value }, puedeCrear: true, puedeEditar: true, puedeBorrar: true,
         columnas: [{ t: 'Tipo', v: (m) => esc(etiqueta(m.tipo)) }, { t: 'Odontólogo', v: (m) => esc(m.odontologo_nombre || 'Toda la clínica') }, { t: 'Objetivo', v: (m) => esc(Number(m.objetivo).toLocaleString('es-PY')) }],

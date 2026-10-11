@@ -71,7 +71,14 @@ const DOVA = (() => {
     return renovando;
   }
 
-  async function request(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {
+  // Aviso de pedido en curso (app.js muestra la barra de progreso y el botón "ocupado").
+  function avisar(delta) { try { window.dispatchEvent(new CustomEvent('dova:pedido', { detail: delta })); } catch (_e) { /* sin DOM */ } }
+  async function request(path, opciones) {
+    avisar(1);
+    try { return await pedir(path, opciones); } finally { avisar(-1); }
+  }
+
+  async function pedir(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {
     if (!accessToken && getPerfil() && reintentar) {
       try { await refrescarToken(); } catch (_e) { /* el pedido sigue y responderá 401 */ }
     }
@@ -89,7 +96,7 @@ const DOVA = (() => {
     if (res.status === 401 && reintentar && getPerfil()) {
       try {
         await refrescarToken();
-        return request(path, { method, body, isForm, reintentar: false, raw });
+        return pedir(path, { method, body, isForm, reintentar: false, raw });
       } catch (_e) {
         clearSession();
         window.location.reload();

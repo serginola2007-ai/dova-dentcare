@@ -444,7 +444,7 @@ const Vistas = (() => {
                 </li>
               `).join('')}
             </ul>
-          ` : '<p class="dova-nota">Sin pendientes en esta categoría.</p>'}
+          ` : '<p class="dova-vacio">Sin pendientes en esta categoría.</p>'}
         </div>
       `).join('')}
 
@@ -955,7 +955,7 @@ const Vistas = (() => {
               <h5>Evoluciones</h5>
               <ul class="dova-lista-simple">
                 ${exp.evoluciones.map((e) => `<li>${fmtFecha(e.fecha)} — ${esc(e.diagnostico || e.procedimiento || 'Sin detalle')}${e.odontologo_nombre ? ' (' + esc(e.odontologo_nombre) + ')' : ''}</li>`).join('')}
-              </ul>` : '<p class="dova-nota">Sin evoluciones registradas para esta pieza.</p>'}
+              </ul>` : '<p class="dova-vacio">Sin evoluciones registradas para esta pieza.</p>'}
             </div>`;
         } catch (e) {
           root.innerHTML = `<p class="dova-error-text">No se pudo cargar el expediente: ${esc(e.message)}</p>`;

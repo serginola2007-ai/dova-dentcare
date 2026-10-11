@@ -168,7 +168,7 @@ const DovaExt = (() => {
               ${(cfg.acciones || []).filter((a) => !a.visible || a.visible(f)).map((a, j) => `<button class="dova-btn-link" data-accion="${j}" data-fila="${i}">${esc(typeof a.texto === 'function' ? a.texto(f) : a.texto)}</button>`).join('')}
               ${cfg.puedeEditar && cfg.campos ? `<button class="dova-btn-link" data-editar="${i}">Editar</button>` : ''}
               ${cfg.puedeBorrar ? `<button class="dova-btn-link dova-ext-peligro" data-borrar="${i}">Borrar</button>` : ''}
-            </td>` : ''}</tr>`).join('') || `<tr><td colspan="${cfg.columnas.length + (hayAcciones ? 1 : 0)}">${esc(cfg.vacio || 'Sin registros.')}</td></tr>`}
+            </td>` : ''}</tr>`).join('') || `<tr><td colspan="${cfg.columnas.length + (hayAcciones ? 1 : 0)}">${esc(cfg.vacio || 'Todavía no hay nada cargado.')}${cfg.puedeCrear && cfg.nuevoTexto ? ` <span class="dova-vacio-pista">Usá «${esc(cfg.nuevoTexto.replace(/^\+\s*/, ''))}» para cargar el primero.</span>` : ''}</td></tr>`}
         </tbody>
       </table></div>`;
     const campos = typeof cfg.campos === 'function' ? await cfg.campos() : cfg.campos;

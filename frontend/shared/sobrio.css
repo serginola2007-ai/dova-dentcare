@@ -91,3 +91,99 @@
 .dova-usuario-acciones { white-space: normal; }
 .dova-usuario-acciones .dova-btn-link { white-space: nowrap; margin-right: 10px; }
 .dova-usuario-acciones .dova-btn-link:last-child { margin-right: 0; }
+
+/* =====================================================================
+   Estados: hover, presionado, foco, deshabilitado, cargando y vacío.
+   Botones compactos (30px) para un aire más técnico.
+   ===================================================================== */
+
+/* ---------- Botones ---------- */
+.dova-btn-primary, .dova-btn-secundario { transition: background-color .12s, border-color .12s, color .12s; white-space: nowrap; }
+.dova-btn-primary:hover { background: var(--terracotta-dark, #9E4F2E); }
+.dova-btn-primary:active { filter: brightness(.92); }
+.dova-btn-secundario:hover { background: var(--cream); border-color: var(--ink-soft); }
+.dova-btn-secundario:active { background: color-mix(in srgb, var(--cream) 70%, var(--border)); }
+.dova-btn-secundario.dova-btn-peligro:hover { background: color-mix(in srgb, var(--rust) 8%, transparent); border-color: var(--rust); }
+.dova-btn-primary:disabled, .dova-btn-secundario:disabled, .dova-btn-link:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+.dova-btn-primary:focus-visible, .dova-btn-secundario:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
+.dova-btn-link { transition: color .12s; text-underline-offset: 2px; }
+.dova-btn-link:hover { color: var(--terracotta-dark, #9E4F2E); text-decoration-thickness: 2px; }
+.dova-link-peligro:hover { color: color-mix(in srgb, var(--rust) 80%, black) !important; }
+/* Botones de la agenda (Día/Semana/Mes/Lista) al mismo tamaño */
+.dova-cal-vistas button { padding: 5px 10px; font-size: 13px; line-height: 18px; transition: background-color .12s; }
+.dova-cal-vistas button:not(.activo):hover { background: var(--cream); }
+/* En pantallas táctiles el área de toque no baja de 36px */
+@media (pointer: coarse) {
+  .dova-btn-primary, .dova-btn-secundario, .dova-cal-vistas button { min-height: 36px; }
+}
+
+/* ---------- Hover en elementos navegables ---------- */
+.dova-tab, .dova-ext-subtab { transition: color .12s, border-color .12s; }
+.dova-tab:hover:not(.activo) { color: var(--ink); border-bottom-color: var(--border-strong); }
+.dova-ext-subtab:hover:not(.activo) { border-bottom-color: var(--border-strong); }
+.dova-menu-item { transition: background-color .12s, color .12s; }
+input:not([type=checkbox]):not([type=radio]):hover, select:hover, textarea:hover { border-color: var(--ink-soft); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--terracotta); box-shadow: 0 0 0 2px color-mix(in srgb, var(--terracotta) 18%, transparent); }
+.dova-ext-chip:hover { border-color: var(--ink-soft); }
+.dova-cli-accion, .dova-consulta-accion { transition: border-color .12s, background-color .12s; }
+.dova-consulta-accion:hover { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 5%, var(--white)); }
+.dova-tabla tbody tr { transition: background-color .1s; }
+.dova-tabla tbody tr:has(a, button):hover td { background: color-mix(in srgb, var(--cream) 75%, transparent); }
+.dova-buscador-resultados a:hover, .dova-buscador-resultados button:hover, .dova-buscador-resultados li:hover { background: var(--cream); }
+button.dova-ext-kpi:hover, .dova-card-clicable:hover { background: var(--cream); }
+.dova-permiso-item:hover { background: var(--cream); }
+
+/* ---------- Cargando: barras "esqueleto" en lugar de un texto suelto ---------- */
+@keyframes dova-brillo { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.dova-cargando { font-size: 12px; letter-spacing: .02em; }
+.dova-cargando::before, .dova-cargando::after {
+  content: ''; display: block; height: 10px; margin: 0 0 10px;
+  background: linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 40%, var(--white)) 50%, var(--border) 75%);
+  background-size: 200% 100%; animation: dova-brillo 1.2s linear infinite;
+}
+.dova-cargando::before { width: 64%; box-shadow: 0 20px 0 var(--border); margin-bottom: 30px; }
+.dova-cargando::after { width: 42%; margin: 10px 0 0; }
+/* Barra fina arriba mientras se guarda o carga algo que pidió el usuario */
+@keyframes dova-progreso { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+body.dova-ocupado::after {
+  content: ''; position: fixed; top: 0; left: 0; width: 40%; height: 2px; z-index: 2000;
+  background: var(--terracotta); animation: dova-progreso 1s ease-in-out infinite; pointer-events: none;
+}
+/* Botón que espera la respuesta del servidor: no se puede apretar dos veces */
+@keyframes dova-girar { to { transform: rotate(360deg); } }
+.dova-btn-ocupado { pointer-events: none; opacity: .8; }
+.dova-btn-ocupado::after {
+  content: ''; width: 10px; height: 10px; border: 1.5px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: dova-girar .7s linear infinite; flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dova-cargando::before, .dova-cargando::after, body.dova-ocupado::after, .dova-btn-ocupado::after { animation: none; }
+}
+
+/* ---------- Vacío: un mensaje claro con ícono, no una línea perdida ---------- */
+.dova-vacio, .dova-tabla tbody tr:only-child > td[colspan]:only-child, .dova-cmd-vacio {
+  color: var(--ink-soft); font-size: 13px;
+}
+.dova-vacio { display: flex; align-items: center; gap: 10px; padding: 18px 14px; margin: 8px 0; background: var(--white); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.dova-tabla tbody tr:only-child > td[colspan]:only-child { padding: 22px 14px; text-align: left; background: var(--white); }
+.dova-vacio::before, .dova-tabla tbody tr:only-child > td[colspan]:only-child::before {
+  content: ''; display: inline-block; width: 18px; height: 18px; flex-shrink: 0; margin-right: 10px; vertical-align: -4px;
+  background: var(--border-strong);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M3.5 13.5 6 5h12l2.5 8.5V19h-17z'/%3E%3Cpath d='M3.5 13.5H9l1 2h4l1-2h5.5'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M3.5 13.5 6 5h12l2.5 8.5V19h-17z'/%3E%3Cpath d='M3.5 13.5H9l1 2h4l1-2h5.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.dova-vacio::before { margin-right: 0; }
+.dova-tabla tbody tr:only-child:hover > td[colspan]:only-child { background: var(--white); }
+.dova-fac-vacio { border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; padding: 22px 16px; }
+.dova-fac-vacio h3 { font-size: 15px; }
+.dova-vacio-pista { display: block; margin: 4px 0 0 28px; font-size: 12px; color: var(--ink-soft); opacity: .85; }
+
+/* Campos compactos, a la altura de los botones (aire más técnico) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select {
+  padding: 5px 9px; font-size: 13px; min-height: 30px; line-height: 18px;
+}
+textarea { padding: 6px 9px; font-size: 13px; }
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select { min-height: 36px; font-size: 16px; }
+  textarea { font-size: 16px; }
+}

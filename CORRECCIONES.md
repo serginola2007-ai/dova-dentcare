@@ -487,3 +487,13 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - La cookie de sesión `dova_rt` pasó a ser de navegador, sin `Max-Age`: se borra al cerrarlo. El servidor sigue controlando la inactividad (7 días) y el máximo absoluto (30 días).
 - Las sesiones guardadas por versiones anteriores también piden ingresar una vez.
 - Menú: pasar rápido el cursor de una herramienta a otra ya no cierra el panel recién abierto (un solo temporizador compartido).
+
+## Estados vacíos, de carga y hover; botones y campos compactos
+- Botones más chicos (30px de alto, 13px) y campos de texto/listas a la misma altura, para un aire más técnico. En pantallas táctiles quedan en 36px para que se puedan tocar bien.
+- Carga:
+  - mientras se espera al servidor, una barra fina arriba de todo;
+  - el botón que se tocó muestra un indicador girando y no se puede volver a tocar hasta que termina (evita guardar dos veces);
+  - los "Cargando…" muestran barras grises de relleno.
+- Vacíos: las listas sin datos muestran un ícono y un mensaje sobrio ("Sin proveedores.", "Todavía no hay nada cargado.") con una pista de qué botón usar para cargar el primero.
+- Hover en botones, pestañas, campos, filas de tablas con acciones, resultados del buscador, indicadores y tarjetas. Foco visible al navegar con teclado.
+- Si el sistema pide menos movimiento, las animaciones se desactivan.

@@ -47,7 +47,7 @@ const DovaOperativo = (() => {
           const r = await DOVA.get(`/pacientes?q=${encodeURIComponent(q)}&pageSize=8`);
           const lista = r.data || r.items || r;
           res.innerHTML = lista.map((p) => `<button type="button" class="dova-op-res-item" data-id="${p.id}" data-nombre="${esc(`${p.nombre} ${p.apellido}`)}">${esc(p.nombre)} ${esc(p.apellido)} <span class="dova-nota">${p.ci ? 'CI ' + esc(p.ci) : ''} ${p.telefono ? '· ' + esc(p.telefono) : ''}</span></button>`).join('')
-            || '<p class="dova-nota">Sin resultados.</p>';
+            || '<p class="dova-vacio">Sin resultados.</p>';
           res.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => {
             hid.value = b.dataset.id; inp.value = b.dataset.nombre; res.innerHTML = '';
             eleg.textContent = '✓ Paciente seleccionado';
@@ -807,7 +807,7 @@ const DovaOperativo = (() => {
           <td>${q.estado === 'pagada' ? badge('Pagada', 'ok') : String(q.vencimiento).slice(0, 10) < h ? badge('Vencida', 'critica') : badge('Pendiente', 'info')}</td>
           <td>${puedeCobrar && q.estado !== 'pagada' ? `<button class="dova-btn-link" data-cobrar-cuota="${p.id}:${q.id}">Cobrar</button>` : ''}</td></tr>`).join('')}
         </tbody></table>
-      </div>`).join('') : '<p class="dova-nota">Sin planes de pago. Se crean desde un presupuesto aceptado (subpestaña Presupuestos → "Financiar en cuotas").</p>';
+      </div>`).join('') : '<p class="dova-vacio">Sin planes de pago. Se crean desde un presupuesto aceptado (subpestaña Presupuestos → "Financiar en cuotas").</p>';
     c.querySelectorAll('[data-cobrar-cuota]').forEach((b) => b.addEventListener('click', () => {
       const [planId, cuotaId] = b.dataset.cobrarCuota.split(':').map(Number);
       const q = det.find((p) => p.id === planId).cuotas.find((x) => x.id === cuotaId);

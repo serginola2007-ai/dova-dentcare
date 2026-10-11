@@ -323,7 +323,7 @@ const DovaFacturacion = (() => {
           ${f.pagos.length ? `<ul class="dova-lista-simple">${f.pagos.map((p) => `<li class="${p.activo && p.estado === 'pagado' ? '' : 'dova-op-fila-apagada'}"><strong>${fmtGs(p.monto)}</strong> · ${esc(nombreMetodo(mets, p.metodo))} · ${fmtFecha(p.fecha)} · cobró ${esc(p.usuario_nombre || '-')}
             ${p.estado !== 'pagado' ? badge('cobro anulado', 'critica') : !p.activo ? badge('liberado al anular', 'info') : ''}
             <br><span class="dova-nota">${p.caja_movimiento_id ? `Caja del ${fmtFecha(p.caja_fecha)} (${esc(p.caja_estado)}) · movimiento #${p.caja_movimiento_id}` : 'No entró a la caja (se cobró con la caja cerrada o por otro medio)'}</span></li>`).join('')}</ul>`
-            : f.movimiento ? '' : '<p class="dova-nota">Sin cobros asociados.</p>'}</section>
+            : f.movimiento ? '' : '<p class="dova-vacio">Sin cobros asociados.</p>'}</section>
         <section class="dova-ext-caja"><h4>Presupuesto asociado</h4>
           ${f.presupuesto ? `<dl class="dova-fac-dl">${filaDato('Presupuesto', `N.º ${f.presupuesto.id} (${esc(f.presupuesto.estado)})`)}${filaDato('Total', fmtGs(f.presupuesto.total))}${filaDato('Pagado', fmtGs(f.presupuesto.pagado))}${filaDato('Pendiente', fmtGs(f.presupuesto.pendiente))}${filaDato('Facturado', fmtGs(f.presupuesto.facturado))}</dl>
             <p class="dova-nota">Facturas de este presupuesto: ${f.presupuesto.facturas.map((x) => `<button class="dova-btn-link" data-ir-fac="${x.id}">${esc(x.numero_completo)}</button>${x.estado === 'anulada' ? ' (anulada)' : ''}`).join(', ')}</p>` : '<p class="dova-nota">No está asociada a un presupuesto.</p>'}</section>
@@ -515,7 +515,7 @@ const DovaFacturacion = (() => {
       tmr = setTimeout(async () => {
         try {
           const r = await DOVA.get(`/pacientes?q=${encodeURIComponent(q)}&pageSize=8`);
-          resPac.innerHTML = (r.data || r.items || r).map((p) => `<button type="button" class="dova-op-res-item" data-id="${p.id}">${esc(p.nombre)} ${esc(p.apellido)} <span class="dova-nota">${p.ci ? 'C.I. ' + esc(p.ci) : ''}</span></button>`).join('') || '<p class="dova-nota">Sin resultados.</p>';
+          resPac.innerHTML = (r.data || r.items || r).map((p) => `<button type="button" class="dova-op-res-item" data-id="${p.id}">${esc(p.nombre)} ${esc(p.apellido)} <span class="dova-nota">${p.ci ? 'C.I. ' + esc(p.ci) : ''}</span></button>`).join('') || '<p class="dova-vacio">Sin resultados.</p>';
           resPac.querySelectorAll('[data-id]').forEach((x) => x.addEventListener('click', async () => {
             resPac.innerHTML = ''; inp.value = x.textContent.replace(/\s+C\.I\..*$/, '').trim(); inp.readOnly = true;
             try { await recargarBorrador({ pacienteId: x.dataset.id }); } catch (e) { toast(e.message, 'error'); }

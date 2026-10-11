@@ -316,7 +316,7 @@ const DovaClinica = (() => {
       <li><strong>${esc(fmtFecha(h.fecha))}</strong> ${h.firmada ? badge('Firmada', 'ok') : badge('Borrador', 'atencion')} ${h.enmendada_de_id ? badge('Enmienda', 'info') : ''}
         ${h.odontologo_nombre ? `<span class="dova-nota">${esc(h.odontologo_nombre)}</span>` : ''}
         ${h.motivo_consulta ? `<p>Motivo: ${esc(h.motivo_consulta)}</p>` : ''}${h.diagnostico ? `<p>Dx: ${esc(h.diagnostico)}</p>` : ''}
-        ${h.procedimiento ? `<p>${esc(h.procedimiento)}</p>` : ''}${h.piezas && h.piezas.length ? `<p class="dova-nota">Piezas: ${esc(piezasTexto(h.piezas))}</p>` : ''}</li>`).join('')}</ol>` : '<p class="dova-nota">Sin consultas anteriores.</p>'}</div>`;
+        ${h.procedimiento ? `<p>${esc(h.procedimiento)}</p>` : ''}${h.piezas && h.piezas.length ? `<p class="dova-nota">Piezas: ${esc(piezasTexto(h.piezas))}</p>` : ''}</li>`).join('')}</ol>` : '<p class="dova-vacio">Sin consultas anteriores.</p>'}</div>`;
   }
 
   // =================================================================
@@ -424,7 +424,7 @@ const DovaClinica = (() => {
           <div class="dova-cli-estudio-acc">${e.tiene_archivo ? `<button class="dova-btn-secundario" data-ver-estudio="${e.id}">Ver</button>` : '<span class="dova-nota">Sin archivo</span>'}
             ${puede('estudios.manage') && e.tiene_archivo ? `<label class="dova-ext-check" title="El paciente lo puede ver y descargar desde su cuenta web"><input type="checkbox" data-compartir-estudio="${e.id}" ${e.visible_paciente ? 'checked' : ''}/> Visible para el paciente</label>` : e.visible_paciente ? '<span class="dova-nota">Visible para el paciente</span>' : ''}
             ${puede('estudios.manage') ? `<button class="dova-btn-link dova-ext-peligro" data-borrar-estudio="${e.id}">Eliminar</button>` : ''}</div>
-        </article>`).join('') : '<p class="dova-nota">Sin estudios cargados.</p>'}</div>`;
+        </article>`).join('') : '<p class="dova-vacio">Sin estudios cargados.</p>'}</div>`;
 
     const gal = c.querySelector('[data-galeria]');
     const pintar = () => {
@@ -740,7 +740,7 @@ const DovaClinica = (() => {
   async function formMaterial(c, plan, etapa, alGuardar) {
     let insumos = [];
     try { insumos = await DOVA.get('/planes-tratamiento/insumos-disponibles'); } catch (e) { toast(e.message, 'error'); return; }
-    if (!insumos.length) { c.innerHTML = '<p class="dova-nota">No hay insumos cargados en el inventario.</p>'; return; }
+    if (!insumos.length) { c.innerHTML = '<p class="dova-vacio">No hay insumos cargados en el inventario.</p>'; return; }
     c.innerHTML = `<form class="dova-cli-form" data-m>
       <label><span>Material</span><select name="insumoId">${insumos.map((i) => `<option value="${i.id}">${esc(i.nombre)} (stock ${Number(i.stock_actual)})</option>`).join('')}</select></label>
       <label><span>Cantidad</span><input type="number" name="cantidad" min="0.01" step="0.01" value="1" /></label>
@@ -768,7 +768,7 @@ const DovaClinica = (() => {
         ${r.estado === 'anulada' && r.anulada_motivo ? `<p class="dova-nota">Motivo de anulación: ${esc(r.anulada_motivo)}</p>` : ''}
         <div class="dova-cli-siguiente"><button class="dova-btn-secundario" data-pdf="${r.id}">Ver e imprimir</button>
           ${maneja && r.estado !== 'anulada' ? `<button class="dova-btn-link dova-ext-peligro" data-anular="${r.id}">Anular</button>` : ''}</div>
-      </article>`).join('')}</div>` : '<p class="dova-nota">Sin recetas.</p>'}`;
+      </article>`).join('')}</div>` : '<p class="dova-vacio">Sin recetas.</p>'}`;
     const n = c.querySelector('[data-nueva]');
     if (n) n.addEventListener('click', () => formReceta(c.querySelector('[data-form-receta]'), pid, { alGuardar: () => setTimeout(() => panelRecetas(c, pid), 50) }));
     c.querySelectorAll('[data-pdf]').forEach((b) => b.addEventListener('click', () => verPdf(`/comprobantes/receta/${b.dataset.pdf}`, `Receta N.º ${b.dataset.pdf}`)));
@@ -793,7 +793,7 @@ const DovaClinica = (() => {
         <label class="dova-ext-check"><input type="checkbox" name="importante" /> Importante (se muestra en la consulta)</label><button class="dova-btn-primary">Agregar nota</button></form>` : ''}
       <ul class="dova-cli-notas">${lista.map((n) => `<li class="${n.importante ? 'importante' : ''}">${n.importante ? badge('Importante', 'atencion') : ''} ${esc(n.texto)}
         <span class="dova-nota">${esc(n.usuario_nombre || '')} · ${esc(fmtFechaHora(n.creado_en))}</span>
-        ${n.usuario_id === yo || admin ? `<button class="dova-btn-link dova-ext-peligro" data-quitar="${n.id}">Quitar</button>` : ''}</li>`).join('') || '<li class="dova-nota">Sin notas.</li>'}</ul>`;
+        ${n.usuario_id === yo || admin ? `<button class="dova-btn-link dova-ext-peligro" data-quitar="${n.id}">Quitar</button>` : ''}</li>`).join('') || '<li class="dova-vacio">Sin notas.</li>'}</ul>`;
     const f = c.querySelector('[data-f]');
     if (f) f.addEventListener('submit', async (e) => {
       e.preventDefault();

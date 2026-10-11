@@ -478,7 +478,37 @@ const DovaApp = (() => {
     Vistas.initLogin((disenoElegido) => decidirDestinoTrasLogin(elLogin, elShell, disenoElegido));
   }
 
+  /* Estado "cargando" de lo que pidió el usuario: barra fina arriba y el botón
+     que lo disparó queda ocupado (con indicador y sin poder apretarse dos
+     veces) hasta que el servidor responde. Los pedidos automáticos (avisos,
+     tiempo real) no muestran nada. */
+  function iniciarEstadosDeCarga() {
+    let ultimo = { el: null, t: 0 };
+    const anotar = (el) => { if (el) ultimo = { el, t: performance.now() }; };
+    document.addEventListener('click', (e) => anotar(e.target.closest && e.target.closest('button, a, [role="button"]')), true);
+    document.addEventListener('submit', (e) => anotar(e.submitter || (e.target && e.target.querySelector('[type=submit]'))), true);
+    let activos = 0; const botones = new Set();
+    window.addEventListener('dova:pedido', (e) => {
+      if (e.detail > 0) {
+        activos += 1;
+        if (performance.now() - ultimo.t < 600 && ultimo.el && ultimo.el.isConnected) {
+          document.body.classList.add('dova-ocupado');
+          const b = ultimo.el;
+          if (b.matches('.dova-btn-primary, .dova-btn-secundario')) { b.classList.add('dova-btn-ocupado'); b.setAttribute('aria-busy', 'true'); botones.add(b); }
+        }
+        return;
+      }
+      activos = Math.max(0, activos - 1);
+      if (activos === 0) {
+        document.body.classList.remove('dova-ocupado');
+        botones.forEach((b) => { b.classList.remove('dova-btn-ocupado'); b.removeAttribute('aria-busy'); });
+        botones.clear();
+      }
+    });
+  }
+
   function iniciar({ mainId, menuId, marcaId, loginId, shellId, logoutId }) {
+    iniciarEstadosDeCarga();
     elMain = document.getElementById(mainId);
     elMenu = document.getElementById(menuId);
     elMarca = document.getElementById(marcaId);

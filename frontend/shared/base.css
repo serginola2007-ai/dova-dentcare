@@ -53,7 +53,9 @@ input, select, textarea { font-family: inherit; font-size: 14px; padding: 8px 10
 label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
 
 .dova-btn-primary, .dova-btn-secundario {
-  padding: 10px 18px; border-radius: var(--radius-s); border: none; font-size: 14px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 30px; padding: 5px 12px; line-height: 18px;
+  border-radius: var(--radius-s); border: none; font-size: 13px; font-weight: 600;
 }
 .dova-btn-primary { background: var(--terracotta); color: var(--white); }
 .dova-btn-primary:hover { background: var(--terracotta-dark); }
@@ -113,7 +115,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 .dova-modal-box { background: var(--white); border-radius: var(--radius-m); padding: 24px; width: 90%; max-width: 420px; box-shadow: var(--shadow-menu); }
 .dova-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 
-.dova-cargando { padding: 40px; text-align: center; color: var(--ink-soft); }
+.dova-cargando { padding: 16px 0; color: var(--ink-soft); }
 
 /* ---- Ficha clínica 360° ---- */
 .dova-ficha-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
