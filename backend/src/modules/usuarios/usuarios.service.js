@@ -332,6 +332,21 @@ async function cerrarSesiones(clinicaId, id, actor) {
   return { ok: true };
 }
 
+/* Reiniciar la verificación en dos pasos de otra persona (perdió el celular).
+   Se cierran sus sesiones y la próxima vez entra solo con la contraseña. */
+async function reiniciar2fa(clinicaId, id, actor) {
+  const usuario = await repo.obtener(clinicaId, id);
+  if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+  if (Number(id) === Number(actor.id)) throw new ApiError(400, 'Tu propia verificación se maneja desde Configuración → Seguridad.');
+  soloAdminSobreAdmin(actor, usuario);
+  if (!usuario.totp_activo) throw new ApiError(409, 'Esa persona no tiene la verificación en dos pasos activa.');
+  await query('UPDATE usuarios SET totp_activo=false, totp_secreto=NULL, totp_pendiente=NULL, totp_ultimo_paso=NULL, totp_recuperacion=NULL, totp_activado_en=NULL WHERE id=$1 AND clinica_id=$2', [Number(id), clinicaId]);
+  await sesiones.invalidarSesiones(id, 'reinicio_2fa');
+  await auditoria.registrar({ clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'reiniciar_2fa_usuario', modulo: 'seguridad', entidadId: id, detalle: { username: usuario.username } });
+  await require('../../utils/alertas').alertarAdmins(clinicaId, { clave: `rein2fa|${id}`, alUsuario: id, titulo: `Verificación en dos pasos reiniciada: ${usuario.nombre}`, mensaje: `${actor.nombre} reinició la verificación en dos pasos de «${usuario.username}». Tiene que volver a activarla desde Configuración → Seguridad.` });
+  return { ok: true };
+}
+
 // ---- Preferencia de diseño propia (self-service, cualquier usuario logueado) ----
 async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido) {
   if (!DISENOS_VALIDOS.includes(disenoPreferido)) {
@@ -355,5 +370,5 @@ module.exports = {
   listarRoles, detalleRol, crearRol, actualizarPermisosRol: conOlvido(actualizarPermisosRol, null), listarPermisos,
   listar, obtenerConPermisos, crear, actualizar: conOlvido(actualizar, 1), cambiarPassword,
   setOverride: conOlvido(setOverride, 1), quitarOverride: conOlvido(quitarOverride, 1),
-  actualizarMiDisenoPreferido, cerrarSesiones, eliminar: conOlvido(eliminar, 1),
+  actualizarMiDisenoPreferido, cerrarSesiones, eliminar: conOlvido(eliminar, 1), reiniciar2fa: conOlvido(reiniciar2fa, 1),
 };

@@ -85,6 +85,7 @@ variable `ADMIN_PASSWORD` antes del primer seed, el admin se crea con esa clave.
 | `DATABASE_URL` | Cadena de conexión Postgres (`postgres://usuario:password@host:5432/basededatos`) |
 | `JWT_SECRET` | Secreto para firmar los access tokens (15 min) |
 | `JWT_REFRESH_SECRET` | Secreto para los refresh tokens (7 días) — **no reutilizar el de arriba** |
+| `TOTP_CLAVE_CIFRADO` | Opcional (recomendado): clave para cifrar los secretos de la verificación en dos pasos. Definirla **antes** de que alguien la active; si no está, se deriva de `JWT_REFRESH_SECRET` (ver `SECURITY-AUDIT.md`, sección 0). |
 | `JWT_EXPIRES_IN` | Duración del access token (default `15m`) |
 | `JWT_REFRESH_EXPIRES_IN` | Duración del refresh token (default `7d`) |
 | `CORS_ORIGIN` | Uno o varios orígenes separados por coma (sin barra final) desde los que se acepta el frontend, ej. `https://tu-sitio.netlify.app`, o `*` para permitir cualquiera (solo en desarrollo) |

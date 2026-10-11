@@ -17,7 +17,7 @@ async function estadoUsuario(id, rolIdDesconocido) {
   const authRepo = require('../modules/auth/auth.repository');
   const u = await authRepo.findUsuarioById(id);
   const v = u && u.activo
-    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
+    ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, debeActivar2fa: !!u.debe_activar_2fa, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
     : { activo: false };
   cache.set(id, { t: ahora, v });
   if (cache.size > 5000) cache.clear();
@@ -45,11 +45,24 @@ async function authMiddleware(req, res, next) {
     if (!est.activo) return next(new ApiError(401, 'Tu usuario fue desactivado. Consultá con el administrador.'));
     // Contraseña cambiada, rol cambiado o sesiones cerradas: los tokens anteriores ya no valen.
     if ((Number(payload.tv) || 0) !== est.tokenVersion || Number(payload.clinicaId) !== Number(est.clinicaId)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
-    if (await require('../utils/sesiones').jtiRevocado(payload.jti)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
+    const sesiones = require('../utils/sesiones');
+    if (await sesiones.jtiRevocado(payload.jti)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
+    // Sesión cerrada desde otro dispositivo o pantalla bloqueada: el token deja de valer al instante.
+    if (payload.sid) {
+      const es = await sesiones.estadoSesion(payload.sid);
+      if (!es || !es.existe || es.cerrada || Number(es.usuarioId) !== Number(payload.sub)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));
+      if (es.bloqueada) return next(new ApiError(423, 'La pantalla está bloqueada. Ingresá tu contraseña para seguir.', { codigo: 'SESION_BLOQUEADA' }));
+    }
+    const ruta = (req.originalUrl || '').split('?')[0];
     // Con la contraseña inicial pendiente de cambio, la API no se puede usar
     // (antes solo lo exigía la pantalla y la API respondía igual).
-    if (est.debeCambiarClave && !(req.method === 'POST' && (req.originalUrl || '').split('?')[0] === '/api/auth/cambiar-clave')) {
+    if (est.debeCambiarClave && !(req.method === 'POST' && ruta === '/api/auth/cambiar-clave')) {
       return next(new ApiError(403, 'Tenés que cambiar la contraseña inicial antes de seguir.', { codigo: 'DEBE_CAMBIAR_CLAVE' }));
+    }
+    // La clínica exige verificación en dos pasos a los administradores: hasta
+    // activarla, solo se puede usar lo necesario para hacerlo (o salir).
+    if (est.debeActivar2fa && !/^\/api\/auth\/(2fa(\/iniciar|\/confirmar)?|logout|logout-todas|politica|bloquear)$/.test(ruta)) {
+      return next(new ApiError(403, 'La clínica exige la verificación en dos pasos a los administradores. Activala para seguir.', { codigo: 'DEBE_ACTIVAR_2FA' }));
     }
     req.usuario = {
       id: payload.sub,
@@ -62,6 +75,7 @@ async function authMiddleware(req, res, next) {
     };
     req.tokenExp = payload.exp;
     req.tokenJti = payload.jti || null;
+    req.sesionId = payload.sid || null;
     next();
   } catch (err) {
     next(err);

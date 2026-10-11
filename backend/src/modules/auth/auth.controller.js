@@ -22,10 +22,23 @@ function tokenRenovacion(req) {
   return { token: req.body && typeof req.body.refreshToken === 'string' ? req.body.refreshToken : null, deCuerpo: true };
 }
 
+const ctx = (req) => ({ ip: req.ip, agente: String(req.headers['user-agent'] || '').slice(0, 300) });
+
 async function login(req, res, next) {
   try {
     const { username, password, clinicaSlug } = req.body || {};
-    const resultado = await authService.login({ username, password, clinicaSlug, ip: req.ip });
+    const resultado = await authService.login({ username, password, clinicaSlug, ...ctx(req) });
+    ponerCookie(req, res, resultado);
+    res.json(sinSecretos(resultado));
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function login2fa(req, res, next) {
+  try {
+    const { desafio, codigo } = req.body || {};
+    const resultado = await authService.login2fa({ desafio, codigo, ...ctx(req) });
     ponerCookie(req, res, resultado);
     res.json(sinSecretos(resultado));
   } catch (err) {
@@ -36,7 +49,7 @@ async function login(req, res, next) {
 async function refresh(req, res, next) {
   try {
     const t = tokenRenovacion(req);
-    const resultado = await authService.refresh(t.token, { deCuerpo: t.deCuerpo });
+    const resultado = await authService.refresh(t.token, { deCuerpo: t.deCuerpo, ...ctx(req) });
     ponerCookie(req, res, resultado);
     res.json(sinSecretos(resultado));
   } catch (err) {
@@ -67,10 +80,41 @@ async function logoutTodas(req, res, next) {
 
 async function cambiarClave(req, res, next) {
   try {
-    const r = await authService.cambiarClavePropia(req.usuario.id, req.body || {});
+    const r = await authService.cambiarClavePropia(req.usuario.id, req.body || {}, ctx(req));
     ponerCookie(req, res, r);
     res.json(sinSecretos(r));
   } catch (err) { next(err); }
 }
 
-module.exports = { login, refresh, logout, logoutTodas, cambiarClave };
+const h = (fn) => async (req, res, next) => { try { res.json(await fn(req, res)); } catch (err) { next(err); } };
+
+// Verificación en dos pasos (la propia cuenta).
+const estado2fa = h((req) => authService.estado2fa(req.usuario.id));
+const iniciar2fa = h((req) => authService.iniciar2fa(req.usuario, req.body || {}));
+const confirmar2fa = h((req) => authService.confirmar2fa(req.usuario, req.body || {}));
+const desactivar2fa = h((req) => authService.desactivar2fa(req.usuario, req.body || {}));
+const nuevosCodigos2fa = h((req) => authService.nuevosCodigos2fa(req.usuario, req.body || {}));
+// Sesiones abiertas de la propia cuenta.
+const sesiones = h((req) => authService.listarSesiones(req.usuario, req.sesionId));
+const cerrarSesion = h(async (req, res) => {
+  const r = await authService.cerrarSesionPropia(req.usuario, req.params.id);
+  if (req.params.id === req.sesionId) cookies.borrar(req, res, COOKIE);
+  return { ...r, actual: req.params.id === req.sesionId };
+});
+// Bloqueo de pantalla por inactividad.
+const politica = h((req) => authService.politica(req.usuario.clinicaId));
+const bloquear = h((req) => authService.bloquear(req.usuario, req.sesionId));
+async function desbloquear(req, res, next) {
+  try {
+    const deCookie = cookies.leer(req, COOKIE.nombre);
+    cookies.exigirAntiCsrf(req);
+    const r = await authService.desbloquear(deCookie, { clave: (req.body || {}).clave, ...ctx(req) });
+    ponerCookie(req, res, r);
+    res.json(sinSecretos(r));
+  } catch (err) {
+    if (err.status === 401) cookies.borrar(req, res, COOKIE);
+    next(err);
+  }
+}
+
+module.exports = { login, login2fa, refresh, logout, logoutTodas, cambiarClave, estado2fa, iniciar2fa, confirmar2fa, desactivar2fa, nuevosCodigos2fa, sesiones, cerrarSesion, politica, bloquear, desbloquear };

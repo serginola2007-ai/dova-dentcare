@@ -61,8 +61,46 @@ Notas para correrlas:
 | **Usuario de base con mínimo privilegio** | Toda la suite se corre con la app conectada como `dova_app`. Además, a mano con `psql` como `dova_app`: `CREATE`, `DROP`, `ALTER`, `TRUNCATE auditoria`, desvío del disparador, `pgmigrations` y `CREATE ROLE`, todos denegados. |
 | **Límites de pedidos** | `endurecimiento.test.js` (429 en login y web pública); almacén `postgres` probado a mano (429 con contadores en la tabla). |
 | **Cabeceras, CORS y errores** | `endurecimiento.test.js`. |
+| **Verificación en dos pasos** | `dos-pasos.test.js`: <ul><li>la contraseña sola no abre sesión ni pone cookie;</li><li>desafío alterado, vencido, reusado o un token de acceso usado como desafío: 401;</li><li>código repetido (anti-repetición);</li><li>código de recuperación de un solo uso;</li><li>5 fallos: bloqueo (aunque después venga el correcto) y aviso;</li><li>secreto cifrado y recuperación solo como hash;</li><li>desactivar pide contraseña y código;</li><li>reinicio por admin: permiso, otra clínica (404), sesiones cerradas.</li></ul> `ui-seguridad-cuenta.js`: el flujo completo en los 3 diseños. |
+| **Exigir 2FA a administradores** | `dos-pasos.test.js`: 403 `DEBE_ACTIVAR_2FA` en la API, rutas permitidas para activarla, no se exige a otros roles, no se puede desactivar con la exigencia, hace falta tenerla para exigirla. |
+| **Sesiones abiertas** | `dos-pasos.test.js`: el token lleva `sid`; cerrar otra sesión propia corta su token **al instante**; la de otra persona: 404. |
+| **Bloqueo de pantalla** | `dos-pasos.test.js`: 423 en la API y en la renovación; desbloqueo sin CSRF (403), sin cookie (401), cookie rotada (401); 5 fallos cierran la sesión y avisan. `ui-seguridad-cuenta.js`: recargar no lo saltea, sin pedidos con el candado, bloqueo real a los 15 min (reloj adelantado), no antes. |
 
-## Resultados de la última corrida (6 de octubre de 2026)
+## Resultados de la 3.ª ronda (11 de octubre de 2026)
+
+Servidor local, `NODE_ENV=production`, aplicación conectada como **`dova_app`**, migración 0043 aplicada.
+
+| Prueba | Resultado |
+|---|---|
+| `dos-pasos.test.js` (nueva) | 67/67 |
+| `ui-seguridad-cuenta.js` (nueva, 3 diseños, escritorio/tablet/celular) | 41/41 |
+| `barrido-rutas.js` | 531 rutas, 0 anomalías |
+| `endurecimiento.test.js` | 64/64 |
+| `auditoria2.test.js` | 76/76 |
+| `permisos-por-rol.test.js` | 65/65 |
+| `multiclinica.test.js` | 23/23 |
+| `vinculo-odontologo.test.js` | 14/14 |
+| `eliminar-usuario.test.js` | 15/15 |
+| `npm run lint` / `npm run build` / `npm audit` | 0 problemas / 214 archivos sin errores / 0 vulnerabilidades |
+
+Regresión de pantallas:
+- ui-sesiones 22/22;
+- ui-menu 75;
+- ui-submenu 53;
+- ui-tablet 12/12;
+- ui-consulta 24;
+- ui-fase6 78;
+- ui-vivo 48;
+- ui-eliminar-usuario 21/21;
+- ui-vinculo 11/11;
+- ui-primer-ingreso 5/5;
+- ui-permisos-viejos 2/2;
+- ui-portal-seg 9/9;
+- ui-xss 4/4;
+- ui-operativo 34;
+- ui-anio (un año de uso simulado) 968/968, 0 hallazgos.
+
+## Resultados de la corrida anterior (6 de octubre de 2026)
 
 Servidor local, `NODE_ENV=production`, aplicación conectada como **`dova_app`** (mínimo privilegio).
 

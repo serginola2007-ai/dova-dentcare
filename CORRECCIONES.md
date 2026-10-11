@@ -497,3 +497,30 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
 - Vacíos: las listas sin datos muestran un ícono y un mensaje sobrio ("Sin proveedores.", "Todavía no hay nada cargado.") con una pista de qué botón usar para cargar el primero.
 - Hover en botones, pestañas, campos, filas de tablas con acciones, resultados del buscador, indicadores y tarjetas. Foco visible al navegar con teclado.
 - Si el sistema pide menos movimiento, las animaciones se desactivan.
+
+## Seguridad, 3.ª ronda: verificación en dos pasos, sesiones abiertas y bloqueo de pantalla (migración 0043)
+- **Verificación en dos pasos** (Configuración → Seguridad → Activar):
+  - con una app del celular (Google Authenticator, Microsoft Authenticator, Authy);
+  - al entrar, después de la contraseña, se pide el código de 6 números;
+  - 10 códigos de recuperación para cuando no está el celular (cada uno sirve una vez);
+  - si alguien pierde el celular, el admin la reinicia desde Usuarios ("Reiniciar 2 pasos");
+  - la lista de usuarios marca quién la tiene.
+- **Bloqueo de pantalla por inactividad:**
+  - a los 15 minutos sin usar DOVA (en ninguna pestaña) aparece un candado que pide la contraseña;
+  - lo que estabas haciendo queda abajo;
+  - recargar la página no lo saltea;
+  - 5 contraseñas mal cierran la sesión.
+- **Sesiones abiertas** (Configuración → Seguridad):
+  - lista de dónde está abierta la cuenta (navegador, IP, última actividad);
+  - "Cerrar" en cada una, que corta esa sesión al instante.
+- **Política de la clínica** (solo admin, Configuración → Seguridad):
+  - minutos hasta el bloqueo (5 a 120, o nunca);
+  - "Exigir verificación en dos pasos a los administradores".
+- **Avisos de seguridad en la campanita** para los administradores:
+  - usuario bloqueado por contraseñas mal;
+  - sesión robada y reutilizada;
+  - segundo paso fallido varias veces;
+  - ingreso con código de recuperación;
+  - 2FA desactivada o reiniciada;
+  - desbloqueo fallido.
+- Detalle técnico y pruebas en `SECURITY-AUDIT.md` (sección 0) y `SECURITY-TESTS.md`.

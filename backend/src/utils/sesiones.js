@@ -25,6 +25,8 @@ function validarClaveFuerte(clave, { username, nombre } = {}) {
 
 async function invalidarSesiones(usuarioId, motivo = 'invalidacion') {
   await query('UPDATE usuarios SET token_version = token_version + 1 WHERE id=$1', [Number(usuarioId)]);
+  await query('UPDATE sesiones SET cerrada_en=now(), motivo=COALESCE(motivo, $2) WHERE usuario_id=$1 AND cerrada_en IS NULL', [Number(usuarioId), String(motivo).slice(0, 30)]);
+  estados.clear();
   await query('UPDATE refresh_tokens SET revocado=true, revocado_en=COALESCE(revocado_en, now()), motivo=COALESCE(motivo, $2) WHERE usuario_id=$1 AND revocado=false', [Number(usuarioId), String(motivo).slice(0, 30)]);
   require('../middlewares/auth.middleware').olvidarUsuario(Number(usuarioId));
   require('./tiempoReal').cerrarUsuario(Number(usuarioId));
@@ -53,4 +55,42 @@ async function jtiRevocado(jti) {
   return r;
 }
 
-module.exports = { validarClaveFuerte, invalidarSesiones, revocarJti, jtiRevocado };
+/* ---- Sesiones (una por login) ----
+   El token de acceso lleva el id de la sesión (sid). Cerrar o bloquear una
+   sesión corta sus tokens de acceso al instante, no a los 15 minutos. */
+const estados = new Map(); // sid -> { t, v }
+const ESTADO_MS = 10000;
+const recortar = (v, n) => (v === undefined || v === null ? null : String(v).slice(0, n));
+
+async function registrarSesion({ id, usuarioId, clinicaId, inicio, ip, agente }) {
+  await query(
+    `INSERT INTO sesiones (id, usuario_id, clinica_id, inicio, ip, agente) VALUES ($1,$2,$3,COALESCE($4, now()),$5,$6)
+     ON CONFLICT (id) DO UPDATE SET ultimo_uso=now(), ip=COALESCE(EXCLUDED.ip, sesiones.ip), agente=COALESCE(EXCLUDED.agente, sesiones.agente)`,
+    [String(id), Number(usuarioId), Number(clinicaId), inicio || null, recortar(ip, 64), recortar(agente, 300)]);
+  estados.delete(String(id));
+  // Limpieza liviana: sesiones cerradas o sin uso hace más de 90 días.
+  if (Math.random() < 0.01) await query("DELETE FROM sesiones WHERE COALESCE(cerrada_en, ultimo_uso) < now() - interval '90 days'");
+}
+async function estadoSesion(sid) {
+  if (!sid) return null;
+  const k = String(sid);
+  const c = estados.get(k);
+  if (c && Date.now() - c.t < ESTADO_MS) return c.v;
+  const r = await query('SELECT usuario_id, bloqueada, cerrada_en FROM sesiones WHERE id=$1', [k]);
+  const f = r.rows[0];
+  const v = f ? { existe: true, usuarioId: f.usuario_id, bloqueada: f.bloqueada, cerrada: !!f.cerrada_en } : { existe: false };
+  estados.set(k, { t: Date.now(), v });
+  if (estados.size > 20000) estados.clear();
+  return v;
+}
+async function cerrarSesion(sid, motivo = 'cerrada') {
+  await query('UPDATE sesiones SET cerrada_en=COALESCE(cerrada_en, now()), motivo=COALESCE(motivo, $2) WHERE id=$1', [String(sid), String(motivo).slice(0, 30)]);
+  await query('UPDATE refresh_tokens SET revocado=true, revocado_en=COALESCE(revocado_en, now()), motivo=COALESCE(motivo, $2) WHERE sesion_id=$1 AND revocado=false', [String(sid), String(motivo).slice(0, 30)]);
+  estados.delete(String(sid));
+}
+async function bloquearSesion(sid, bloqueada) {
+  await query(`UPDATE sesiones SET bloqueada=$2, bloqueada_en=CASE WHEN $2 THEN now() ELSE NULL END WHERE id=$1 AND cerrada_en IS NULL`, [String(sid), !!bloqueada]);
+  estados.delete(String(sid));
+}
+
+module.exports = { validarClaveFuerte, invalidarSesiones, revocarJti, jtiRevocado, registrarSesion, estadoSesion, cerrarSesion, bloquearSesion };

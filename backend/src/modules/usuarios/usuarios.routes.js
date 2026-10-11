@@ -30,6 +30,8 @@ router.post('/:id/password', requirePermiso('usuarios.manage'), controller.cambi
 router.delete('/:id', requirePermiso('usuarios.manage'), controller.eliminar);
 // Cerrar todas las sesiones abiertas de una persona (por ejemplo, si perdió el celular).
 router.post('/:id/cerrar-sesiones', requirePermiso('usuarios.manage'), controller.cerrarSesiones);
+// Reiniciar la verificación en dos pasos de alguien que perdió el celular.
+router.post('/:id/reiniciar-2fa', requirePermiso('usuarios.manage'), controller.reiniciar2fa);
 
 // Permisos personalizados (overrides) por usuario
 router.put('/:id/permisos', requirePermiso('usuarios.manage'), controller.setOverride);

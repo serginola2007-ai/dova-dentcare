@@ -22,4 +22,11 @@ async function actualizar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { obtenerActual, brandingPublico, actualizar };
+async function obtenerSeguridad(req, res, next) {
+  try { res.json(await service.obtenerSeguridad(req.clinicaId)); } catch (err) { next(err); }
+}
+async function actualizarSeguridad(req, res, next) {
+  try { res.json(await service.actualizarSeguridad(req.clinicaId, req.body || {}, req.usuario)); } catch (err) { next(err); }
+}
+
+module.exports = { obtenerActual, brandingPublico, actualizar, obtenerSeguridad, actualizarSeguridad };

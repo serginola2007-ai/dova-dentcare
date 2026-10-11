@@ -57,6 +57,7 @@ const DOVA = (() => {
         headers: { 'Content-Type': 'application/json', ...CSRF },
         body: JSON.stringify(viejo ? { refreshToken: viejo } : {}),
       });
+      if (res.status === 423) { avisarBloqueo(); const e = new Error('La pantalla está bloqueada'); e.status = 423; throw e; }
       if (!res.ok) { clearSession(); throw new Error('Sesión expirada'); }
       const data = await res.json();
       accessToken = data.accessToken;
@@ -71,6 +72,16 @@ const DOVA = (() => {
     return renovando;
   }
 
+  /* Pantalla bloqueada (por inactividad o desde otra pestaña): el servidor
+     responde 423 hasta que se ingrese la contraseña. bloqueo.js muestra el
+     candado; mientras tanto no se mandan pedidos. */
+  let bloqueada = false;
+  function avisarBloqueo() {
+    accessToken = null;
+    if (!bloqueada) { bloqueada = true; try { window.dispatchEvent(new CustomEvent('dova:bloqueada')); } catch (_e) { /* sin DOM */ } }
+  }
+  function errorBloqueo() { const e = new Error('La pantalla está bloqueada'); e.status = 423; return e; }
+
   // Aviso de pedido en curso (app.js muestra la barra de progreso y el botón "ocupado").
   function avisar(delta) { try { window.dispatchEvent(new CustomEvent('dova:pedido', { detail: delta })); } catch (_e) { /* sin DOM */ } }
   async function request(path, opciones) {
@@ -79,8 +90,9 @@ const DOVA = (() => {
   }
 
   async function pedir(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {
+    if (bloqueada && !path.startsWith('/auth/')) throw errorBloqueo();
     if (!accessToken && getPerfil() && reintentar) {
-      try { await refrescarToken(); } catch (_e) { /* el pedido sigue y responderá 401 */ }
+      try { await refrescarToken(); } catch (e) { if (e && e.status === 423) throw errorBloqueo(); /* si no, el pedido sigue y responderá 401 */ }
     }
     const headers = {};
     if (!isForm) headers['Content-Type'] = 'application/json';
@@ -93,11 +105,13 @@ const DOVA = (() => {
       body: isForm ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
 
+    if (res.status === 423 && !path.startsWith('/auth/desbloquear')) { avisarBloqueo(); throw errorBloqueo(); }
     if (res.status === 401 && reintentar && getPerfil()) {
       try {
         await refrescarToken();
         return pedir(path, { method, body, isForm, reintentar: false, raw });
-      } catch (_e) {
+      } catch (e) {
+        if (e && e.status === 423) throw errorBloqueo();
         clearSession();
         window.location.reload();
         throw new Error('Sesión expirada');
@@ -119,13 +133,42 @@ const DOVA = (() => {
     return data;
   }
 
-  async function login(username, password) {
-    const data = await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false });
+  function abrirSesion(data) {
     accessToken = data.accessToken;
+    bloqueada = false;
     setPerfil({ usuario: data.usuario, clinica: data.clinica });
     marcarPestana(true);
     return data;
   }
+  // Con verificación en dos pasos devuelve { requiere2fa, desafio } y la
+  // sesión recién se abre con login2fa().
+  async function login(username, password) {
+    const data = await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false });
+    if (data.requiere2fa) return data;
+    return abrirSesion(data);
+  }
+  async function login2fa(desafio, codigo) {
+    return abrirSesion(await request('/auth/login/2fa', { method: 'POST', body: { desafio, codigo }, reintentar: false }));
+  }
+  // Bloqueo de pantalla: el servidor deja de aceptar esta sesión hasta que
+  // se ingrese la contraseña (aunque se recargue la página).
+  async function bloquear() {
+    try { await request('/auth/bloquear', { method: 'POST', reintentar: false }); } catch (_e) { /* igual se bloquea acá */ }
+    accessToken = null; bloqueada = true;
+  }
+  async function desbloquear(clave) {
+    const res = await fetch(`${apiBase}/auth/desbloquear`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...CSRF }, body: JSON.stringify({ clave }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error((data.error && data.error.message) || 'No se pudo desbloquear'); e.status = res.status; throw e; }
+    accessToken = data.accessToken; bloqueada = false;
+    const actual = getPerfil();
+    if (actual && actual.usuario && Array.isArray(data.permisos)) { actual.usuario.permisos = data.permisos; setPerfil(actual); }
+    return data;
+  }
+  // Otra pestaña desbloqueó: esta pide un acceso nuevo cuando lo necesite.
+  function marcarDesbloqueada() { bloqueada = false; accessToken = null; }
+  function actualizarUsuario(campos) { const p = getPerfil(); if (p && p.usuario) { Object.assign(p.usuario, campos); setPerfil(p); } }
+  function marcarBloqueada() { bloqueada = true; accessToken = null; }
 
   async function logout() {
     try {
@@ -220,7 +263,7 @@ const DOVA = (() => {
     tokenActual: () => accessToken,
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
-    request, login, logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
+    request, login, login2fa, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, actualizarUsuario, estaBloqueada: () => bloqueada, limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),

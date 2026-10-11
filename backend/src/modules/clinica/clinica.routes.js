@@ -12,4 +12,9 @@ router.get('/branding-publico', controller.brandingPublico);
 router.get('/', authMiddleware, resolverClinicaMiddleware, controller.obtenerActual);
 router.put('/', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.actualizar);
 
+// Política de seguridad de la clínica: bloqueo de pantalla por inactividad y
+// verificación en dos pasos obligatoria para administradores.
+router.get('/seguridad', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.obtenerSeguridad);
+router.put('/seguridad', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.actualizarSeguridad);
+
 module.exports = router;

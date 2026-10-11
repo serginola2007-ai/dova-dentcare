@@ -415,6 +415,8 @@ const DovaApp = (() => {
       const ref = document.getElementById('theme-toggle-btn') || document.getElementById('logout-btn');
       if (ref) DovaVivo.montarCampana(ref, navegar);
     }
+    // Bloqueo de pantalla por inactividad (minutos según la clínica).
+    if (window.DovaBloqueo) DovaBloqueo.iniciar();
     if (window.DovaComandos) DovaComandos.iniciar({ navegar, menu: () => MENU.filter((m) => tieneAcceso(m.permiso)) });
     {
       const hashActual = location.hash.replace('#', '');
@@ -462,6 +464,14 @@ const DovaApp = (() => {
     // Quedó pendiente el cambio obligatorio de contraseña: vuelve al login.
     if (usuario && usuario.debeCambiarClave) {
       DOVA.logout().catch(() => {}).finally(() => location.reload());
+      return;
+    }
+    // La clínica exige verificación en dos pasos y todavía no la activó.
+    if (usuario && usuario.debeActivar2fa && window.DovaSeguridad) {
+      elShell.style.display = 'none';
+      elLogin.style.display = '';
+      elLogin.innerHTML = Vistas.vistaLogin(temaActual());
+      DovaSeguridad.activacionObligatoria(elLogin.querySelector('.dova-login-card'), () => decidirDestinoTrasSesionExistente(elLogin, elShell));
       return;
     }
     const pref = normalizarTema(usuario && usuario.disenoPreferido) || 'moderno';
