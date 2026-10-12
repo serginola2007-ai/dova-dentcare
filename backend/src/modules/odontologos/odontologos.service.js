@@ -20,7 +20,7 @@ function validarColor(datos) {
 }
 
 async function crear(clinicaId, datos, usuario) {
-  if (!datos.nombre || !datos.nombre.trim()) throw new ApiError(400, 'El nombre es obligatorio');
+  if (typeof datos.nombre !== 'string' || !datos.nombre.trim()) throw new ApiError(400, 'El nombre es obligatorio');
   validarColor(datos);
   const odontologo = await repo.crear(clinicaId, datos);
   await auditoria.registrar({
@@ -31,7 +31,7 @@ async function crear(clinicaId, datos, usuario) {
 }
 
 async function actualizar(clinicaId, id, datos, usuario) {
-  if (datos.nombre !== undefined && !datos.nombre.trim()) throw new ApiError(400, 'El nombre es obligatorio');
+  if (datos.nombre !== undefined && (typeof datos.nombre !== 'string' || !datos.nombre.trim())) throw new ApiError(400, 'El nombre es obligatorio');
   validarColor(datos);
   const odontologo = await repo.actualizar(clinicaId, id, datos);
   if (!odontologo) throw new ApiError(404, 'Odontólogo no encontrado');

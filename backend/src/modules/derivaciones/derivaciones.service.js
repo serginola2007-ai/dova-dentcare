@@ -4,6 +4,7 @@ const pacientesRepo = require('../pacientes/pacientes.repository');
 const auditoria = require('../../utils/auditoria');
 const { query } = require('../../config/db');
 const { tipoReal } = require('../../utils/upload');
+const { str } = require('../../utils/texto');
 
 const ESTADOS_VALIDOS = ['pendiente', 'atendida', 'rechazada'];
 
@@ -18,7 +19,7 @@ async function obtener(clinicaId, id) {
 }
 
 async function crear(clinicaId, datos, usuario, archivo) {
-  if (!datos.pacienteId || !datos.odontologoDestinoId || !String(datos.motivo || '').trim()) {
+  if (!datos.pacienteId || !datos.odontologoDestinoId || !str(datos.motivo).trim()) {
     throw new ApiError(400, 'Elegí el paciente, el profesional de destino y escribí el motivo');
   }
   const paciente = await pacientesRepo.obtenerPorId(clinicaId, datos.pacienteId);

@@ -2,6 +2,7 @@ const { conCandado } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
 const repo = require('./inventario.repository');
 const auditoria = require('../../utils/auditoria');
+const { str } = require('../../utils/texto');
 
 async function listarProveedores(clinicaId, filtros) { return repo.listarProveedores(clinicaId, filtros); }
 
@@ -41,7 +42,7 @@ async function registrarMovimiento(clinicaId, insumoId, datos, usuario) {
   const cantidad = Number(datos.cantidad);
   if (!Number.isFinite(cantidad) || cantidad < 0 || cantidad > 1e9) throw new ApiError(400, 'La cantidad no puede ser negativa');
   if (datos.tipo !== 'ajuste' && cantidad === 0) throw new ApiError(400, 'La cantidad debe ser mayor a cero');
-  if (['ajuste', 'perdida', 'vencimiento'].includes(datos.tipo) && String(datos.motivo || '').trim().length < 3) throw new ApiError(400, 'Escribí el motivo del ajuste o la baja');
+  if (['ajuste', 'perdida', 'vencimiento'].includes(datos.tipo) && str(datos.motivo).trim().length < 3) throw new ApiError(400, 'Escribí el motivo del ajuste o la baja');
   if (datos.vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(datos.vencimiento)) throw new ApiError(400, 'Vencimiento inválido');
   let antes = null;
 

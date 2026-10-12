@@ -179,12 +179,15 @@ body.dova-ocupado::after {
 .dova-vacio-pista { display: block; margin: 4px 0 0 28px; font-size: 12px; color: var(--ink-soft); opacity: .85; }
 
 /* Campos compactos, a la altura de los botones (aire más técnico) */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select {
-  padding: 5px 9px; font-size: 13px; min-height: 30px; line-height: 18px;
+/* Prioridad de un simple "input" (el :where no suma): le gana a base.css pero
+   los estilos propios de cada componente (periodontograma, celdas chicas)
+   siguen mandando. La altura sale del relleno, sin min-height. */
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"])), select {
+  padding: 5px 9px; font-size: 13px; line-height: 18px;
 }
 textarea { padding: 6px 9px; font-size: 13px; }
 @media (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select { min-height: 36px; font-size: 16px; }
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"])), select { padding-top: 8px; padding-bottom: 8px; font-size: 16px; }
   textarea { font-size: 16px; }
 }
 
@@ -211,3 +214,22 @@ body.dova-bloqueada #shell-root, body.dova-bloqueada #modal-root, body.dova-bloq
 .dova-seguridad-bloque { margin-bottom: 8px; }
 .dova-seguridad-bloque select { max-width: 260px; }
 .dova-tabla-sesiones td { vertical-align: middle; }
+
+/* ---------- Barra superior en tablet (769–1199 px) ----------
+   Antes el menú se apretaba en una columna y quedaba debajo de la campanita
+   y del buscador. Ahora va en su propia fila, a todo el ancho. */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .dova-topbar { flex-wrap: wrap; row-gap: 8px; }
+  .dova-topbar > .dova-menu { order: 20; flex: 1 1 100%; width: 100%; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: 0; }
+  .dova-topbar > .dova-menu .dova-menu-item { white-space: nowrap; }
+}
+
+/* Pestañas en el celular: se deslizan de costado. Un leve desvanecido a la
+   derecha avisa que hay más pestañas fuera de la pantalla. */
+@media (max-width: 768px) {
+  .dova-tabs, .dova-ext-subtabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); padding-right: 24px; }
+}
+
+/* Contador de la campanita: mismo rojo en claro y en oscuro (en oscuro el
+   rojo se aclaraba y el número blanco casi no se leía). */
+.dova-campana-num { background: #B8443A; color: #FFFFFF; }

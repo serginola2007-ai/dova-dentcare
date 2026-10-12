@@ -7,6 +7,7 @@ const { query } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
 const { requirePermiso } = require('../../middlewares/rbac.middleware');
 const auditoria = require('../../utils/auditoria');
+const { str } = require('../../utils/texto');
 
 const router = express.Router({ mergeParams: true });
 const h = (fn) => async (req, res, next) => { try { res.json(await fn(req)); } catch (e) { next(e); } };
@@ -26,7 +27,7 @@ router.get('/:id/notas', requirePermiso('pacientes.view'), h(async (req) => {
 
 router.post('/:id/notas', requirePermiso('pacientes.edit', 'historia_clinica.edit', 'pacientes.clinical.edit'), h(async (req) => {
   const p = await paciente(req);
-  const texto = String((req.body || {}).texto || '').trim().slice(0, 2000);
+  const texto = str((req.body || {}).texto).trim().slice(0, 2000);
   if (texto.length < 2) throw new ApiError(400, 'Escribí la nota');
   const r = (await query(`INSERT INTO paciente_notas (clinica_id, paciente_id, texto, importante, usuario_id, usuario_nombre)
                            VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, texto, importante, usuario_id, usuario_nombre, creado_en`,

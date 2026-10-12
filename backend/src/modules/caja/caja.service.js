@@ -3,6 +3,7 @@ const { monto: validarMonto } = require('../../utils/montos');
 const repo = require('./caja.repository');
 const auditoria = require('../../utils/auditoria');
 const { query, conCandado } = require('../../config/db');
+const { str } = require('../../utils/texto');
 
 /* Lo que tiene que haber FÍSICAMENTE en el cajón: monto inicial + cobros en
    efectivo − egresos en efectivo. Tarjeta, transferencia y QR se muestran
@@ -89,11 +90,11 @@ async function registrarMovimiento(clinicaId, datosIn, usuario) {
   const datos = { ...datosIn };
   if (datos.tipo === 'devolucion') {
     datos.tipo = 'egreso';
-    datos.concepto = `Devolución: ${String(datos.concepto || '').trim() || 'sin detalle'}`;
+    datos.concepto = `Devolución: ${str(datos.concepto).trim() || 'sin detalle'}`;
   }
   if (!['ingreso', 'egreso'].includes(datos.tipo)) throw new ApiError(400, 'Tipo de movimiento inválido');
   datos.monto = validarMonto(datos.monto);
-  datos.concepto = String(datos.concepto || '').trim().slice(0, 300);
+  datos.concepto = str(datos.concepto).trim().slice(0, 300);
   if (!datos.concepto) throw new ApiError(400, 'Escribí el concepto del movimiento');
   if (datos.metodo !== undefined && datos.metodo !== null && (typeof datos.metodo !== 'string' || datos.metodo.length > 40)) throw new ApiError(400, 'Método inválido');
 

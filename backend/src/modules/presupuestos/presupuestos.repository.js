@@ -1,3 +1,4 @@
+const { ApiError } = require('../../middlewares/error.middleware');
 const { query } = require('../../config/db');
 
 async function listarPorPaciente(clinicaId, pacienteId) {
@@ -25,6 +26,8 @@ async function obtenerPorId(clinicaId, id) {
 function calcularTotal(items, descuento) {
   const subtotal = items.reduce((acc, it) => acc + Number(it.cantidad) * Number(it.precioUnitario), 0);
   const totalConDescuento = subtotal - (subtotal * (Number(descuento) || 0) / 100);
+  // Nunca guardar un total "NaN" (Math.max(0, NaN) da NaN).
+  if (!Number.isFinite(totalConDescuento)) throw new ApiError(400, 'Revisá las cantidades y los precios del presupuesto');
   return Math.max(0, Math.round(totalConDescuento * 100) / 100);
 }
 

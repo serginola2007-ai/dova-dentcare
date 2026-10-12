@@ -7,6 +7,7 @@ const presupuestosService = require('../presupuestos/presupuestos.service');
 const pacientesRepo = require('../pacientes/pacientes.repository');
 const odontologosRepo = require('../odontologos/odontologos.repository');
 const auditoria = require('../../utils/auditoria');
+const { str } = require('../../utils/texto');
 
 async function listarPorPaciente(clinicaId, pacienteId) {
   return repo.listarPorPaciente(clinicaId, pacienteId);
@@ -105,7 +106,7 @@ async function actualizarEtapa(clinicaId, planId, etapaId, datos, usuario) {
   }
   const actualizada = await etapasRepo.actualizarEtapa(etapaId, {
     estado, fechaInicio: datos.fechaInicio, fecha: datos.fecha !== undefined ? datos.fecha : (etapa.fecha ? String(etapa.fecha).slice(0, 10) : null),
-    odontologoId, observaciones: datos.observaciones !== undefined ? String(datos.observaciones || '').slice(0, 2000) : etapa.observaciones, piezas,
+    odontologoId, observaciones: datos.observaciones !== undefined ? str(datos.observaciones).slice(0, 2000) : etapa.observaciones, piezas,
   });
   // El tratamiento arranca cuando arranca su primera etapa.
   if (['en_progreso', 'completado'].includes(estado) && plan.estado === 'pendiente') {

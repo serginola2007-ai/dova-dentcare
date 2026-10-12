@@ -14,10 +14,11 @@ const { query, conCandado } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
 const { hoyIso } = require('../../utils/recurso');
 const auditoria = require('../../utils/auditoria');
+const { str } = require('../../utils/texto');
 
 const TZ = process.env.DOVA_TZ || 'America/Asuncion';
 const ESTADOS_LIBRES = ['cancelado', 'no_asistio']; // estos no ocupan el horario (igual que la agenda)
-const txt = (v, max) => { const s = v === undefined || v === null ? '' : String(v).trim(); return s ? s.slice(0, max) : null; };
+const txt = (v, max) => { const s = str(v).trim(); return s ? s.slice(0, max) : null; };
 const hash = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
 const aMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + m; };
 const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;

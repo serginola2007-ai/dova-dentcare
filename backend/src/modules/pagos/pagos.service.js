@@ -5,6 +5,7 @@ const planesPagoRepo = require('../planes-pago/planespago.repository');
 const pacientesRepo = require('../pacientes/pacientes.repository');
 const cajaService = require('../caja/caja.service');
 const auditoria = require('../../utils/auditoria');
+const { str } = require('../../utils/texto');
 
 async function listarPorPaciente(clinicaId, pacienteId) { return repo.listarPorPaciente(clinicaId, pacienteId); }
 async function listar(clinicaId, filtros) { return repo.listar(clinicaId, filtros); }
@@ -98,7 +99,7 @@ async function crearEnTransaccion(clinicaId, datos, usuario) {
 }
 
 async function anular(clinicaId, id, usuario, { motivo } = {}) {
-  const m = String(motivo || '').trim().slice(0, 500);
+  const m = str(motivo).trim().slice(0, 500);
   if (m.length < 5) throw new ApiError(400, 'Escribí el motivo de la anulación (queda registrado)');
   // Cierre contable: un pago de un período cerrado no se puede anular.
   const { query } = require('../../config/db');

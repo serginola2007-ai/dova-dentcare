@@ -19,6 +19,7 @@ const { query, conCandado } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
 const auditoria = require('../../utils/auditoria');
 const { hoyIso } = require('../../utils/recurso');
+const { str } = require('../../utils/texto');
 
 const METODOS_DEFECTO = [
   { codigo: 'efectivo', nombre: 'Efectivo', activo: true },
@@ -31,7 +32,7 @@ const METODOS_DEFECTO = [
 ];
 const TIPOS = { comprobante_interno: 'Comprobante interno', nota_credito_interna: 'Nota de crédito interna' };
 const redondear = (n) => Math.round(Number(n) || 0); // Guaraníes: sin decimales
-const txt = (v, max) => (v === undefined || v === null ? null : String(v).trim().slice(0, max) || null);
+const txt = (v, max) => (v === undefined || v === null ? null : str(v).trim().slice(0, max) || null);
 
 // ------------------------------------------------------------------ alcance
 /* Quién ve qué: con facturacion.ver, todo; con facturacion.ver_propias (odontólogo),
@@ -204,8 +205,8 @@ async function tomarNumero(serieId) {
 /* Cambiar serie (establecimiento / punto de expedición) o el próximo número.
    El próximo número nunca puede quedar en uno ya usado. */
 async function cambiarNumeracion(clinicaId, datos, usuario) {
-  const est = String(datos.establecimiento || '').padStart(3, '0');
-  const pto = String(datos.puntoExpedicion || '').padStart(3, '0');
+  const est = str(datos.establecimiento).padStart(3, '0');
+  const pto = str(datos.puntoExpedicion).padStart(3, '0');
   if (!/^\d{3}$/.test(est) || !/^\d{3}$/.test(pto) || est === '000' || pto === '000') throw new ApiError(400, 'Establecimiento y punto de expedición: 3 números, ej. 001');
   return conCandado(`factura:serie:${clinicaId}`, async () => {
     const previo = await query('SELECT establecimiento, punto_expedicion FROM facturacion_config WHERE clinica_id=$1', [clinicaId]);

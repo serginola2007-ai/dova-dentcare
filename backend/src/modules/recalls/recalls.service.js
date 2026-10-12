@@ -186,6 +186,7 @@ async function registrarContacto(clinicaId, id, { canal = 'whatsapp', resultado,
 async function completar(clinicaId, id, { fecha }, usuario) {
   const rec = await obtener(clinicaId, id);
   if (!rec) throw new ApiError(404, 'Control periódico no encontrado');
+  if (fecha !== undefined && fecha !== null && fecha !== '' && (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(fecha)))) throw new ApiError(400, 'La fecha tiene que ser AAAA-MM-DD');
   const f = fecha || hoyIso();
   const proxima = sumarMeses(f, rec.intervalo_efectivo);
   await query(

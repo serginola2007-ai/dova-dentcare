@@ -10,6 +10,7 @@ const { ApiError } = require('../../middlewares/error.middleware');
 const { enlaceWhatsapp, PLANTILLAS } = require('../../utils/mensajes');
 const auditoria = require('../../utils/auditoria');
 const clinicaRepo = require('../clinica/clinica.repository');
+const { str } = require('../../utils/texto');
 
 const VER = ['seguimiento.view', 'seguimiento.manage', 'recalls.view'];
 const EDITAR = ['seguimiento.manage', 'recalls.manage'];
@@ -161,7 +162,7 @@ router.post('/casos', requirePermiso(...EDITAR), h(async (req) => {
   validarCaso(d);
   const pac = (await query('SELECT id FROM pacientes WHERE clinica_id=$1 AND id=$2', [c, Number(d.pacienteId)])).rows[0];
   if (!pac) throw new ApiError(404, 'Paciente no encontrado');
-  if (tipo === 'manual' && String(d.motivo || '').trim().length < 3) throw new ApiError(400, 'Escribí el motivo del seguimiento');
+  if (tipo === 'manual' && str(d.motivo).trim().length < 3) throw new ApiError(400, 'Escribí el motivo del seguimiento');
   const resp = await responsableValido(c, d.responsableId);
   const refId = d.referenciaId ? Number(d.referenciaId) : null;
   if (refId) {
@@ -185,7 +186,7 @@ router.post('/casos/:id/gestion', requirePermiso(...EDITAR), h(async (req) => {
   if (d.canal && !CANALES.includes(d.canal)) throw new ApiError(400, 'Canal inválido');
   if (!d.resultado && !d.estado && d.proximoContacto === undefined && d.responsableId === undefined) throw new ApiError(400, 'No hay nada para registrar');
   const estado = d.estado || (d.resultado ? 'en_curso' : k.estado);
-  if (estado === 'descartado' && String(d.nota || '').trim().length < 3) throw new ApiError(400, 'Para descartar el caso escribí el motivo');
+  if (estado === 'descartado' && str(d.nota).trim().length < 3) throw new ApiError(400, 'Para descartar el caso escribí el motivo');
   const resp = d.responsableId !== undefined ? await responsableValido(c, d.responsableId) : k.responsable_id;
   const cerrado = ['resuelto', 'descartado'].includes(estado);
   const nuevo = (await query(`UPDATE seguimiento_casos SET estado=$3, responsable_id=$4, proximo_contacto=$5,

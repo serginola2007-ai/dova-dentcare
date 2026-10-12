@@ -9,6 +9,7 @@ const pagosRepo = require('../pagos/pagos.repository');
 const odontologosRepo = require('../odontologos/odontologos.repository');
 
 const { conCandado } = require('../../config/db');
+const { str } = require('../../utils/texto');
 
 // Claves de candado de agenda: por odontólogo y por sillón en el día.
 function clavesAgenda(clinicaId, { odontologoId, sillonId, fecha }) {
@@ -22,11 +23,11 @@ function clavesAgenda(clinicaId, { odontologoId, sillonId, fecha }) {
 // Datos de horario razonables: fecha real, hora HH:MM y duración de 5 min a 8 h.
 function validarHorario(d, creando) {
   if (d.fecha !== undefined || creando) {
-    const f = String(d.fecha || '').slice(0, 10);
+    const f = str(d.fecha).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || Number.isNaN(Date.parse(f + 'T12:00:00Z'))) throw new ApiError(400, 'Fecha del turno inválida');
   }
   if (d.horaInicio !== undefined || creando) {
-    if (!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(String(d.horaInicio || ''))) throw new ApiError(400, 'Hora del turno inválida (formato HH:MM)');
+    if (!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(str(d.horaInicio))) throw new ApiError(400, 'Hora del turno inválida (formato HH:MM)');
   }
   if (d.duracionMinutos !== undefined && d.duracionMinutos !== null && d.duracionMinutos !== '') {
     const m = Number(d.duracionMinutos);

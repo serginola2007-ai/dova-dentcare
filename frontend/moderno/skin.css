@@ -18,8 +18,27 @@
   --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 12px rgba(0,0,0,0.04);
 }
 
-/* Modo oscuro explícito (toggle manual), independiente de prefers-color-scheme.
-   Colores neutros grises/azulados, no marrón — pedido específico: "moderno". */
+/* Modo oscuro: colores neutros grises/azulados, no marrón — pedido específico: "moderno".
+   Sin elección manual, se sigue al sistema: si el equipo está en modo oscuro,
+   el moderno también (antes quedaba mezclado: fondo claro con acentos oscuros). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cream: #121214;
+    --ink: #F4F4F5;
+    --ink-soft: #A1A1AA;
+    --terracotta: #E08B62;
+    --terracotta-dark: #EDA989;
+    --sage: #8FA189;
+    --sage-dark: #A3B69C;
+    --rust: #F09A90;
+    --border: #2A2A2E;
+    --border-strong: #38383D;
+    --white: #1C1C1F;
+    --shadow-menu: 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 12px rgba(0,0,0,0.2);
+  }
+}
+/* Modo oscuro elegido a mano (botón de la barra). */
 :root[data-theme="dark"] {
   --cream: #121214;
   --ink: #F4F4F5;

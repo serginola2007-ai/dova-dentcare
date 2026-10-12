@@ -4,7 +4,7 @@
    skin en su propio index.html / css; esto solo genera el contenido. */
 
 const Vistas = (() => {
-  function fmtGs(n) { return 'Gs. ' + Math.round(Number(n || 0)).toLocaleString('es-PY'); } // el guaraní no usa decimales
+  function fmtGs(n) { const v = Number(n || 0); return Number.isFinite(v) ? 'Gs. ' + Math.round(v).toLocaleString('es-PY') : '-'; } // el guaraní no usa decimales
   // Un día calendario ('AAAA-MM-DD') se arma en hora LOCAL: new Date('2026-01-05')
   // lo toma como medianoche UTC y en Paraguay (UTC-3) mostraba el 4/1.
   function fmtFecha(f) {
@@ -13,6 +13,8 @@ const Vistas = (() => {
     if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('es-PY');
     return new Date(f).toLocaleDateString('es-PY');
   }
+  // "Hoy" en Paraguay (con toISOString() era el día UTC: después de las 21 h ya daba mañana).
+  function hoyPy() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date()); }
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   function toast(msg, tipo = 'info') {
@@ -630,7 +632,9 @@ const Vistas = (() => {
   function calcularEdad(fechaNacimiento) {
     if (!fechaNacimiento) return null;
     const hoy = new Date();
-    const nac = new Date(fechaNacimiento);
+    // Mediodía local: new Date('2000-05-10') es medianoche UTC y en Paraguay
+    // quedaba en el día anterior (la edad cumplía un día antes).
+    const nac = new Date(`${String(fechaNacimiento).slice(0, 10)}T12:00:00`);
     let edad = hoy.getFullYear() - nac.getFullYear();
     if (hoy.getMonth() < nac.getMonth() || (hoy.getMonth() === nac.getMonth() && hoy.getDate() < nac.getDate())) edad--;
     return edad;
@@ -1024,7 +1028,7 @@ const Vistas = (() => {
 
   // ---------------- AGENDA ----------------
   async function vistaAgenda() {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyPy();
     const turnos = await manejarError(() => DOVA.get(`/agenda?desde=${hoy}&hasta=${hoy}`)).catch(() => []);
     return `
       <h2 class="dova-view-title">Agenda de hoy</h2>
@@ -1186,7 +1190,7 @@ const Vistas = (() => {
     const [paciente, planes, proximaCita] = await Promise.all([
       manejarError(() => DOVA.get(`/pacientes/${pacienteId}`)),
       DOVA.tienePermiso('planes_tratamiento.view') ? manejarError(() => DOVA.get(`/planes-tratamiento/paciente/${pacienteId}`)).catch(() => []) : [],
-      DOVA.tienePermiso('agenda.view') ? manejarError(() => DOVA.get(`/agenda?desde=${new Date().toISOString().slice(0, 10)}&hasta=2100-01-01`)).catch(() => []) : [],
+      DOVA.tienePermiso('agenda.view') ? manejarError(() => DOVA.get(`/agenda?desde=${hoyPy()}&hasta=2100-01-01`)).catch(() => []) : [],
     ]);
     const edad = calcularEdad(paciente.fecha_nacimiento);
     const enCurso = (planes || []).filter((p) => p.estado === 'en_proceso');
@@ -1389,7 +1393,7 @@ const Vistas = (() => {
         <div class="dova-etapas-box">
           <h4>Programar control postoperatorio</h4>
           <form id="form-consulta-control">
-            <label>Fecha del procedimiento</label><input id="ccp-fecha-proc" type="date" value="${new Date().toISOString().slice(0, 10)}" />
+            <label>Fecha del procedimiento</label><input id="ccp-fecha-proc" type="date" value="${hoyPy()}" />
             <label>Fecha del control</label><input id="ccp-fecha-control" type="date" required />
             <label>Observaciones</label><input id="ccp-observaciones" placeholder="Ej: control post extracción pieza 26" />
             <button type="submit" class="dova-btn-primary">Programar control</button>

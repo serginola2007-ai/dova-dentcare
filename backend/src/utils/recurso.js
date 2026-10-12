@@ -34,6 +34,9 @@ function aSnake(s) { return s.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase()); }
 
 function convertir(nombre, def, valor) {
   if (valor === undefined) return undefined;
+  // Un objeto o una lista donde se espera un dato simple se guardaba como
+  // "[object Object]" o se rompía más adelante: se rechaza con un mensaje claro.
+  if (valor !== null && typeof valor === 'object' && def.tipo !== 'json') throw new ApiError(400, `El campo ${nombre} tiene un formato inválido`);
   if (valor === null || valor === '') {
     if (def.requerido) throw new ApiError(400, `El campo ${nombre} es obligatorio`);
     return def.tipo === 'bool' ? false : (def.tipo === 'json' ? {} : null);

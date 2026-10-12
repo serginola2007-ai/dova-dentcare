@@ -8,7 +8,7 @@
 .dova-menu { display: flex; gap: 0; flex: 1; }
 .dova-menu-item { background: none; border: none; border-right: 1px solid rgba(247,243,236,0.15); color: var(--on-dark); padding: 8px 14px; font-size: 13px; font-family: monospace; }
 .dova-menu-item:hover { background: rgba(247,243,236,0.1); }
-.dova-menu-item.activo { background: var(--terracotta); color: #FFFFFF; }
+.dova-menu-item.activo { background: #A5522F; color: #FFFFFF; } /* terracota oscuro fijo: se lee igual en claro y en oscuro */
 .dova-logout { background: none; border: 1px solid rgba(247,243,236,0.3); color: var(--on-dark); font-size: 12px; padding: 6px 10px; border-radius: 2px; }
 .dova-main { padding: 20px; max-width: 1300px; }
 

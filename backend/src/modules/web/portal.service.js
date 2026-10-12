@@ -20,6 +20,7 @@ const { hoyIso } = require('../../utils/recurso');
 const auditoria = require('../../utils/auditoria');
 const correo = require('../../utils/correo');
 const w = require('./web.service');
+const { str } = require('../../utils/texto');
 
 const CLAVE_PORTAL = () => `${env.jwtSecret}|portal-paciente`;
 const AUD = 'portal-paciente';
@@ -388,7 +389,7 @@ async function informarPago(pt, d, archivo) {
   if (!archivo || !archivo.buffer) throw new ApiError(400, 'Adjuntá el comprobante del pago (foto o PDF)');
   const mime = tipoArchivo(archivo.buffer);
   if (!mime) throw new ApiError(400, 'El comprobante tiene que ser una foto (JPG, PNG) o un PDF');
-  let monto = Math.round(Number(String(d.monto || '').replace(/[^\d]/g, '')));
+  let monto = Math.round(Number(str(d.monto).replace(/[^\d]/g, '')));
   let cuotaId = d.cuotaId ? Number(d.cuotaId) : null; let presupuestoId = d.presupuestoId ? Number(d.presupuestoId) : null;
   if (cuotaId) {
     const c = (await query(`SELECT c.id, c.monto, c.estado, pp.presupuesto_id FROM cuotas c JOIN planes_pago pp ON pp.id=c.plan_pago_id WHERE c.id=$1 AND pp.clinica_id=$2 AND pp.paciente_id=$3`, [cuotaId, pt.clinicaId, pt.pacienteId])).rows[0];

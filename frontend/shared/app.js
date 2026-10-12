@@ -391,6 +391,14 @@ const DovaApp = (() => {
   // acá a partir del <thead> de cada tabla, cada vez que se renderiza una vista.
   function aplicarDataThATablas() {
     elMain.querySelectorAll('.dova-tabla').forEach((tabla) => {
+      // Toda tabla ancha se desplaza dentro de su caja en vez de empujar la
+      // pantalla (antes había que acordarse de envolverla a mano en cada vista).
+      if (!tabla.closest('.dova-ext-tabla-wrap, .dova-modal-box') && tabla.parentElement) {
+        const caja = document.createElement('div');
+        caja.className = 'dova-ext-tabla-wrap';
+        tabla.parentElement.insertBefore(caja, tabla);
+        caja.appendChild(tabla);
+      }
       const encabezados = Array.from(tabla.querySelectorAll('thead th')).map((th) => th.textContent.trim());
       if (!encabezados.length) return;
       tabla.querySelectorAll('tbody tr').forEach((fila) => {
@@ -509,8 +517,24 @@ const DovaApp = (() => {
     });
   }
 
+  /* Campos numéricos enteros (importes en Gs., cantidades): en Paraguay se
+     escribe "1.500.000". El navegador tomaba el punto como decimal (1,5) o
+     invalidaba el campo. Acá el punto y la coma de miles simplemente se
+     ignoran al tipear o pegar. Los campos con decimales (mm, kg, °C) no se tocan. */
+  function iniciarCamposEnteros() {
+    const entero = (el) => el && el.tagName === 'INPUT' && el.type === 'number' && !/[.]|any/.test(el.getAttribute('step') || '1');
+    document.addEventListener('keydown', (e) => { if ((e.key === '.' || e.key === ',') && entero(e.target)) e.preventDefault(); }, true);
+    document.addEventListener('paste', (e) => {
+      if (!entero(e.target)) return;
+      const t = (e.clipboardData && e.clipboardData.getData('text')) || '';
+      const limpio = t.replace(/[.,\s]/g, '').replace(/^Gs/i, '');
+      if (limpio !== t) { e.preventDefault(); e.target.value = limpio; e.target.dispatchEvent(new Event('input', { bubbles: true })); }
+    }, true);
+  }
+
   function iniciar({ mainId, menuId, marcaId, loginId, shellId, logoutId }) {
     iniciarEstadosDeCarga();
+    iniciarCamposEnteros();
     elMain = document.getElementById(mainId);
     elMenu = document.getElementById(menuId);
     elMarca = document.getElementById(marcaId);

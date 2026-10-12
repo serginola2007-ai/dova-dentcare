@@ -12,9 +12,10 @@ async function verificarPaciente(clinicaId, pacienteId) {
 
 // ---- Fotos clínicas ----
 const { tipoReal } = require('../../utils/upload');
+const { str } = require('../../utils/texto');
 const CATEGORIAS_FOTO = ['inicial', 'durante', 'final', 'intraoral', 'extraoral', 'frontal', 'lateral', 'oclusal', 'personalizada', 'antes', 'despues'];
 const TIPOS_ESTUDIO = ['radiografia', 'panoramica', 'periapical', 'bitewing', 'tomografia', 'cefalometria', 'laboratorio', 'otro'];
-const txt = (v, max) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim().slice(0, max));
+const txt = (v, max) => (v === undefined || v === null || str(v).trim() === '' ? null : str(v).trim().slice(0, max));
 const fechaOk = (v) => { const f = txt(v, 10); if (f && !/^\d{4}-\d{2}-\d{2}$/.test(f)) throw new ApiError(400, 'Fecha inválida'); return f; };
 function piezaOk(v) {
   const p = txt(v, 10);
@@ -238,7 +239,8 @@ async function obtenerReceta(clinicaId, id) {
 
 async function crearReceta(clinicaId, datos, actor) {
   const pacienteId = Number(datos.pacienteId);
-  const items = (datos.items || []).map((it) => ({
+  if (datos.items !== undefined && !Array.isArray(datos.items)) throw new ApiError(400, 'Indicá el paciente y al menos un medicamento');
+  const items = (datos.items || []).filter((it) => it && typeof it === 'object').map((it) => ({
     medicamento: txt(it.medicamento, 200), concentracion: txt(it.concentracion, 60), presentacion: txt(it.presentacion, 100),
     dosis: txt(it.dosis, 100), frecuencia: txt(it.frecuencia, 100), duracion: txt(it.duracion, 100), via: txt(it.via, 60), indicaciones: txt(it.indicaciones, 500),
   })).filter((it) => it.medicamento);
@@ -326,7 +328,7 @@ async function actualizarLaboratorio(clinicaId, id, datos, actor) {
       throw new ApiError(400, `Estado inválido. Debe ser uno de: ${ESTADOS_LABORATORIO.join(', ')}`);
     }
     campos.estado = datos.estado;
-    if (datos.estado === 'recibido' && !existente.fecha_recepcion) campos.fecha_recepcion = new Date().toISOString().slice(0, 10);
+    if (datos.estado === 'recibido' && !existente.fecha_recepcion) campos.fecha_recepcion = new Intl.DateTimeFormat('en-CA', { timeZone: process.env.DOVA_TZ || 'America/Asuncion' }).format(new Date()); // día de Paraguay, no UTC
   }
   if (datos.fechaEstimada !== undefined) campos.fecha_estimada = datos.fechaEstimada;
   if (datos.costo !== undefined) campos.costo = datos.costo;

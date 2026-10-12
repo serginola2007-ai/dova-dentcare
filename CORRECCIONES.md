@@ -527,3 +527,39 @@ Informe completo en `SECURITY-AUDIT.md` (hallazgo, severidad, archivo, causa, im
   - sesión robada y reutilizada;
   - desbloqueo fallido.
 - Detalle técnico y pruebas en `SECURITY-AUDIT.md` (sección 0) y `SECURITY-TESTS.md`.
+
+## QA completa (octubre 2026): errores encontrados y corregidos
+Se probó todo DOVA como un QA:
+- cada ruta de la API (unos 4.400 pedidos) con datos vacíos, tipos incorrectos, IDs inexistentes, textos enormes y parámetros absurdos;
+- todas las pantallas y pestañas, con los 4 roles, en los 3 diseños, en escritorio, tablet y celular;
+- los formularios mandados vacíos;
+- modo claro y oscuro;
+- la página web y el portal del paciente;
+- más toda la regresión.
+
+**Errores corregidos:**
+- **Importes con punto de miles:** escribir "150.000" en un precio o monto se guardaba como **150 Gs.** (el navegador tomaba el punto como decimal). Ahora el punto y la coma de miles se ignoran al tipear o pegar en los campos en guaraníes. Los campos con decimales (mm, kg, °C) siguen igual.
+- **Barra de arriba en tablet (769 a 1199 px):** el menú se apretaba en una columna y quedaba tapado por la campanita y el buscador, en los 3 diseños. Ahora va en su propia fila.
+- **Moderno con el equipo en modo oscuro:** la pantalla quedaba mezclada (fondo claro con colores del modo oscuro) y con poco contraste. Ahora sigue al sistema.
+- **"Hoy" después de las 21 h:**
+  - la agenda del día, los próximos turnos y la fecha del procedimiento usaban el día UTC y mostraban **mañana**;
+  - pasaba lo mismo con la fecha de recepción de un trabajo de laboratorio.
+
+  Ahora usan el día de Paraguay.
+- **Edad del paciente:** cumplía años un día antes (la fecha de nacimiento se leía en UTC).
+- **Errores 500** con datos mal formados en:
+  - alta y edición de odontólogos;
+  - alta de roles;
+  - recetas;
+  - completar un control periódico con una fecha inválida.
+
+  Ahora responden con un mensaje claro.
+- **Textos guardados como "[object Object]":** notas del paciente, motivos de anulación, facturas, tipos de control y otros campos que aceptaban un objeto en vez de texto. Ahora se rechaza.
+- **Presupuesto con total "NaN":** nunca se guarda un total inválido, la pantalla muestra "-" en vez de "Gs. NaN" y la migración 0045 recalcula los que hubiera.
+- **Tablas anchas en tablet** (por ejemplo, Finanzas → Comisiones) empujaban la pantalla. Ahora toda tabla se desplaza dentro de su propia caja.
+- **Celdas del periodontograma agrandadas** por el cambio de campos compactos de la tanda anterior (la regla tenía demasiada prioridad). Corregido sin perder el tamaño compacto.
+- **Pestañas en el celular:** un leve desvanecido a la derecha avisa que hay más pestañas para deslizar.
+- **Contraste:**
+  - el número rojo de la campanita casi no se leía en modo oscuro;
+  - la opción activa del menú del diseño técnico tenía poco contraste.
+- Verificación: API sin ningún error 500 en 2.664 pedidos de prueba; pantallas, seguridad y regresión completa en verde.

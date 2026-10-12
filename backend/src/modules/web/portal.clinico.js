@@ -8,8 +8,9 @@ const { ApiError } = require('../../middlewares/error.middleware');
 const { hoyIso } = require('../../utils/recurso');
 const auditoria = require('../../utils/auditoria');
 const w = require('./web.service');
+const { str } = require('../../utils/texto');
 
-const txt = (v, n) => { const s = String(v ?? '').trim(); return s ? s.slice(0, n) : null; };
+const txt = (v, n) => { const s = str(v).trim(); return s ? s.slice(0, n) : null; };
 const SIN_VERIFICAR = () => new ApiError(403, 'Para ver tu información clínica, la clínica tiene que confirmar tu identidad: mostrá tu cédula en recepción en tu próxima visita.');
 const exigirVerificado = (pt) => { if (pt.verificado === false) throw SIN_VERIFICAR(); };
 

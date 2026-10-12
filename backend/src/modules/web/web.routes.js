@@ -10,6 +10,7 @@ const multer = require('multer');
 const s = require('./web.service');
 const portal = require('./portal.service');
 const { ApiError } = require('../../middlewares/error.middleware');
+const { str } = require('../../utils/texto');
 
 // Archivos (comprobantes y QR): en memoria, máximo 5 MB, un solo archivo.
 const subir = (campo) => (req, res, next) => multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } }).single(campo)(req, res, (err) => {
@@ -111,7 +112,7 @@ interno.get('/config', requirePermiso('web.configurar', 'web.ver'), h((req) => s
 interno.post('/config/qr', requirePermiso('web.configurar'), subir('qr'), h((req) => s.guardarQr(req.clinicaId, req.file, req.usuario)));
 interno.post('/correo/prueba', requirePermiso('web.configurar'), h(async (req) => {
   const correo = require('../../utils/correo');
-  const para = String((req.body || {}).email || '').trim();
+  const para = str((req.body || {}).email).trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) throw new ApiError(400, 'Escribí un email válido');
   if (!correo.configurado()) throw new ApiError(409, 'El envío de emails no está configurado en el servidor (faltan los datos SMTP).');
   try { await correo.enviar({ para, asunto: 'Prueba de email de la página web', texto: 'Si recibiste esto, el envío de emails funciona.', htmlCuerpo: correo.html('Funciona', ['<p>Si recibiste esto, el envío de emails de la página web funciona.</p>']) }); }

@@ -46,7 +46,7 @@ const DovaExt = (() => {
       case 'textarea': return `<textarea id="${id}" name="${c.k}" rows="${c.filas || 2}" ${req}>${esc(val)}</textarea>`;
       case 'select': return `<select id="${id}" name="${c.k}" ${req}>${c.req ? '' : '<option value="">—</option>'}${(c.opciones || []).map(([o, t]) => `<option value="${esc(o)}" ${String(o) === String(val) ? 'selected' : ''}>${esc(t ?? etiqueta(o))}</option>`).join('')}</select>`;
       case 'bool': return `<label class="dova-ext-check"><input type="checkbox" id="${id}" name="${c.k}" ${val === true ? 'checked' : ''}/> ${esc(c.textoCheck || 'Sí')}</label>`;
-      case 'numero': return `<input type="number" id="${id}" name="${c.k}" value="${esc(val)}" step="${c.paso || 'any'}" ${c.min !== undefined ? `min="${c.min}"` : ''} ${c.max !== undefined ? `max="${c.max}"` : ''} ${req}/>`;
+      case 'numero': return `<input type="number" id="${id}" name="${c.k}" value="${esc(val)}" step="${c.paso || (esMonto(c) ? '1' : 'any')}" ${esMonto(c) ? 'data-monto' : ''} ${c.min !== undefined ? `min="${c.min}"` : ''} ${c.max !== undefined ? `max="${c.max}"` : ''} ${req}/>`;
       case 'fecha': return `<input type="date" id="${id}" name="${c.k}" value="${esc(String(val).slice(0, 10))}" ${req}/>`;
       case 'fechahora': return `<input type="datetime-local" id="${id}" name="${c.k}" value="${esc(val ? new Date(val).toISOString().slice(0, 16) : '')}" ${req}/>`;
       case 'hora': return `<input type="time" id="${id}" name="${c.k}" value="${esc(String(val).slice(0, 5))}" ${req}/>`;
@@ -203,6 +203,10 @@ const DovaExt = (() => {
     }));
     return filas;
   }
+
+  // Importes en guaraníes: enteros. Con step "any", escribir "150.000" se
+  // guardaba como 150 (el punto se tomaba como decimal).
+  function esMonto(c) { return /precio|monto|costo|honorario|entrega|cuota(?!s)|copago|tope|saldo|importe/i.test(c.k) || /\(Gs\.\)/.test(c.label || ''); }
 
   // ---------------- Sub-pestañas ----------------
   // pestanas: [{ id, texto, visible(bool), render(contenedor) }]

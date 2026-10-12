@@ -5,7 +5,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const gs = (n) => `Gs. ${Math.round(n).toLocaleString('es-PY')}`;
+  const gs = (n) => (Number.isFinite(Number(n)) ? `Gs. ${Math.round(Number(n)).toLocaleString('es-PY')}` : '-');
   const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const DIAS_C = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
   const fechaLarga = (iso) => new Intl.DateTimeFormat('es-PY', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`));

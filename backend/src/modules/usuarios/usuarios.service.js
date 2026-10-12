@@ -43,7 +43,7 @@ async function detalleRol(clinicaId, id) {
 }
 
 async function crearRol(clinicaId, { codigo, nombre }) {
-  if (!codigo || !nombre) throw new ApiError(400, 'codigo y nombre son requeridos');
+  if (typeof codigo !== 'string' || typeof nombre !== 'string' || !codigo.trim() || !nombre.trim()) throw new ApiError(400, 'El código y el nombre del rol son obligatorios');
   const codigoNorm = codigo.toLowerCase().trim().replace(/\s+/g, '_');
   if (ROLES_SISTEMA.includes(codigoNorm)) {
     throw new ApiError(409, 'Ese código de rol está reservado para roles de sistema');
