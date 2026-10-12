@@ -9,10 +9,6 @@
   try {
     var sesion = JSON.parse(localStorage.getItem('dova_session') || 'null');
     var pref = sesion && sesion.usuario && sesion.usuario.disenoPreferido;
-    var admin = !!(sesion && sesion.usuario && sesion.usuario.rol === 'admin');
-    // El diseño mecánico es solo para administradores.
-    if (pref === 'mecanico' && !admin) pref = 'moderno';
-    if (!pref && ESTE_TEMA === 'mecanico' && sesion && !admin) pref = 'moderno';
     if (pref && TEMAS_VALIDOS.indexOf(pref) !== -1 && pref !== ESTE_TEMA) {
       var nuevaRuta = location.pathname.replace(new RegExp('/' + ESTE_TEMA + '(/|$)'), '/' + pref + '$1');
       location.replace(nuevaRuta + location.search + location.hash);

@@ -33,7 +33,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
 frontend/           JavaScript puro, sin build
-  moderno/ minimalista/ tecnico/ mecanico/   4 diseños: cada uno es index.html + skin.css (mecanico: solo admin, más shared/mecanico.js)
+  moderno/ minimalista/ tecnico/ mecanico/   4 diseños: cada uno es index.html + skin.css (mecanico: colores de la clínica, para todos, más shared/mecanico.js)
   shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
   web/              página pública + portal del paciente
   sw.js             service worker (precache con VERSION)

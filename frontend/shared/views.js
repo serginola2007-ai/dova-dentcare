@@ -45,7 +45,7 @@ const Vistas = (() => {
     { id: 'moderno', nombre: 'Moderno', desc: 'Una interfaz actual, visual y dinámica, pensada para una experiencia moderna.' },
     { id: 'minimalista', nombre: 'Minimalista', desc: 'Una interfaz limpia, simple y ordenada, enfocada en facilitar el trabajo diario.' },
     { id: 'tecnico', nombre: 'Técnico', desc: 'Una interfaz orientada a información, control y gestión detallada.' },
-    { id: 'mecanico', nombre: 'Mecánico', desc: 'Estilo de sistema de escritorio clásico: menú en mayúsculas, íconos a la izquierda y parámetros activos a la vista. Solo administradores.', soloAdmin: true },
+    { id: 'mecanico', nombre: 'Mecánico', desc: 'Estilo de sistema de escritorio clásico con los colores de la clínica: menú en mayúsculas, íconos a la izquierda y parámetros activos a la vista.' },
   ];
   // Diseños que puede elegir el usuario actual (el mecánico, solo un admin; en el login, nunca).
   const disenosPara = (usuario) => DISENOS.filter((d) => !d.soloAdmin || (usuario && usuario.rol === 'admin'));

@@ -29,8 +29,8 @@ async function codigosValidos(codigos) {
 
 const ROLES_SISTEMA = ['admin', 'odontologo', 'recepcion', 'asistente', 'helpdesk'];
 const DISENOS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
-// Diseños que solo puede elegir un administrador.
-const DISENOS_SOLO_ADMIN = ['mecanico'];
+// Diseños reservados a administradores (hoy ninguno: el mecánico es para todos).
+const DISENOS_SOLO_ADMIN = [];
 
 // ---- Roles ----
 async function listarRoles(clinicaId) {

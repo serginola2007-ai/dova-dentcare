@@ -681,3 +681,14 @@ Se probó todo DOVA como un QA:
 - Cada paso tiene "Ir", que lleva directo a la pantalla donde se carga.
 - La lista desaparece sola al completar los pasos, o con "Ocultar" (se vuelve a mostrar desde Datos de la clínica).
 - Pruebas: `tests/puesta-en-marcha.test.js` (24/24: API, escritorio y celular). Regresión: menú 75/75, responsive 78/78, tablet, mecánico 26/26. Seguridad: 540 rutas sin anomalías, permisos 65/65, multiclínica 23/23.
+
+## Diseño Mecánico: colores de la clínica y para todos
+
+- Mismo diseño (menú en mayúsculas, íconos a la izquierda, ventanas con barra de título, Parámetros activos, Ventanas recientes, barra de estado), ahora con los colores de DentCareRC:
+  - área de trabajo terracota;
+  - barras y biseles en crema;
+  - títulos en terracota profundo;
+  - verde salvia para lo que está bien.
+- **Lo puede elegir cualquier usuario**, en el login o en Configuración → Apariencia. Cada uno ve en la tira de íconos solo las secciones que tiene permitidas.
+- Los 4 diseños se muestran en una grilla de 2 × 2 (4 en fila en Configuración en pantallas anchas).
+- Pruebas: `tests/ui-mecanico.js` 27/27 (admin y recepción; escritorio, tablet y celular). Regresión: menú 75/75, responsive 78/78, primer ingreso, PWA.

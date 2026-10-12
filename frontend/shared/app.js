@@ -55,8 +55,6 @@ const DovaApp = (() => {
   // diseño significa navegar a la carpeta hermana correspondiente — la
   // sesión (localStorage) es la misma para las 3, así que no se pierde.
   const TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
-  // "mecanico" es solo para administradores (el servidor también lo controla).
-  const esAdmin = () => ((DOVA.usuarioActual() || {}).rol === 'admin');
 
   function normalizarTema(t) {
     return TEMAS_VALIDOS.includes(t) ? t : null;
@@ -416,7 +414,6 @@ const DovaApp = (() => {
     // Permisos al día (p. ej. un módulo nuevo como Facturación) sin pedir que se vuelva a iniciar sesión.
     if (DOVA.actualizarSesion) await DOVA.actualizarSesion();
     if (!DOVA.estaAutenticado()) { location.reload(); return; }
-    if (temaActual() === 'mecanico' && !esAdmin()) { irATema('moderno'); return; }
     elLogin.style.display = 'none';
     elShell.style.display = '';
     renderMenu();

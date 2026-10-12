@@ -1,4 +1,4 @@
-/* Diseño MECÁNICO (solo administradores): estilo de sistema de escritorio
+/* Diseño MECÁNICO (para todos, con los colores de la clínica): estilo de sistema de escritorio
    clásico. Este archivo arma lo que es propio de este diseño:
    - la tira de íconos de la izquierda (accesos rápidos a las secciones que el usuario puede ver);
    - el recuadro "Parámetros activos" (usuario, clínica, caja, fecha y reloj);
