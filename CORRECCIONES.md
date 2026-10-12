@@ -641,3 +641,24 @@ Se probó todo DOVA como un QA:
   - si un no-admin abre `/mecanico/`, lo manda a su diseño.
 - En tablet se oculta la columna de parámetros; en el celular, también la tira de íconos (queda el menú ☰).
 - Pruebas: `tests/ui-mecanico.js` (26/26: API, escritorio, tablet, celular, recepción). Regresión de los otros diseños: menú, submenú, tablet, PWA, responsive y vínculos en verde.
+
+## Importar pacientes desde Excel o CSV
+
+- **Pacientes → "Importar desde Excel"** sirve para empezar con los pacientes que la clínica ya tiene en otra planilla o sistema.
+- **Paso 1, revisar (no guarda nada).** DOVA muestra:
+  - qué columna reconoció como qué dato: entiende los títulos más comunes, como "Nombres", "Cédula", "Celular", "Correo", "F. Nac." o "Nombre completo";
+  - cuántos pacientes son nuevos y cuántos ya están;
+  - las filas con errores, con su número de fila de Excel (falta el apellido, fecha imposible, email inválido, C.I. repetida en la planilla);
+  - una muestra de cómo se van a cargar.
+- **Paso 2, importar.** Todo en una sola operación: si algo falla, no queda nada a medias.
+  - Si la C.I. ya existe, por defecto no se toca.
+  - Opción "completar solo los datos que le faltan": nunca pisa lo ya cargado y pide permiso de editar pacientes.
+- Acepta:
+  - Excel .xlsx con fechas de Excel, día/mes/año y años de 2 cifras;
+  - CSV de Excel en Windows (punto y coma y acentos) o UTF-8.
+  - C.I. con puntos: se guarda sin puntos.
+  - "Apellido, Nombre" o "Nombre Apellido" en una sola columna.
+- **Límites:** hasta 5 MB y 5000 pacientes por archivo; una importación por clínica a la vez.
+  - El formato .xls viejo se rechaza explicando cómo guardarlo como .xlsx.
+- Planilla modelo descargable. Queda en el historial de cambios quién importó, el archivo y los totales.
+- Pruebas: `tests/importar-pacientes.test.js` (37/37) y `tests/ui-importar-pacientes.js` (16/16, escritorio y celular). Barrido de seguridad: 538 rutas, 0 anomalías.

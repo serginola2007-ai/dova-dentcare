@@ -271,3 +271,19 @@ body.dova-firmando #shell-root { visibility: hidden; }
 .dova-firma-gracias { text-align: center; padding: 18vh 0; }
 .dova-firma-gracias h2 { font-size: 28px; }
 @media (max-width: 600px) { .dova-firma-resp { grid-template-columns: 1fr; } }
+
+/* ---------- Importar pacientes ---------- */
+.dova-imp-dup { border: 0; padding: 0; margin: 4px 0 8px; }
+.dova-imp-dup legend { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.dova-imp-revision { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 8px; }
+.dova-imp-cifras { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 8px 0; }
+.dova-imp-cifras > div { padding: 8px 10px; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+.dova-imp-cifras > div:first-child { border-left: 0; }
+.dova-imp-cifras strong { font-size: 20px; }
+.dova-imp-cifras span { font-size: 12px; color: var(--ink-soft); }
+.dova-imp-mal strong { color: var(--rust); }
+.dova-imp-lista { max-height: 180px; overflow-y: auto; margin: 4px 0 8px; padding-left: 18px; font-size: 13px; }
+.dova-imp details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+@media (max-width: 600px) { .dova-imp-cifras { grid-template-columns: repeat(2, 1fr); } .dova-imp-cifras > div:nth-child(3) { border-left: 0; } }
+.dova-modal-box:has(.dova-imp) { max-width: 860px; width: calc(100% - 32px); }
+@media (min-width: 769px) { .dova-imp-tabla { overflow-x: auto; } }

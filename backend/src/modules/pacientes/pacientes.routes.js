@@ -10,6 +10,8 @@ const {
 const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
 
+// Importar desde Excel/CSV (antes de '/:id').
+router.use('/', require('./pacientes.importar'));
 router.get('/', requirePermiso('pacientes.view'), listarPacientesValidators, controller.listar);
 router.get('/:id', requirePermiso('pacientes.view'), controller.obtener);
 router.post('/', requirePermiso('pacientes.create'), crearPacienteValidators, controller.crear);

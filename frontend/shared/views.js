@@ -488,6 +488,7 @@ const Vistas = (() => {
       <div class="dova-toolbar">
         <input id="pacientes-buscar" type="search" placeholder="Buscar por nombre o C.I..." class="dova-input-buscar" autocomplete="off" />
         ${puedeBorrar ? '<button id="btn-ver-eliminados" class="dova-btn-secundario" aria-pressed="false">Ver eliminados</button>' : ''}
+        ${DOVA.tienePermiso('pacientes.create') && window.DovaImportar ? '<button id="btn-importar-pacientes" class="dova-btn-secundario" type="button">Importar desde Excel</button>' : ''}
         ${DOVA.tienePermiso('pacientes.create') ? '<button id="btn-nuevo-paciente" class="dova-btn-primary">+ Nuevo paciente</button>' : ''}
       </div>
       <p class="dova-nota" id="pacientes-aviso" hidden></p>
@@ -574,6 +575,7 @@ const Vistas = (() => {
       aviso.hidden = !eliminados;
       aviso.textContent = 'Pacientes eliminados: no aparecen en la agenda ni en los buscadores. "Restaurar" los vuelve a activar con toda su historia.';
       const nuevoBtn = document.getElementById('btn-nuevo-paciente'); if (nuevoBtn) nuevoBtn.hidden = eliminados;
+      if (btnImp) btnImp.hidden = eliminados;
       cargar();
     });
     tbody.addEventListener('click', async (ev) => {
@@ -587,6 +589,8 @@ const Vistas = (() => {
         try { await DOVA.post(`/pacientes/${res.dataset.restaurarPaciente}/restaurar`, {}); toast('Paciente restaurado', 'ok'); cargar(); } catch (e) { toast(e.message, 'error'); res.disabled = false; }
       }
     });
+    const btnImp = document.getElementById('btn-importar-pacientes');
+    if (btnImp) btnImp.addEventListener('click', () => DovaImportar.abrir(cargar));
     const btnNuevo = document.getElementById('btn-nuevo-paciente');
     if (btnNuevo) {
       btnNuevo.addEventListener('click', () => {
