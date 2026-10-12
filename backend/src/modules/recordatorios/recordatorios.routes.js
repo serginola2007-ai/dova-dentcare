@@ -14,9 +14,15 @@ const interno = express.Router();
 interno.use(authMiddleware, resolverClinicaMiddleware);
 interno.get('/config', requirePermiso('agenda.view'), h((req) => s.configuracion(req.clinicaId)));
 interno.put('/config', requirePermiso('agenda.config', 'clinica.config.manage'), h((req) => s.guardarConfiguracion(req.clinicaId, req.body || {}, req.usuario)));
-interno.get('/turnos', requirePermiso('agenda.view'), h((req) => s.listar(req.clinicaId, req.query.fecha)));
-interno.post('/turnos/:id/enviar', requirePermiso('agenda.edit', 'whatsapp.send'), h((req) => s.enviarAhora(req.clinicaId, req.params.id, req.usuario)));
-interno.post('/turnos/:id/enlace', requirePermiso('agenda.edit', 'whatsapp.send'), h((req) => s.enlaceManual(req.clinicaId, req.params.id, req.usuario)));
+interno.get('/turnos', requirePermiso('agenda.view', 'recordatorios.propios'), h((req) => s.listar(req.clinicaId, req.query.fecha, req.usuario, { soloMios: req.query.mios === '1' })));
+// Odontólogos con "recordatorios.propios": solo sus turnos (se controla en el servicio).
+interno.post('/turnos/:id/enviar', requirePermiso('agenda.edit', 'whatsapp.send', 'recordatorios.propios'), h((req) => s.enviarAhora(req.clinicaId, req.params.id, req.usuario)));
+interno.post('/turnos/:id/enlace', requirePermiso('agenda.edit', 'whatsapp.send', 'recordatorios.propios'), h((req) => s.enlaceManual(req.clinicaId, req.params.id, req.usuario)));
+// WhatsApp de cada odontólogo: lo registra el propio doctor; el número conectado a Meta lo carga quien configura.
+interno.get('/remitentes', requirePermiso('agenda.config', 'clinica.config.manage'), h((req) => s.remitentes(req.clinicaId)));
+interno.put('/remitentes/:odontologoId', requirePermiso('agenda.config', 'clinica.config.manage'), h((req) => s.guardarRemitente(req.clinicaId, req.params.odontologoId, req.body || {}, req.usuario)));
+interno.get('/mi-whatsapp', requirePermiso('recordatorios.propios', 'agenda.config'), h((req) => s.miWhatsapp(req.clinicaId, req.usuario)));
+interno.put('/mi-whatsapp', requirePermiso('recordatorios.propios', 'agenda.config'), h((req) => s.guardarMiWhatsapp(req.clinicaId, req.usuario, req.body || {})));
 
 // ---- Disparo programado (cron externo; el servidor gratuito de Render se duerme) ----
 // POST /api/recordatorios/cron con la cabecera X-DOVA-CRON = CRON_SECRET.

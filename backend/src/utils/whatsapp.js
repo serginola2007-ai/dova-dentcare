@@ -25,13 +25,15 @@ function configurado() { const c = cfg(); return !!(c.token && c.numeroId); }
 
 /* Envía la plantilla con sus valores ({{1}}, {{2}}…). Devuelve el id del
    mensaje que da Meta (sirve para seguir si se entregó y se leyó). */
-async function enviarPlantilla(telefono, valores) {
+async function enviarPlantilla(telefono, valores, { numeroId } = {}) {
   const c = cfg();
   if (!configurado()) throw new Error('WhatsApp no está configurado');
+  // Número que envía: el del odontólogo (si está conectado) o el de la clínica.
+  const desde = numeroId && /^\d{5,30}$/.test(String(numeroId)) ? String(numeroId) : c.numeroId;
   const ctrl = new AbortController();
   const corte = setTimeout(() => ctrl.abort(), 15000);
   try {
-    const r = await fetch(`${c.base}/${encodeURIComponent(c.numeroId)}/messages`, {
+    const r = await fetch(`${c.base}/${encodeURIComponent(desde)}/messages`, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { authorization: `Bearer ${c.token}`, 'content-type': 'application/json' },

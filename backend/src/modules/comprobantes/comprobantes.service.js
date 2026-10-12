@@ -35,7 +35,10 @@ async function consentimiento(clinicaId, id, res) {
     clinicaRepo.findById(clinicaId),
     pacientesRepo.obtenerPorId(clinicaId, consentimientoRow.paciente_id),
   ]);
-  pdf.comprobanteConsentimiento(res, { clinica, consentimiento: consentimientoRow, paciente });
+  const { query } = require('../../config/db');
+  const testigo = consentimientoRow.testigo_usuario_id ? (await query('SELECT nombre FROM usuarios WHERE id=$1', [consentimientoRow.testigo_usuario_id])).rows[0] : null;
+  const verificado = require('../clinico-extras/extras.service').verificarConsentimiento(consentimientoRow);
+  pdf.comprobanteConsentimiento(res, { clinica, consentimiento: consentimientoRow, paciente, testigo: testigo && testigo.nombre, verificado });
 }
 
 async function planTratamiento(clinicaId, id, res) {

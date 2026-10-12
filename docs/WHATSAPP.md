@@ -78,3 +78,21 @@ DOVA los manda solo, a la hora elegida, el día anterior (o 2 o 3 días antes). 
 - Si un envío falla, la recepción recibe un aviso. En la lista aparece **No se pudo enviar** con el motivo y el botón **Reintentar**; también se puede mandar a mano.
 - El enlace del mensaje vale hasta el día siguiente al turno. Solo se guarda su huella: con la base de datos no se pueden reconstruir los enlaces.
 - La firma de cada aviso de Meta se verifica con `WHATSAPP_APP_SECRET`. Un aviso sin firma válida se rechaza.
+
+## Recordatorios desde el número de cada odontólogo
+
+Cada doctor puede registrar su celular en **Configuración → Mi WhatsApp para recordatorios**. Con eso:
+
+- **Sin conectar nada más:** en Seguimiento → Recordatorios el doctor ve solo los turnos de sus pacientes y, con "Mandar por mi WhatsApp", el mensaje (ya armado, con el enlace para confirmar) sale de su celular.
+- **Para que los automáticos salgan de su número:**
+  1. En Meta (WhatsApp Manager de la misma cuenta de la clínica) → *Agregar número de teléfono* → cargar el número del doctor y verificarlo con el código SMS.
+     - Si ese número ya usa la app WhatsApp Business, Meta ofrece conectarlo en modo "coexistencia" (sigue usando la app en el celular).
+     - Si usa WhatsApp común, hay que pasarlo a WhatsApp Business primero.
+  2. Copiar el **Phone number ID** que muestra Meta para ese número.
+  3. En DOVA, quien tenga permiso de configuración: Seguimiento → Recordatorios → *WhatsApp de cada odontólogo* → pegar el ID, marcar **Enviar desde su número** y Guardar.
+  4. La plantilla `recordatorio_turno` es de la cuenta, así que sirve para todos los números. No hace falta otro token.
+
+Reglas:
+- Si el doctor cambia su número, DOVA deja de enviar desde el número viejo (vuelve al de la clínica) hasta que se cargue el ID nuevo.
+- Cada envío guarda de qué número salió (columna "Sale de").
+- Un doctor solo puede mandar recordatorios de sus propios turnos (permiso `recordatorios.propios`); recepción y administración, de todos.

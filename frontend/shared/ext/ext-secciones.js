@@ -47,7 +47,7 @@ const DovaSecciones = (() => {
       { id: 'observacion', texto: 'Piezas en observación', render: subObservacion },
       { id: 'sinturno', texto: 'Tratamientos sin turno', visible: puede('planes_tratamiento.view', 'seguimiento.view'), render: subSinTurno },
       { id: 'presupuestos', texto: 'Presupuestos sin respuesta', visible: puede('presupuestos.view'), render: subPresupuestos },
-      { id: 'recordatorios', texto: 'Recordatorios de turnos', visible: puede('agenda.view'), render: subRecordatorios },
+      { id: 'recordatorios', texto: 'Recordatorios de turnos', visible: puede('agenda.view', 'recordatorios.propios'), render: subRecordatorios },
       { id: 'reactivacion', texto: 'Pacientes que no volvieron', render: subReactivacion },
       { id: 'cumpleanos', texto: 'Cumpleaños', render: subCumpleanos },
       { id: 'tareas', texto: 'Tareas', visible: puede('tareas.manage'), render: subTareas },
@@ -231,7 +231,9 @@ const DovaSecciones = (() => {
   const ESTADO_ENVIO = { enviando: ['Enviando…', 'info'], enviado: ['Enviado', 'info'], entregado: ['Entregado', 'info'], leido: ['Leído', 'ok'], respondido: ['Respondió', 'ok'], fallo: ['No se pudo enviar', 'critica'] };
   async function subRecordatorios(c) {
     const puedeCfg = puede('agenda.config', 'clinica.config.manage');
-    const puedeEnviar = puede('agenda.edit', 'whatsapp.send');
+    const puedeEnviar = puede('agenda.edit', 'whatsapp.send', 'recordatorios.propios');
+    const yo = DOVA.usuarioActual() || {};
+    const veTodos = puede('agenda.edit', 'whatsapp.send');
     let cfg = await DOVA.get('/recordatorios/config');
     const horas = Array.from({ length: 16 }, (_, i) => i + 6);
     const dibujarCfg = () => `
@@ -249,9 +251,31 @@ const DovaSecciones = (() => {
         </form>
         <p class="dova-nota">Así le llega al paciente:</p><blockquote class="dova-rec-ejemplo">${esc(cfg.ejemplo)}</blockquote>
         ${cfg.whatsappConectado ? '' : '<p class="dova-nota">Para que se manden solos hace falta conectar WhatsApp Business (una sola vez). Los pasos están en <code>docs/WHATSAPP.md</code>.</p>'}
-      </details>` : ''}`;
+      </details>
+      <details class="dova-rec-config" data-remitentes><summary>WhatsApp de cada odontólogo</summary><div data-rem-l><p class="dova-cargando">Cargando…</p></div></details>` : ''}`;
     c.innerHTML = `<div data-cfgbox>${dibujarCfg()}</div>
-      <form class="dova-ext-filtros" data-f><div><label>Turnos del día</label><input type="date" name="fecha" value="${X.sumarDias(X.hoy(), cfg.dias || 1)}"/></div><button class="dova-btn-secundario">Ver</button><span data-masivo></span></form><div data-l></div>`;
+      <form class="dova-ext-filtros" data-f><div><label>Turnos del día</label><input type="date" name="fecha" value="${X.sumarDias(X.hoy(), cfg.dias || 1)}"/></div>${veTodos && yo.odontologoId ? '<label class="dova-check"><input type="checkbox" name="mios" /> Solo mis pacientes</label>' : ''}<button class="dova-btn-secundario">Ver</button><span data-masivo></span></form><div data-l></div>`;
+    // WhatsApp de cada odontólogo (quien configura): número, id de Meta y si sus recordatorios salen de su número.
+    const cargarRemitentes = async () => {
+      const box = c.querySelector('[data-rem-l]'); if (!box) return;
+      const r = await DOVA.get('/recordatorios/remitentes');
+      box.innerHTML = `<p class="dova-nota">Cada doctor puede registrar su celular en Configuración → Mi WhatsApp. Para que los recordatorios automáticos de sus pacientes salgan de su número, ese número se conecta a WhatsApp Business en Meta y acá se carga el "Phone number ID" que da Meta. Sin eso, salen del número de la clínica.</p>
+        <table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Celular</th><th>Phone number ID (Meta)</th><th>Enviar desde su número</th><th></th></tr></thead><tbody>
+        ${r.odontologos.map((o) => `<tr data-odo="${o.id}"><td>${esc(o.nombre)}${o.usuario ? '' : ' <span class="dova-nota">(sin usuario)</span>'}</td>
+          <td><input type="tel" name="numero" value="${esc(o.whatsapp_numero || '')}" placeholder="0981 123 456" maxlength="30"/></td>
+          <td><input type="text" name="phoneId" value="${esc(o.whatsapp_phone_id || '')}" inputmode="numeric" maxlength="30" placeholder="Solo si está conectado"/></td>
+          <td><label class="dova-check"><input type="checkbox" name="envia" ${o.whatsapp_envia ? 'checked' : ''}/> Sí</label></td>
+          <td><button type="button" class="dova-btn-secundario" data-guardar-rem>Guardar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay odontólogos activos.</td></tr>'}</tbody></table>`;
+      box.querySelectorAll('[data-guardar-rem]').forEach((b) => b.addEventListener('click', async () => {
+        const tr = b.closest('tr');
+        try {
+          await DOVA.put(`/recordatorios/remitentes/${tr.dataset.odo}`, { numero: tr.querySelector('[name=numero]').value.trim() || null, phoneId: tr.querySelector('[name=phoneId]').value.trim() || null, envia: tr.querySelector('[name=envia]').checked });
+          X.toast('Guardado', 'ok');
+        } catch (ex) { X.toast(ex.message, 'error'); cargarRemitentes(); }
+      }));
+    };
+    // "toggle" no burbujea: se escucha en captura para que siga andando cuando se redibuja la configuración.
+    c.addEventListener('toggle', (e) => { if (e.target.matches && e.target.matches('[data-remitentes]') && e.target.open) cargarRemitentes(); }, true);
     const enlazarCfg = () => {
       const fc = c.querySelector('[data-cfg]');
       if (fc) fc.addEventListener('submit', async (e) => {
@@ -262,11 +286,11 @@ const DovaSecciones = (() => {
     enlazarCfg();
     const f = c.querySelector('[data-f]'); const l = c.querySelector('[data-l]');
     const cargar = async () => {
-      const r = await DOVA.get(`/recordatorios/turnos?fecha=${f.fecha.value}`);
+      const r = await DOVA.get(`/recordatorios/turnos?fecha=${f.fecha.value}${f.mios && f.mios.checked ? '&mios=1' : ''}`);
       const pendientes = r.turnos.filter((t) => !t.noEnviable && (!t.envio || t.envio.estado === 'fallo') && t.confirmacion !== 'confirmado');
       c.querySelector('[data-masivo]').innerHTML = r.whatsappConectado && puedeEnviar && pendientes.length ? `<button type="button" class="dova-btn-primary" data-todos>Enviar ${pendientes.length} pendiente${pendientes.length === 1 ? '' : 's'}</button>` : '';
-      l.innerHTML = `<p class="dova-nota">El mensaje trae un enlace para que el paciente confirme o cancele con un toque; cuando lo hace, se actualiza solo acá y en la agenda.</p>
-        <table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Recordatorio</th><th>Confirmación</th><th></th></tr></thead><tbody>
+      l.innerHTML = `<p class="dova-nota">El mensaje trae un enlace para que el paciente confirme o cancele con un toque; cuando lo hace, se actualiza solo acá y en la agenda.${r.soloMios && !veTodos ? ' Ves los turnos de tus pacientes: abrí "Mandar por mi WhatsApp" desde tu celular para que salgan de tu número.' : ''}</p>
+        <table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Sale de</th><th>Recordatorio</th><th>Confirmación</th><th></th></tr></thead><tbody>
         ${r.turnos.map((t) => {
           const e = t.envio ? ESTADO_ENVIO[t.envio.estado] || [t.envio.estado, 'info'] : null;
           const estadoEnvio = t.noEnviable ? `<span class="dova-nota">${esc(t.noEnviable)}</span>`
@@ -277,14 +301,14 @@ const DovaSecciones = (() => {
             if (r.whatsappConectado && (!t.envio || t.envio.estado === 'fallo')) acciones.push(`<button class="dova-btn-link" data-enviar="${t.id}">${t.envio ? 'Reintentar' : 'Enviar'}</button>`);
             acciones.push(`<button class="dova-btn-link dova-link-wa" data-manual="${t.id}">${t.envio ? 'Reenviar por mi WhatsApp' : 'Mandar por mi WhatsApp'}</button>`);
           }
-          if (puede('agenda.edit')) {
+          if (puede('agenda.edit') && veTodos) {
             if (t.confirmacion !== 'confirmado') acciones.push(`<button class="dova-btn-link" data-conf="${t.id}">Confirmó</button>`);
             if (t.confirmacion !== 'pide_reprogramar') acciones.push(`<button class="dova-btn-link" data-reprog="${t.id}">Pide reprogramar</button>`);
           }
-          return `<tr><td>${esc(t.hora)}</td><td>${linkPac(t.paciente_id, t.nombre, t.apellido)}</td><td>${esc(t.odontologo_nombre || '-')}</td><td>${estadoEnvio}</td>
+          return `<tr><td>${esc(t.hora)}</td><td>${linkPac(t.paciente_id, t.nombre, t.apellido)}</td><td>${esc(t.odontologo_nombre || '-')}</td><td><span class="dova-nota">${esc(t.remitente || '')}</span></td><td>${estadoEnvio}</td>
             <td>${badge(etiqueta(t.confirmacion), t.confirmacion === 'confirmado' ? 'ok' : t.confirmacion === 'pide_reprogramar' ? 'critica' : 'atencion')}</td>
             <td class="dova-ext-acciones">${acciones.join('')}</td></tr>`;
-        }).join('') || '<tr><td colspan="6">No hay turnos ese día.</td></tr>'}</tbody></table>`;
+        }).join('') || '<tr><td colspan="7">No hay turnos ese día.</td></tr>'}</tbody></table>`;
       l.querySelectorAll('[data-enviar]').forEach((b) => b.addEventListener('click', async () => {
         try { await DOVA.post(`/recordatorios/turnos/${b.dataset.enviar}/enviar`); X.toast('Recordatorio enviado', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
         cargar();
@@ -892,7 +916,30 @@ const DovaSecciones = (() => {
   }
 
   // Configuración: tipos de recall y qué tratamiento dispara cada uno.
+  // Mi WhatsApp: cada odontólogo registra su celular para los recordatorios de sus pacientes.
+  async function tarjetaMiWhatsapp(elMain) {
+    const yo = DOVA.usuarioActual() || {};
+    if (!yo.odontologoId || !puede('recordatorios.propios', 'agenda.config')) return;
+    let m; try { m = await DOVA.get('/recordatorios/mi-whatsapp'); } catch (_e) { return; }
+    const cont = document.createElement('section');
+    cont.className = 'dova-mi-whatsapp';
+    const pintar = () => {
+      const estado = m.whatsapp_envia ? 'Los recordatorios automáticos de tus pacientes salen de tu número.'
+        : (m.whatsapp_numero ? 'Con este número podés mandar los recordatorios desde tu celular ("Mandar por mi WhatsApp"). Para que los automáticos salgan de tu número, pedile a la administración que lo conecte a WhatsApp Business.' : 'Todavía no registraste tu número: los recordatorios salen del número de la clínica.');
+      cont.innerHTML = `<h2 class="dova-view-title" style="margin-top:32px">Mi WhatsApp para recordatorios</h2>
+        <p class="dova-nota">${esc(estado)}</p>
+        <form class="dova-ext-filtros" data-mi-wa><div><label for="mi-wa-numero">Mi celular</label><input id="mi-wa-numero" type="tel" name="numero" maxlength="30" placeholder="0981 123 456" value="${esc(m.whatsapp_numero || '')}"/></div><button class="dova-btn-primario">Guardar</button></form>`;
+      cont.querySelector('[data-mi-wa]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try { m = { ...m, ...(await DOVA.put('/recordatorios/mi-whatsapp', { numero: e.target.numero.value.trim() || null })) }; X.toast('Número guardado', 'ok'); pintar(); } catch (ex) { X.toast(ex.message, 'error'); }
+      });
+    };
+    pintar();
+    elMain.appendChild(cont);
+  }
+
   async function extenderConfiguracion(elMain) {
+    await tarjetaMiWhatsapp(elMain);
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
     cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';

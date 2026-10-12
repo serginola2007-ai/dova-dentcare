@@ -25,7 +25,7 @@ const DovaApp = (() => {
       subs: [['tablero', 'Resumen', ['facturacion.ver', 'facturacion.ver_propias']], ['facturas', 'Facturas', ['facturacion.ver', 'facturacion.ver_propias']], ['nueva', 'Nueva factura', 'facturacion.crear'], ['reportes', 'Reportes', 'facturacion.ver_reportes'], ['config', 'Configuración', 'facturacion.configurar']] },
     { grupo: 'movimientos', ruta: 'seguimiento', label: 'Seguimiento', permiso: ['seguimiento.view', 'recalls.view', 'seguimiento.manage'],
       subs: [['bandeja', 'Para contactar'], ['recalls', 'Controles periódicos', ['recalls.view', 'recalls.manage']], ['controles', 'Controles después de un tratamiento'], ['observacion', 'Piezas en observación'],
-        ['sinturno', 'Tratamientos sin turno', ['planes_tratamiento.view', 'seguimiento.view']], ['presupuestos', 'Presupuestos sin respuesta', 'presupuestos.view'], ['recordatorios', 'Recordatorios de turnos', 'agenda.view'],
+        ['sinturno', 'Tratamientos sin turno', ['planes_tratamiento.view', 'seguimiento.view']], ['presupuestos', 'Presupuestos sin respuesta', 'presupuestos.view'], ['recordatorios', 'Recordatorios de turnos', ['agenda.view', 'recordatorios.propios']],
         ['reactivacion', 'Pacientes que no volvieron'], ['cumpleanos', 'Cumpleaños'], ['tareas', 'Tareas', 'tareas.manage'], ['biopsias', 'Biopsias', ['especialidades.edit', 'pacientes.clinical.view']], ['comunicaciones', 'Llamadas y mensajes']] },
     { grupo: 'movimientos', ruta: 'web', label: 'Página web', permiso: ['web.ver', 'web.configurar'],
       subs: [['solicitudes', 'Lo que llegó', ['web.ver', 'web.configurar']], ['pagos', 'Pagos para revisar', 'web.ver'], ['accesos', 'Cuentas de pacientes', 'web.ver'], ['config', 'Configurar la página', 'web.configurar']] },

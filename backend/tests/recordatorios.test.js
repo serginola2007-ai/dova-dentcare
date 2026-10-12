@@ -33,7 +33,7 @@ const meta = http.createServer((rq, rs) => {
 (async () => {
   await new Promise((ok) => meta.listen(4600, ok));
   await db.query("DELETE FROM pacientes WHERE apellido='Recordatorio' AND ci LIKE 'RC%'");
-  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false WHERE username IN ('admin','recep1','sinperm')");
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false WHERE username IN ('admin','recep1','sinperm','odo1','odo2')");
   const A = (await req('POST', '/auth/login', { username: 'admin', password: 'admin' })).j.accessToken;
   const R = (await req('POST', '/auth/login', { username: 'recep1', password: 'clave123' })).j.accessToken;
   const S = (await req('POST', '/auth/login', { username: 'sinperm', password: 'Clave1234!' })).j.accessToken;
@@ -161,7 +161,48 @@ const meta = http.createServer((rq, rs) => {
   P('Una segunda pasada no manda nada', r.j.enviados === 0, r.j);
   await req('PUT', '/recordatorios/config', { automatico: false, hora: 10, dias: 1 }, A);
 
+  // ---------- WhatsApp de cada odontólogo ----------
+  const O1 = (await req('POST', '/auth/login', { username: 'odo1', password: 'clave123' })).j.accessToken;
+  const O2 = (await req('POST', '/auth/login', { username: 'odo2', password: 'clave123' })).j.accessToken;
+  await db.query('UPDATE odontologos SET whatsapp_numero=NULL, whatsapp_phone_id=NULL, whatsapp_envia=false WHERE id=$1', [odo]);
+  const p10 = await pac('Juli', `0971${suf}`.slice(0, 10)); const t10 = await turno(p10, '10:00');
+  r = await req('GET', '/recordatorios/mi-whatsapp', null, O1);
+  P('Mi WhatsApp: el doctor ve su configuración', r.s === 200 && r.j.id === odo && r.j.whatsapp_numero === null, r.j);
+  P('…número inválido: 400', (await req('PUT', '/recordatorios/mi-whatsapp', { numero: 'abc' }, O1)).s === 400);
+  P('…sin permiso: 403', (await req('PUT', '/recordatorios/mi-whatsapp', { numero: '0981 111 222' }, S)).s === 403);
+  r = await req('PUT', '/recordatorios/mi-whatsapp', { numero: '0981 111 222' }, O1);
+  P('…registra su celular', r.s === 200 && /981/.test(r.j.whatsapp_numero || ''), r.j);
+  const avisos = (await db.query("SELECT u.username FROM notificaciones n JOIN usuarios u ON u.id=n.usuario_id WHERE n.clinica_id=1 AND n.titulo LIKE '%registró su WhatsApp%' AND n.creado_en > now() - interval '1 minute'")).rows.map((x) => x.username);
+  P('…y avisa a la administración (no a los otros doctores) para conectarlo', avisos.includes('admin') && !avisos.includes('odo2'), avisos);
+  r = await req('GET', `/recordatorios/turnos?fecha=${manana}`, null, O1);
+  P('El doctor ve solo los turnos de sus pacientes', r.s === 200 && r.j.turnos.length >= 1 && r.j.turnos.every((t) => t.odontologo_id === undefined || Number(t.odontologo_id) === odo), r.j && r.j.turnos && r.j.turnos.length);
+  r = await req('GET', `/recordatorios/turnos?fecha=${manana}`, null, O2);
+  P('Otro doctor no ve los turnos ajenos', r.s === 200 && !r.j.turnos.some((t) => t.id === t10), r.j && r.j.turnos && r.j.turnos.length);
+  P('Otro doctor no puede mandar el recordatorio de un turno ajeno: 403', (await req('POST', `/recordatorios/turnos/${t10}/enviar`, null, O2)).s === 403);
+  P('…ni sacar el enlace manual: 403', (await req('POST', `/recordatorios/turnos/${t10}/enlace`, null, O2)).s === 403);
+  P('Configurar el número de otro sin permiso: 403', (await req('PUT', `/recordatorios/remitentes/${odo}`, { envia: true, phoneId: '999' }, O1)).s === 403);
+  P('Enviar desde su número sin el ID de Meta: 400', (await req('PUT', `/recordatorios/remitentes/${odo}`, { numero: '0981 111 222', envia: true, phoneId: null }, A)).s === 400);
+  P('ID de Meta con letras: 400', (await req('PUT', `/recordatorios/remitentes/${odo}`, { numero: '0981 111 222', envia: true, phoneId: '12ab' }, A)).s === 400);
+  r = await req('PUT', `/recordatorios/remitentes/${odo}`, { numero: '0981 111 222', envia: true, phoneId: '777888999' }, A);
+  P('La administración lo conecta: envía desde su número', r.s === 200, r.j);
+  r = await req('GET', '/recordatorios/remitentes', null, A);
+  P('Lista de remitentes con su estado', r.s === 200 && r.j.odontologos.some((o) => o.id === odo && o.whatsapp_envia === true && o.whatsapp_phone_id === '777888999'), r.j);
+  let ant = recibidos.length;
+  r = await req('POST', `/recordatorios/turnos/${t10}/enviar`, null, O1);
+  P('El doctor manda el recordatorio de su paciente: sale de SU número', r.s === 200 && recibidos.length === ant + 1 && recibidos[ant].url === '/v21.0/777888999/messages', { s: r.s, j: r.j, url: recibidos[ant] && recibidos[ant].url });
+  P('…y queda registrado de qué número salió', /\(0981|981/.test((await q1('SELECT remitente FROM recordatorios_envios WHERE turno_id=$1', [t10])).remitente || ''));
+  r = await req('GET', `/recordatorios/turnos?fecha=${manana}`, null, A);
+  P('Recepción ve todos los turnos y de qué número sale cada uno', r.j.turnos.length > 1 && r.j.turnos.every((t) => t.remitente) && r.j.turnos.some((t) => t.id === t10 && /981/.test(t.remitente)), r.j.turnos.map((t) => [t.id, t.remitente]));
+  const p11 = await pac('Kevin', `0972${suf}`.slice(0, 10)); const t11 = await turno(p11, '10:30');
+  await req('PUT', '/recordatorios/mi-whatsapp', { numero: '0982 333 444' }, O1);
+  P('Si el doctor cambia su número, deja de enviar desde el número viejo', (await q1('SELECT whatsapp_envia, whatsapp_phone_id FROM odontologos WHERE id=$1', [odo])).whatsapp_envia === false);
+  ant = recibidos.length;
+  await req('POST', `/recordatorios/turnos/${t11}/enviar`, null, R);
+  P('…y vuelve a salir del número de la clínica', recibidos[ant] && recibidos[ant].url === '/v21.0/123456/messages', recibidos[ant] && recibidos[ant].url);
+  await db.query('UPDATE odontologos SET whatsapp_numero=NULL, whatsapp_phone_id=NULL, whatsapp_envia=false WHERE id=$1', [odo]);
+
   // Limpieza
+  await db.query('DELETE FROM turnos WHERE id = ANY($1::int[])', [[t10, t11]]);
   await db.query('DELETE FROM turnos WHERE id = ANY($1::int[])', [[t1, t2, t3, t4, t5, t6, t7, t8, t9]]);
   await db.query("DELETE FROM pacientes WHERE ci LIKE $1", [`RC${suf}%`]);
   meta.close(); await db.end();

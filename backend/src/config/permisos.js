@@ -58,6 +58,7 @@ const PERMISOS = [
 
   // WhatsApp / Seguimiento
   { codigo: 'whatsapp.send', modulo: 'comunicacion', descripcion: 'Preparar mensajes de WhatsApp' },
+  { codigo: 'recordatorios.propios', modulo: 'comunicacion', descripcion: 'Mandar los recordatorios de sus propios turnos (odontólogos) y registrar su WhatsApp' },
   { codigo: 'seguimiento.view', modulo: 'comunicacion', descripcion: 'Ver seguimiento/CRM de pacientes' },
   { codigo: 'lista_espera.manage', modulo: 'agenda', descripcion: 'Gestionar lista de espera' },
 
@@ -146,6 +147,7 @@ const PERMISOS_POR_ROL = {
     'salud.view', 'salud.edit', 'recalls.view', 'recalls.manage', 'seguimiento.view', 'seguimiento.manage',
     'periodoncia.edit', 'especialidades.edit', 'tareas.manage', 'esterilizacion.manage',
     'fichaje.use', 'comisiones.view', 'kpis.view', 'laboratorio.manage',
+    'recordatorios.propios',
   ],
   recepcion: [
     'pacientes.view', 'pacientes.create', 'pacientes.edit',

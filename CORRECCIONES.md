@@ -584,3 +584,44 @@ Se probó todo DOVA como un QA:
 - Pasos para conectar WhatsApp Business: `docs/WHATSAPP.md`. Un flujo de GitHub (`.github/workflows/recordatorios.yml`) despierta al servidor gratuito de Render para que se manden aunque nadie use DOVA.
 - **También en esta tanda:** "Configuración de la clínica" aceptaba listas u objetos como nombre o email y los guardaba mal (se vio como `{"x"}` en la marca). Ahora solo acepta texto, valida email y colores, y el nombre es obligatorio.
 - Pruebas: `tests/recordatorios.test.js` (45/45, con un WhatsApp falso que imita a Meta) y `tests/ui-recordatorios.js` (21/21: los 3 diseños, celular y la página del paciente).
+
+## Consentimientos firmados en tablet (migración 0047)
+
+- **Firmar en tablet:** desde la ficha → Documentación → Consentimientos → "Firmar en tablet".
+  - Pantalla completa que tapa el resto de DOVA.
+  - Muestra el texto, quién firma (paciente o responsable con nombre y C.I.), la casilla "Leí y acepto" y el recuadro para firmar con el dedo.
+  - Opcional: firma del profesional.
+  - Al terminar: "¡Gracias! Devolvé la tablet".
+- **Validez:**
+  - se guarda fecha y hora, quién del personal estuvo presente, el dispositivo y una huella (SHA-256) del documento firmado;
+  - la base **impide** modificar o borrar un consentimiento firmado;
+  - si alguien lo altera por fuera de DOVA, la huella no coincide y la lista lo marca.
+- Anular uno firmado pide motivo y queda registrado. El PDF lleva las firmas, el firmante, la fecha, la huella y, si corresponde, "ANULADO".
+- Pruebas: `tests/consentimientos-firma.test.js` (22/22) y `tests/ui-consentimiento-tablet.js` (8/8).
+
+## Datos de la clínica (migración 0048)
+
+- Dirección, teléfono, WhatsApp y horario de DentCareRC cargados desde su ficha de Google: Nro 49, Pampa Grande, Luque; 0986 451 065; lunes a sábado de 8 a 12 y de 14 a 19.
+- Solo completa campos vacíos: si ya se cargó algo a mano en Configuración, no lo pisa.
+
+## WhatsApp de cada odontólogo (migración 0049)
+
+- Cada doctor registra su celular en **Configuración → Mi WhatsApp para recordatorios**.
+- En **Seguimiento → Recordatorios** el doctor ve solo los turnos de sus pacientes. Con "Mandar por mi WhatsApp" el mensaje sale de su celular.
+- **Automáticos desde el número del doctor:** quien configura carga el "Phone number ID" de Meta en *WhatsApp de cada odontólogo* y marca "Enviar desde su número". Pasos en `docs/WHATSAPP.md`.
+- La lista muestra de qué número sale (o salió) cada recordatorio.
+- **Protecciones:**
+  - un doctor no ve ni manda recordatorios de turnos ajenos (permiso nuevo `recordatorios.propios`);
+  - si cambia su número, deja de enviarse desde el viejo hasta que se conecte el nuevo;
+  - el aviso de "registró su WhatsApp" llega solo a quien puede conectarlo.
+- Pruebas: `tests/recordatorios.test.js` (64/64) y `tests/ui-recordatorios.js` (29/29, incluye el doctor en celular).
+
+## Copias de seguridad automáticas
+
+- `.github/workflows/copias.yml`: copia diaria completa de la base.
+  - Verificada antes de guardarse.
+  - **Cifrada con AES-256**.
+  - Se guardan 30 días.
+- `scripts/restaurar-copia.sh` comprueba la huella, pide la clave y restaura.
+- Activación y restauración paso a paso: `docs/COPIAS.md`. Necesita dos secretos en GitHub: `DOVA_BACKUP_DATABASE_URL` y `DOVA_BACKUP_CLAVE`.
+- Probado acá: copia → cifrado → restauración en una base vacía y sobre una con datos, con los mismos totales. Con la clave equivocada o el archivo alterado, no restaura.

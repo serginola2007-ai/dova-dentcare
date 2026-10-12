@@ -117,7 +117,13 @@ function comprobantePresupuesto(res, { clinica, presupuesto, items, paciente }) 
   doc.end();
 }
 
-function comprobanteConsentimiento(res, { clinica, consentimiento, paciente }) {
+const fmtFechaHoraPy = (f) => (f ? new Date(f).toLocaleString('es-PY', { timeZone: process.env.DOVA_TZ || 'America/Asuncion', dateStyle: 'short', timeStyle: 'short' }) : '-');
+function imagenFirma(dataUrl) {
+  const m = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  return m ? Buffer.from(m[2], 'base64') : null;
+}
+
+function comprobanteConsentimiento(res, { clinica, consentimiento, paciente, testigo, verificado }) {
   const doc = new PDFDocument({ margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="consentimiento-${consentimiento.id}.pdf"`);
@@ -132,18 +138,43 @@ function comprobanteConsentimiento(res, { clinica, consentimiento, paciente }) {
   if (paciente.ci) doc.text(`C.I.: ${paciente.ci}`);
   doc.text(`Procedimiento: ${consentimiento.procedimiento}`);
   doc.text(`Fecha: ${fmtDia(consentimiento.fecha)}`);
-  doc.text(`Estado: ${consentimiento.estado}`);
   doc.moveDown(1);
 
   doc.fontSize(11).text('Texto del consentimiento', { underline: true });
   doc.moveDown(0.3);
   doc.fontSize(10).text(consentimiento.texto, { align: 'justify' });
-  doc.moveDown(2);
+  doc.moveDown(1.5);
 
-  if (consentimiento.estado === 'firmado') {
-    doc.fontSize(10).text('Firmado electrónicamente por el paciente.', { italics: true });
-  } else {
+  const firmado = consentimiento.estado === 'firmado' || (consentimiento.estado === 'anulado' && consentimiento.firma_paciente);
+  if (firmado) {
+    // Firmas dibujadas en la tablet, con quién firmó y cuándo.
+    const fp = imagenFirma(consentimiento.firma_paciente); const fo = imagenFirma(consentimiento.firma_odontologo);
+    if (doc.y > 600) doc.addPage();
+    const y0 = doc.y;
+    if (fp) { try { doc.image(fp, 50, y0, { fit: [220, 80] }); } catch (_e) { /* imagen ilegible */ } }
+    if (fo) { try { doc.image(fo, 320, y0, { fit: [220, 80] }); } catch (_e) { /* imagen ilegible */ } }
+    doc.moveTo(50, y0 + 84).lineTo(270, y0 + 84).strokeColor('#999999').stroke();
+    if (fo) doc.moveTo(320, y0 + 84).lineTo(540, y0 + 84).strokeColor('#999999').stroke();
+    doc.fontSize(9).fillColor('#000000');
+    const rel = consentimiento.firmante_relacion === 'responsable' ? 'Responsable' : 'Paciente';
+    doc.text(`${rel}: ${consentimiento.firmante_nombre || `${paciente.nombre} ${paciente.apellido}`}${consentimiento.firmante_documento ? ` · C.I. ${consentimiento.firmante_documento}` : ''}`, 50, y0 + 88, { width: 230 });
+    if (fo) doc.text('Profesional', 320, y0 + 88, { width: 220 });
+    doc.x = 50; doc.y = y0 + 118;
+    doc.fontSize(8).fillColor('#444444');
+    doc.text(`Firmado en tablet el ${fmtFechaHoraPy(consentimiento.firmado_en)}${testigo ? `, en presencia de ${testigo}` : ''}.`, { width: 495 });
+    if (consentimiento.hash_documento) {
+      doc.text(`Huella del documento (SHA-256): ${consentimiento.hash_documento}`, { width: 495 });
+      doc.text(verificado === true ? 'Verificación: el documento no fue modificado desde la firma.' : verificado === false ? 'ATENCIÓN: el documento NO coincide con su huella.' : '', { width: 495 });
+    }
+    doc.fillColor('#000000');
+  } else if (consentimiento.estado !== 'anulado') {
     doc.fontSize(10).fillColor('#B00020').text('PENDIENTE DE FIRMA');
+    doc.fillColor('#000000');
+  }
+  if (consentimiento.estado === 'anulado') {
+    doc.moveDown(1);
+    doc.fontSize(12).fillColor('#B00020').text(`ANULADO${consentimiento.anulado_en ? ` el ${fmtFechaHoraPy(consentimiento.anulado_en)}` : ''}`, { align: 'center' });
+    if (consentimiento.anulado_motivo) doc.fontSize(9).text(`Motivo: ${consentimiento.anulado_motivo}`, { align: 'center' });
     doc.fillColor('#000000');
   }
 

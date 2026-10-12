@@ -63,14 +63,24 @@ async function crearEnlace(turno) {
   return `${urlPublica()}/web/mi-turno.html#t=${token}`;
 }
 
-const SELECT_TURNO = `SELECT t.id, t.clinica_id, t.fecha::text AS fecha, to_char(t.hora_inicio,'HH24:MI') AS hora, t.estado, t.confirmacion, t.paciente_id,
+const SELECT_TURNO = `SELECT t.id, t.clinica_id, t.odontologo_id, o.whatsapp_numero AS odo_wa_numero, o.whatsapp_phone_id AS odo_wa_phone, o.whatsapp_envia AS odo_wa_envia, t.fecha::text AS fecha, to_char(t.hora_inicio,'HH24:MI') AS hora, t.estado, t.confirmacion, t.paciente_id,
     p.nombre, p.apellido, p.telefono, p.whatsapp, p.acepta_recordatorios, p.acepta_whatsapp, o.nombre AS odontologo_nombre, c.nombre AS clinica_nombre
   FROM turnos t JOIN pacientes p ON p.id=t.paciente_id LEFT JOIN odontologos o ON o.id=t.odontologo_id JOIN clinicas c ON c.id=t.clinica_id`;
 
-async function turnoDeLaClinica(clinicaId, turnoId) {
+async function turnoDeLaClinica(clinicaId, turnoId, actor) {
   const r = await query(`${SELECT_TURNO} WHERE t.clinica_id=$1 AND t.id=$2`, [clinicaId, Number(turnoId)]);
   if (!r.rowCount) throw new ApiError(404, 'Turno no encontrado');
-  return r.rows[0];
+  const t = r.rows[0];
+  // Un odontólogo con "recordatorios.propios" solo maneja los turnos de sus pacientes.
+  if (actor && !puedeTodos(actor) && Number(t.odontologo_id) !== Number(actor.odontologoId)) throw new ApiError(403, 'Solo podés mandar los recordatorios de tus propios turnos');
+  return t;
+}
+const puedeTodos = (actor) => (actor.permisos || []).some((p) => p === 'whatsapp.send' || p === 'agenda.edit');
+
+// De qué número sale: el del odontólogo si está conectado a WhatsApp Business, si no el de la clínica.
+function remitenteApi(t) {
+  if (t.odo_wa_envia && t.odo_wa_phone) return { numeroId: t.odo_wa_phone, nombre: `${t.odontologo_nombre || 'Odontólogo'}${t.odo_wa_numero ? ` (${t.odo_wa_numero})` : ''}` };
+  return { numeroId: null, nombre: 'Número de la clínica' };
 }
 function motivoNoEnviable(t) {
   if (!['reservado', 'confirmado'].includes(t.estado)) return 'El turno no está vigente';
@@ -80,18 +90,22 @@ function motivoNoEnviable(t) {
 }
 
 /* ------------------------------------------------------------ listado del día */
-async function listar(clinicaId, fecha) {
+async function listar(clinicaId, fecha, actor = null, { soloMios = false } = {}) {
   const f = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : sumarDias(hoyIso(), 1);
-  const r = await query(`${SELECT_TURNO.replace(' FROM turnos t', ', e.envio_estado, e.envio_error, e.envio_canal, e.envio_respuesta, e.envio_en FROM turnos t')}
-      LEFT JOIN LATERAL (SELECT e.estado AS envio_estado, e.error AS envio_error, e.canal AS envio_canal, e.respuesta AS envio_respuesta, e.actualizado_en AS envio_en
+  // Sin permiso general, el odontólogo ve solo sus turnos.
+  const filtroOdo = actor && actor.odontologoId && (soloMios || !puedeTodos(actor)) ? Number(actor.odontologoId) : (actor && !puedeTodos(actor) ? -1 : null);
+  const r = await query(`${SELECT_TURNO.replace(' FROM turnos t', ', e.envio_estado, e.envio_error, e.envio_canal, e.envio_respuesta, e.envio_en, e.envio_remitente FROM turnos t')}
+      LEFT JOIN LATERAL (SELECT e.estado AS envio_estado, e.error AS envio_error, e.canal AS envio_canal, e.respuesta AS envio_respuesta, e.actualizado_en AS envio_en, e.remitente AS envio_remitente
                            FROM recordatorios_envios e WHERE e.turno_id=t.id AND e.tipo='turno') e ON true
-     WHERE t.clinica_id=$1 AND t.fecha=$2 AND t.estado IN ('reservado','confirmado')
-     ORDER BY t.hora_inicio`, [clinicaId, f]);
+     WHERE t.clinica_id=$1 AND t.fecha=$2 AND t.estado IN ('reservado','confirmado') AND ($3::int IS NULL OR t.odontologo_id=$3::int)
+     ORDER BY t.hora_inicio`, [clinicaId, f, filtroOdo]);
   return { fecha: f, whatsappConectado: whatsapp.configurado(), turnos: r.rows.map((t) => ({
     id: t.id, fecha: t.fecha, hora: t.hora, estado: t.estado, confirmacion: t.confirmacion, paciente_id: t.paciente_id, nombre: t.nombre, apellido: t.apellido,
     odontologo_nombre: t.odontologo_nombre, envio: t.envio_estado ? { estado: t.envio_estado, error: t.envio_error, canal: t.envio_canal, respuesta: t.envio_respuesta, en: t.envio_en } : null,
     noEnviable: motivoNoEnviable(t),
-  })) };
+    odontologo_id: t.odontologo_id,
+    remitente: t.envio_remitente || (whatsapp.configurado() ? remitenteApi(t).nombre : (t.odo_wa_numero ? `Celular de ${t.odontologo_nombre} (${t.odo_wa_numero})` : 'WhatsApp de la recepción')),
+  })), soloMios: filtroOdo !== null };
 }
 
 /* ------------------------------------------------------------ envío */
@@ -126,8 +140,9 @@ async function enviarPorApi(t, { automatico = false, usuarioId = null, reintenta
   // Valores de la plantilla: {{1}} nombre, {{2}} clínica, {{3}} día, {{4}} hora, {{5}} enlace.
   const valores = [t.nombre, t.clinica_nombre, nombreDia(t.fecha), t.hora, enlace];
   try {
-    const id = await whatsapp.enviarPlantilla(tel, valores);
-    await query("UPDATE recordatorios_envios SET estado='enviado', proveedor_id=$2, actualizado_en=now() WHERE id=$1", [envioId, id]);
+    const rem = remitenteApi(t);
+    const id = await whatsapp.enviarPlantilla(tel, valores, { numeroId: rem.numeroId });
+    await query("UPDATE recordatorios_envios SET estado='enviado', proveedor_id=$2, remitente=$3, actualizado_en=now() WHERE id=$1", [envioId, id, rem.nombre.slice(0, 120)]);
     await registrarComunicacion(t, textoRecordatorio({ nombre: t.nombre, clinica: t.clinica_nombre, fecha: t.fecha, hora: t.hora, odontologo: t.odontologo_nombre, enlace: '(enlace privado)' }), usuarioId);
     return { ok: true, estado: 'enviado' };
   } catch (e) {
@@ -137,7 +152,7 @@ async function enviarPorApi(t, { automatico = false, usuarioId = null, reintenta
 }
 
 async function enviarAhora(clinicaId, turnoId, actor) {
-  const t = await turnoDeLaClinica(clinicaId, turnoId);
+  const t = await turnoDeLaClinica(clinicaId, turnoId, actor);
   const r = await enviarPorApi(t, { usuarioId: actor.id, reintentar: true });
   if (!r.ok) throw new ApiError(502, r.error);
   return r;
@@ -145,15 +160,66 @@ async function enviarAhora(clinicaId, turnoId, actor) {
 
 // Envío a mano: arma el mensaje con su enlace y devuelve el wa.me para abrir.
 async function enlaceManual(clinicaId, turnoId, actor) {
-  const t = await turnoDeLaClinica(clinicaId, turnoId);
+  const t = await turnoDeLaClinica(clinicaId, turnoId, actor);
   const motivo = motivoNoEnviable(t);
   if (motivo) throw new ApiError(409, motivo);
   const enlace = await crearEnlace(t);
   const texto = textoRecordatorio({ nombre: t.nombre, clinica: t.clinica_nombre, fecha: t.fecha, hora: t.hora, odontologo: t.odontologo_nombre, enlace });
   const envioId = await reservarEnvio(t, { canal: 'whatsapp_manual', usuarioId: actor.id, reintentar: true });
-  if (envioId) await query("UPDATE recordatorios_envios SET estado='enviado', actualizado_en=now() WHERE id=$1", [envioId]);
+  if (envioId) await query("UPDATE recordatorios_envios SET estado='enviado', remitente=$2, actualizado_en=now() WHERE id=$1", [envioId, `A mano: ${actor.nombre}`.slice(0, 120)]);
   await registrarComunicacion(t, texto.replace(enlace, '(enlace privado)'), actor.id);
   return { url: enlaceWhatsapp(t.whatsapp || t.telefono, texto) };
+}
+
+/* ------------------------------------------------------------ WhatsApp de cada odontólogo */
+const telValido = (v) => { if (v === null || v === undefined || v === '') return null; if (typeof v !== 'string' || !normalizarTelefonoPy(v)) throw new ApiError(400, 'El número de celular no es válido (ej.: 0981 123 456)'); return v.trim().slice(0, 30); };
+async function remitentes(clinicaId) {
+  const r = await query(`SELECT o.id, o.nombre, o.whatsapp_numero, o.whatsapp_phone_id, o.whatsapp_envia,
+      (SELECT u.nombre FROM usuarios u WHERE u.odontologo_id=o.id AND u.activo AND u.eliminado_en IS NULL LIMIT 1) AS usuario
+    FROM odontologos o WHERE o.clinica_id=$1 AND o.activo ORDER BY o.nombre`, [clinicaId]);
+  return { whatsappConectado: whatsapp.configurado(), odontologos: r.rows };
+}
+async function guardarRemitente(clinicaId, odontologoId, d, actor) {
+  const o = await query('SELECT id, nombre FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, Number(odontologoId)]);
+  if (!o.rowCount) throw new ApiError(404, 'Odontólogo no encontrado');
+  const campos = {};
+  if (d.numero !== undefined) campos.whatsapp_numero = telValido(d.numero);
+  if (d.phoneId !== undefined) {
+    if (d.phoneId !== null && d.phoneId !== '' && (typeof d.phoneId !== 'string' || !/^\d{5,30}$/.test(d.phoneId.trim()))) throw new ApiError(400, 'El "Phone number ID" de Meta son solo números');
+    campos.whatsapp_phone_id = d.phoneId ? d.phoneId.trim() : null;
+  }
+  if (d.envia !== undefined) { if (typeof d.envia !== 'boolean') throw new ApiError(400, 'envia tiene que ser sí o no'); campos.whatsapp_envia = d.envia; }
+  const cols = Object.keys(campos);
+  if (cols.length) await query(`UPDATE odontologos SET ${cols.map((c, i) => `${c}=$${i + 3}`).join(', ')} WHERE clinica_id=$1 AND id=$2`, [clinicaId, o.rows[0].id, ...cols.map((c) => campos[c])]);
+  const r = (await query('SELECT id, nombre, whatsapp_numero, whatsapp_phone_id, whatsapp_envia FROM odontologos WHERE id=$1', [o.rows[0].id])).rows[0];
+  if (r.whatsapp_envia && !r.whatsapp_phone_id) {
+    await query('UPDATE odontologos SET whatsapp_envia=false WHERE id=$1', [r.id]);
+    throw new ApiError(400, 'Para mandar desde su número, cargá primero el "Phone number ID" que da Meta al conectar ese número');
+  }
+  await auditoria.registrar({ clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'whatsapp_odontologo', modulo: 'agenda', entidadId: r.id, detalle: { numero: r.whatsapp_numero, envia: r.whatsapp_envia } });
+  return r;
+}
+// El propio odontólogo registra su celular.
+async function miWhatsapp(clinicaId, actor) {
+  if (!actor.odontologoId) throw new ApiError(404, 'Tu usuario no está vinculado a un odontólogo');
+  const r = await query('SELECT id, nombre, whatsapp_numero, whatsapp_envia, (whatsapp_phone_id IS NOT NULL) AS conectado FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, Number(actor.odontologoId)]);
+  if (!r.rowCount) throw new ApiError(404, 'Odontólogo no encontrado');
+  return { ...r.rows[0], whatsappConectado: whatsapp.configurado() };
+}
+async function guardarMiWhatsapp(clinicaId, actor, d) {
+  if (!actor.odontologoId) throw new ApiError(404, 'Tu usuario no está vinculado a un odontólogo');
+  const numero = telValido(d.numero);
+  const antes = await query('SELECT whatsapp_numero FROM odontologos WHERE clinica_id=$1 AND id=$2', [clinicaId, Number(actor.odontologoId)]);
+  // Si cambia el número, deja de enviarse desde el número viejo conectado a Meta.
+  await query(`UPDATE odontologos SET whatsapp_numero=$3::varchar,
+      whatsapp_envia = CASE WHEN whatsapp_numero IS DISTINCT FROM $3::varchar THEN false ELSE whatsapp_envia END,
+      whatsapp_phone_id = CASE WHEN whatsapp_numero IS DISTINCT FROM $3::varchar THEN NULL ELSE whatsapp_phone_id END
+    WHERE clinica_id=$1 AND id=$2`, [clinicaId, Number(actor.odontologoId), numero]);
+  await auditoria.registrar({ clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'mi_whatsapp', modulo: 'agenda', entidadId: actor.odontologoId, detalle: { antes: antes.rows[0] && antes.rows[0].whatsapp_numero, despues: numero } });
+  if (numero && (!antes.rows[0] || antes.rows[0].whatsapp_numero !== numero)) {
+    await avisarRecepcion(clinicaId, { titulo: `${actor.nombre} registró su WhatsApp para recordatorios`, mensaje: `Número: ${numero}. Para que los recordatorios automáticos salgan de ese número, conectalo en Meta y cargá su "Phone number ID" en Seguimiento → Recordatorios.`, permisos: ['agenda.config', 'clinica.config.manage'], ruta: 'seguimiento' });
+  }
+  return miWhatsapp(clinicaId, actor);
 }
 
 /* ------------------------------------------------------------ automático */
@@ -192,14 +258,14 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
 }
 
 /* ------------------------------------------------------------ webhook de Meta */
-async function avisarRecepcion(clinicaId, { titulo, mensaje, turnoId }) {
+async function avisarRecepcion(clinicaId, { titulo, mensaje, turnoId, permisos = ['agenda.edit', 'agenda.view'], ruta = 'agenda' }) {
   try {
     const noti = require('../notificaciones/notificaciones.service');
     const authRepo = require('../auth/auth.repository');
     const us = await query('SELECT id, rol_id FROM usuarios WHERE clinica_id=$1 AND activo AND eliminado_en IS NULL', [clinicaId]);
     for (const u of us.rows) {
       const p = await authRepo.getPermisosEfectivos(u.id, u.rol_id);
-      if (p.includes('agenda.edit') || p.includes('agenda.view')) await noti.notificar(clinicaId, u.id, { tipo: 'recordatorio', titulo: String(titulo).slice(0, 150), mensaje: String(mensaje || '').slice(0, 500), entidad: turnoId ? 'turno' : null, entidadId: turnoId || null, ruta: 'agenda' });
+      if (permisos.some((x) => p.includes(x))) await noti.notificar(clinicaId, u.id, { tipo: 'recordatorio', titulo: String(titulo).slice(0, 150), mensaje: String(mensaje || '').slice(0, 500), entidad: turnoId ? 'turno' : null, entidadId: turnoId || null, ruta });
     }
   } catch (e) { console.error('[recordatorios] no se pudo avisar:', e.message); }
 }
@@ -259,4 +325,4 @@ async function procesarWebhook(cuerpo) {
   return { procesados };
 }
 
-module.exports = { configuracion, guardarConfiguracion, listar, enviarAhora, enlaceManual, ejecutarAutomaticos, procesarWebhook, textoRecordatorio, hash, urlPublica };
+module.exports = { remitentes, guardarRemitente, miWhatsapp, guardarMiWhatsapp, configuracion, guardarConfiguracion, listar, enviarAhora, enlaceManual, ejecutarAutomaticos, procesarWebhook, textoRecordatorio, hash, urlPublica };

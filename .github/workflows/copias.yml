@@ -1,0 +1,52 @@
+# Copia de seguridad diaria de la base de DOVA, cifrada.
+# - Se guarda como "artifact" del workflow durante 30 días (una por día).
+# - Va cifrada con AES-256 (gpg) usando DOVA_BACKUP_CLAVE: sin esa clave el archivo no sirve.
+# Secretos (GitHub → Settings → Secrets and variables → Actions):
+#   DOVA_BACKUP_DATABASE_URL  la "External Database URL" de Render (dova-db → Connect)
+#   DOVA_BACKUP_CLAVE         una frase larga (20+ caracteres) guardada también FUERA de GitHub
+# Sin los dos secretos no hace nada. Restaurar: docs/COPIAS.md.
+name: Copia de seguridad
+on:
+  schedule:
+    - cron: "17 7 * * *"   # 03:17 de Paraguay
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency: { group: copias, cancel-in-progress: false }
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Volcar, verificar y cifrar
+        id: copia
+        env:
+          BASE: ${{ secrets.DOVA_BACKUP_DATABASE_URL }}
+          CLAVE: ${{ secrets.DOVA_BACKUP_CLAVE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ] || [ -z "$CLAVE" ]; then echo "Faltan DOVA_BACKUP_DATABASE_URL o DOVA_BACKUP_CLAVE: no se hace nada."; echo "hay=no" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ ${#CLAVE} -lt 20 ]; then echo "::error::DOVA_BACKUP_CLAVE tiene que tener al menos 20 caracteres"; exit 1; fi
+          umask 077
+          nombre="dova-$(date -u +%Y%m%d-%H%M).dump"
+          # pg_dump de la misma versión que la base (Postgres 16) desde la imagen oficial.
+          docker run --rm -e BASE postgres:16-alpine sh -c 'pg_dump "$BASE" -Fc --no-owner --no-acl' > "$nombre"
+          # Verificar que el volcado se puede leer y que trae las tablas principales.
+          docker run --rm -i postgres:16-alpine pg_restore --list < "$nombre" > lista.txt
+          for t in pacientes turnos usuarios auditoria; do grep -q "TABLE DATA public $t " lista.txt || { echo "::error::La copia no trae la tabla $t"; exit 1; }; done
+          echo "Tamaño: $(du -h "$nombre" | cut -f1), objetos: $(wc -l < lista.txt)"
+          printf '%s' "$CLAVE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 -o "$nombre.gpg" "$nombre"
+          shred -u "$nombre" lista.txt
+          sha256sum "$nombre.gpg" > "$nombre.gpg.sha256"
+          echo "hay=si" >> "$GITHUB_OUTPUT"; echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
+      - name: Guardar la copia (30 días)
+        if: steps.copia.outputs.hay == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.copia.outputs.nombre }}
+          path: |
+            ${{ steps.copia.outputs.nombre }}.gpg
+            ${{ steps.copia.outputs.nombre }}.gpg.sha256
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0

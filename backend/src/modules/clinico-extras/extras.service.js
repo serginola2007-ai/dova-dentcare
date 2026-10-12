@@ -176,7 +176,9 @@ const PLANTILLAS_CONSENTIMIENTO = {
 };
 
 async function listarConsentimientos(clinicaId, pacienteId) {
-  return repo.listarConsentimientos(clinicaId, pacienteId);
+  const filas = await repo.listarConsentimientos(clinicaId, pacienteId);
+  // Las firmas (imágenes) no viajan en la lista: se ven en el PDF.
+  return filas.map(({ firma_paciente, firma_odontologo, ...c }) => ({ ...c, tiene_firma: !!firma_paciente, verificado: verificarConsentimiento({ ...c, firma_paciente, firma_odontologo }) }));
 }
 
 async function plantillasConsentimiento() {
@@ -195,35 +197,67 @@ async function crearConsentimiento(clinicaId, datos, actor) {
   return consentimiento;
 }
 
-/* Firma digital: por ahora se guarda como imagen base64 de un canvas de firma
-   dibujado en el frontend (preparación explícita para firma digital real,
-   tal como pide el prompt maestro — no es una firma criptográfica todavía). */
-async function firmarConsentimiento(clinicaId, id, datos, actor) {
+/* Firma en tablet: el paciente (o su responsable) firma con el dedo.
+   Queda quién firmó, cuándo, desde qué dispositivo, quién del personal
+   estuvo presente y una huella SHA-256 de todo el documento firmado: si algo
+   cambiara después, DOVA lo detecta. Un consentimiento firmado no se puede
+   modificar ni borrar (disparador en la base), solo anular. */
+const crypto = require('crypto');
+function huellaConsentimiento(c) {
+  const datos = [c.id, c.paciente_id, c.procedimiento, c.texto, c.firma_paciente || '', c.firma_odontologo || '', c.firmante_nombre || '', c.firmante_documento || '',
+    c.firmante_relacion || '', c.firmado_en ? new Date(c.firmado_en).toISOString() : ''];
+  return crypto.createHash('sha256').update(JSON.stringify(datos)).digest('hex');
+}
+function verificarConsentimiento(c) {
+  if (c.estado !== 'firmado' && !(c.estado === 'anulado' && c.hash_documento)) return null;
+  if (!c.hash_documento) return null; // firmado antes de que existiera la huella
+  return huellaConsentimiento(c) === c.hash_documento;
+}
+
+async function firmarConsentimiento(clinicaId, id, datos, actor, ctx = {}) {
   const existente = await repo.obtenerConsentimiento(clinicaId, id);
   if (!existente) throw new ApiError(404, 'Consentimiento no encontrado');
   if (existente.estado === 'firmado') throw new ApiError(409, 'Este consentimiento ya fue firmado');
+  if (existente.estado === 'anulado') throw new ApiError(409, 'Este consentimiento está anulado');
   if (!datos.firmaPaciente) throw new ApiError(400, 'Se requiere la firma del paciente');
   for (const f of [datos.firmaPaciente, datos.firmaOdontologo].filter(Boolean)) {
-    if (typeof f !== 'string' || !/^data:image\/(png|jpeg);base64,/.test(f) || f.length > 700000) throw new ApiError(400, 'La firma no es válida');
+    if (typeof f !== 'string' || !/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(f) || f.length > 700000) throw new ApiError(400, 'La firma no es válida');
   }
-  const consentimiento = await repo.firmarConsentimiento(clinicaId, id, datos);
+  if (datos.acepta !== undefined && datos.acepta !== true) throw new ApiError(400, 'El paciente tiene que aceptar el texto antes de firmar');
+  const relacion = datos.firmanteRelacion === undefined ? 'paciente' : datos.firmanteRelacion;
+  if (!['paciente', 'responsable'].includes(relacion)) throw new ApiError(400, 'Indicá si firma el paciente o su responsable');
+  const pac = (await query('SELECT nombre, apellido, ci FROM pacientes WHERE clinica_id=$1 AND id=$2', [clinicaId, existente.paciente_id])).rows[0] || {};
+  const nombre = txt(datos.firmanteNombre, 150) || (relacion === 'paciente' ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : null);
+  if (!nombre) throw new ApiError(400, 'Escribí el nombre de quien firma');
+  const documento = txt(datos.firmanteDocumento, 30) || (relacion === 'paciente' ? pac.ci || null : null);
+  if (relacion === 'responsable' && !documento) throw new ApiError(400, 'Escribí el documento del responsable que firma');
+  const firmadoEn = new Date();
+  const c = { ...existente, firma_paciente: datos.firmaPaciente, firma_odontologo: datos.firmaOdontologo || null, firmante_nombre: nombre, firmante_documento: documento, firmante_relacion: relacion, firmado_en: firmadoEn };
+  const hashDoc = huellaConsentimiento(c);
+  const r = await query(`UPDATE consentimientos SET estado='firmado', firma_paciente=$3, firma_odontologo=$4, firmante_nombre=$5, firmante_documento=$6, firmante_relacion=$7,
+      firmado_en=$8, firma_ip=$9, firma_dispositivo=$10, testigo_usuario_id=$11, hash_documento=$12
+      WHERE clinica_id=$1 AND id=$2 AND estado='pendiente' RETURNING *`,
+  [clinicaId, id, c.firma_paciente, c.firma_odontologo, nombre, documento, relacion, firmadoEn, ctx.ip ? String(ctx.ip).slice(0, 64) : null, ctx.agente ? String(ctx.agente).slice(0, 200) : null, actor.id, hashDoc]);
+  if (!r.rowCount) throw new ApiError(409, 'Este consentimiento ya fue firmado');
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
-    accion: 'firmar_consentimiento', modulo: 'pacientes', entidadId: id,
+    accion: 'firmar_consentimiento', modulo: 'pacientes', entidadId: id, detalle: { firmante: nombre, relacion, huella: hashDoc.slice(0, 16) },
   });
-  return consentimiento;
+  return { ...r.rows[0], verificado: true };
 }
 
-async function anularConsentimiento(clinicaId, id, actor) {
+async function anularConsentimiento(clinicaId, id, actor, datos = {}) {
   const existente = await repo.obtenerConsentimiento(clinicaId, id);
   if (!existente) throw new ApiError(404, 'Consentimiento no encontrado');
   if (existente.estado === 'anulado') throw new ApiError(409, 'El consentimiento ya está anulado');
-  const consentimiento = await repo.cambiarEstadoConsentimiento(clinicaId, id, 'anulado');
+  const motivo = txt(datos.motivo, 500);
+  if (existente.estado === 'firmado' && (!motivo || motivo.length < 5)) throw new ApiError(400, 'Para anular un consentimiento firmado escribí el motivo');
+  const r = await query("UPDATE consentimientos SET estado='anulado', anulado_en=now(), anulado_motivo=$3 WHERE clinica_id=$1 AND id=$2 RETURNING *", [clinicaId, id, motivo]);
   await auditoria.registrar({
     clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre,
-    accion: 'anular_consentimiento', modulo: 'pacientes', entidadId: id, detalle: { estadoAnterior: existente.estado },
+    accion: 'anular_consentimiento', modulo: 'pacientes', entidadId: id, detalle: { estadoAnterior: existente.estado, motivo },
   });
-  return consentimiento;
+  return r.rows[0];
 }
 
 // ---- Recetas ----
@@ -392,6 +426,7 @@ async function listarHistorialWhatsapp(clinicaId, filtros) {
 }
 
 module.exports = {
+  huellaConsentimiento, verificarConsentimiento,
   listarFotos, crearFoto, eliminarFoto, actualizarFoto, archivo,
   listarEstudios, crearEstudio, eliminarEstudio, actualizarEstudio,
   listarConsentimientos, plantillasConsentimiento, crearConsentimiento, firmarConsentimiento, anularConsentimiento,

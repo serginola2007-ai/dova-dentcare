@@ -28,7 +28,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0046 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0049 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
@@ -102,7 +102,15 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Webhook firmado: `/api/whatsapp/webhook`.
 - Disparo externo: `POST /api/recordatorios/cron` con `X-DOVA-CRON`.
 - Configuración paso a paso: `docs/WHATSAPP.md`.
+- Número de cada odontólogo: `odontologos.whatsapp_numero/whatsapp_phone_id/whatsapp_envia`. Permiso `recordatorios.propios` = solo sus turnos.
 - Pruebas con WhatsApp falso: `backend/tests/recordatorios.test.js`, `backend/tests/ui-recordatorios.js`.
+
+## Consentimientos
+- Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.
+- Disparadores en la base impiden modificar o borrar firmados (para borrar un paciente de prueba: `SET dova.borrando_paciente='on'`).
+
+## Copias de seguridad
+- `.github/workflows/copias.yml` (diaria, cifrada) y `scripts/restaurar-copia.sh`. Guía: `docs/COPIAS.md`.
 
 ## Deploy
 
@@ -132,4 +140,4 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
   - el redirect de `app.js`.
 
   Validar en el servidor que solo un admin pueda elegirlo.
-- Copias de seguridad de la base (plan pago de Render más `pg_dump` propio).
+- SIFEN (factura electrónica) y cobro online: necesitan contratos externos.

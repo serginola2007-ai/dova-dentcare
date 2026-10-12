@@ -57,10 +57,10 @@ async function crearConsentimiento(req, res, next) {
   try { res.status(201).json(await service.crearConsentimiento(req.clinicaId, req.body, req.usuario)); } catch (e) { next(e); }
 }
 async function firmarConsentimiento(req, res, next) {
-  try { res.json(await service.firmarConsentimiento(req.clinicaId, Number(req.params.id), req.body, req.usuario)); } catch (e) { next(e); }
+  try { res.json(await service.firmarConsentimiento(req.clinicaId, Number(req.params.id), req.body || {}, req.usuario, { ip: req.ip, agente: req.headers['user-agent'] })); } catch (e) { next(e); }
 }
 async function anularConsentimiento(req, res, next) {
-  try { res.json(await service.anularConsentimiento(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
+  try { res.json(await service.anularConsentimiento(req.clinicaId, Number(req.params.id), req.usuario, req.body || {})); } catch (e) { next(e); }
 }
 
 // Recetas

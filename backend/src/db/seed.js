@@ -25,7 +25,7 @@ async function run() {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT (slug) DO UPDATE SET nombre = EXCLUDED.nombre
        RETURNING id`,
-      ['DentCareRC', 'dentcarerc', '#C1673F', '#A5522F', '', '', '', '', 'Lunes a viernes 8:00 - 18:00']
+      ['DentCareRC', 'dentcarerc', '#C1673F', '#A5522F', 'Nro 49, Pampa Grande, Luque, Paraguay', '0986 451 065', '0986 451 065', '', 'Lunes a sábado de 8:00 a 12:00 y de 14:00 a 19:00']
     );
     const clinicaId = clinicaRes.rows[0].id;
 

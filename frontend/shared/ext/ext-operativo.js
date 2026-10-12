@@ -840,21 +840,89 @@ const DovaOperativo = (() => {
   }
 
   // ---- Consentimientos con firma en pantalla ----
+  // Lienzo de firma: dedo, lápiz o mouse (pointer events). Un toque suelto
+  // no cuenta como firma: hace falta un trazo de cierto largo.
   function lienzoFirma(canvas) {
     const ctx = canvas.getContext('2d');
-    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1b1b1b';
-    let dibujando = false; let trazado = false;
-    const pos = (e) => { const r = canvas.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * (canvas.width / r.width), (p.clientY - r.top) * (canvas.height / r.height)]; };
-    const ini = (e) => { dibujando = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
-    const mov = (e) => { if (!dibujando) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); trazado = true; e.preventDefault(); };
+    ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b1b1b';
+    let dibujando = false; let largo = 0; let ult = null;
+    const pos = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)]; };
+    canvas.addEventListener('pointerdown', (e) => { dibujando = true; ult = pos(e); ctx.beginPath(); ctx.moveTo(...ult); try { canvas.setPointerCapture(e.pointerId); } catch (_e) { /* */ } e.preventDefault(); });
+    canvas.addEventListener('pointermove', (e) => { if (!dibujando) return; const p = pos(e); largo += Math.hypot(p[0] - ult[0], p[1] - ult[1]); ult = p; ctx.lineTo(...p); ctx.stroke(); e.preventDefault(); });
     const fin = () => { dibujando = false; };
-    canvas.addEventListener('mousedown', ini); canvas.addEventListener('mousemove', mov); window.addEventListener('mouseup', fin);
-    canvas.addEventListener('touchstart', ini, { passive: false }); canvas.addEventListener('touchmove', mov, { passive: false }); canvas.addEventListener('touchend', fin);
+    canvas.addEventListener('pointerup', fin); canvas.addEventListener('pointercancel', fin); canvas.addEventListener('pointerleave', fin);
     return {
-      limpiar: () => { ctx.clearRect(0, 0, canvas.width, canvas.height); trazado = false; },
-      vacio: () => !trazado,
+      limpiar: () => { ctx.clearRect(0, 0, canvas.width, canvas.height); largo = 0; },
+      vacio: () => largo < 60,
       datos: () => canvas.toDataURL('image/png'),
     };
+  }
+
+  /* Modo firma en tablet: pantalla completa solo con el texto, quién firma,
+     la casilla "Leí y acepto" y el recuadro para firmar con el dedo. El
+     paciente no ve ni puede tocar el resto de DOVA. */
+  function modoFirma(k, paciente, alTerminar) {
+    const capa = document.createElement('div');
+    capa.className = 'dova-firma-tablet';
+    capa.setAttribute('role', 'dialog'); capa.setAttribute('aria-modal', 'true');
+    const nombrePac = `${paciente.nombre || ''} ${paciente.apellido || ''}`.trim();
+    capa.innerHTML = `
+      <div class="dova-firma-caja">
+        <p class="dova-firma-clinica">${esc(((DOVA.clinicaActual() || {}).nombre) || '')}</p>
+        <h2>Consentimiento informado</h2>
+        <p class="dova-firma-proc">${esc(k.procedimiento)}</p>
+        <div class="dova-firma-texto" tabindex="0">${esc(k.texto || '')}</div>
+        <fieldset class="dova-firma-quien"><legend>¿Quién firma?</legend>
+          <label class="dova-check"><input type="radio" name="rel" value="paciente" checked /> El paciente: <strong>${esc(nombrePac)}</strong></label>
+          <label class="dova-check"><input type="radio" name="rel" value="responsable" /> Su responsable (madre, padre, tutor)</label>
+          <div class="dova-firma-resp" hidden>
+            <div><label>Nombre del responsable</label><input type="text" name="fnombre" maxlength="150" autocomplete="off" /></div>
+            <div><label>C.I. del responsable</label><input type="text" name="fdoc" maxlength="30" inputmode="numeric" autocomplete="off" /></div>
+          </div>
+        </fieldset>
+        <label class="dova-check dova-firma-acepto"><input type="checkbox" name="acepto" /> Leí el texto, me lo explicaron y acepto.</label>
+        <p class="dova-firma-etq">Firmá acá con el dedo</p>
+        <canvas class="dova-firma-lienzo" data-lienzo></canvas>
+        <div class="dova-firma-fila"><button type="button" class="dova-btn-secundario" data-borrar>Borrar y volver a firmar</button></div>
+        <details class="dova-firma-prof"><summary>Firma del profesional (opcional)</summary><canvas class="dova-firma-lienzo dova-firma-lienzo-chico" data-lienzo-o></canvas><button type="button" class="dova-btn-link" data-borrar-o>Borrar</button></details>
+        <p class="dova-error-text" data-error hidden></p>
+        <div class="dova-firma-acciones"><button type="button" class="dova-btn-secundario" data-cancelar>Cancelar</button><button type="button" class="dova-btn-primary" data-firmar-ya>Firmar</button></div>
+      </div>`;
+    document.body.appendChild(capa);
+    document.body.classList.add('dova-firmando');
+    try { if (capa.requestFullscreen) capa.requestFullscreen().catch(() => {}); } catch (_e) { /* sin pantalla completa */ }
+    // El lienzo toma el ancho real de la pantalla (nítido en tablets de alta densidad).
+    const ajustar = (cv, alto) => { const r = cv.getBoundingClientRect(); const d = window.devicePixelRatio || 1; cv.width = Math.round(r.width * d); cv.height = Math.round(alto * d); cv.style.height = `${alto}px`; };
+    const cvp = capa.querySelector('[data-lienzo]'); const cvo = capa.querySelector('[data-lienzo-o]');
+    ajustar(cvp, 200); const fp = lienzoFirma(cvp);
+    let fo = null;
+    capa.querySelector('.dova-firma-prof').addEventListener('toggle', (e) => { if (e.target.open && !fo) { ajustar(cvo, 130); fo = lienzoFirma(cvo); } });
+    const resp = capa.querySelector('.dova-firma-resp');
+    capa.querySelectorAll('[name=rel]').forEach((r) => r.addEventListener('change', () => { resp.hidden = capa.querySelector('[name=rel]:checked').value !== 'responsable'; }));
+    capa.querySelector('[data-borrar]').addEventListener('click', () => fp.limpiar());
+    capa.querySelector('[data-borrar-o]').addEventListener('click', () => fo && fo.limpiar());
+    const salir = () => { try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (_e) { /* */ } capa.remove(); document.body.classList.remove('dova-firmando'); };
+    capa.querySelector('[data-cancelar]').addEventListener('click', salir);
+    const err = capa.querySelector('[data-error]');
+    cvp.addEventListener('pointerdown', () => { err.hidden = true; });
+    capa.querySelector('[data-firmar-ya]').addEventListener('click', async (ev) => {
+      const b = ev.currentTarget; err.hidden = true;
+      const rel = capa.querySelector('[name=rel]:checked').value;
+      const mal = (m) => { err.textContent = m; err.hidden = false; };
+      if (!capa.querySelector('[name=acepto]').checked) return mal('Marcá "Leí el texto y acepto" antes de firmar.');
+      if (rel === 'responsable' && (!capa.querySelector('[name=fnombre]').value.trim() || !capa.querySelector('[name=fdoc]').value.trim())) return mal('Escribí el nombre y la C.I. del responsable.');
+      if (fp.vacio()) return mal('Falta la firma.');
+      b.disabled = true;
+      try {
+        await DOVA.post(`/clinico/consentimientos/${k.id}/firmar`, {
+          firmaPaciente: fp.datos(), firmaOdontologo: fo && !fo.vacio() ? fo.datos() : undefined, acepta: true, firmanteRelacion: rel,
+          firmanteNombre: rel === 'responsable' ? capa.querySelector('[name=fnombre]').value.trim() : undefined,
+          firmanteDocumento: rel === 'responsable' ? capa.querySelector('[name=fdoc]').value.trim() : undefined,
+        });
+        capa.querySelector('.dova-firma-caja').innerHTML = `<div class="dova-firma-gracias"><h2>¡Gracias!</h2><p>El consentimiento quedó firmado.</p><p class="dova-nota">Devolvé la tablet a la recepción.</p><button type="button" class="dova-btn-primary" data-listo>Listo</button></div>`;
+        capa.querySelector('[data-listo]').addEventListener('click', () => { salir(); alTerminar(); });
+      } catch (e) { b.disabled = false; mal(e.message); }
+    });
   }
 
   async function consentimientos(c, pid) {
@@ -864,12 +932,18 @@ const DovaOperativo = (() => {
       <div class="dova-toolbar"><h3 class="dova-section-title" style="margin:0">Consentimientos informados</h3>${maneja ? '<button class="dova-btn-primary" data-nuevo>+ Nuevo consentimiento</button>' : ''}</div>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Fecha</th><th>Procedimiento</th><th>Odontólogo</th><th>Estado</th><th></th></tr></thead><tbody>
       ${lista.map((k, i) => `<tr><td>${fmtFecha(k.fecha || k.creado_en)}</td><td>${esc(k.procedimiento)}</td><td>${esc(k.odontologo_nombre || '-')}</td>
-        <td>${k.estado === 'firmado' ? badge('Firmado', 'ok') : k.estado === 'anulado' ? badge('Anulado', 'critica') : badge('Pendiente de firma', 'atencion')}</td>
-        <td class="dova-ext-acciones">${maneja && k.estado === 'pendiente' ? `<button class="dova-btn-link" data-firmar="${i}">Firmar</button><button class="dova-btn-link dova-ext-peligro" data-anular="${k.id}">Anular</button>` : ''}<button class="dova-btn-link" data-pdf="${k.id}">PDF</button></td></tr>`).join('') || '<tr><td colspan="5">Sin consentimientos.</td></tr>'}
+        <td>${k.estado === 'firmado' ? `${badge('Firmado', 'ok')}${k.firmado_en ? `<br><span class="dova-nota">${esc(X.fmtFechaHora(k.firmado_en))}${k.firmante_relacion === 'responsable' ? ` · por ${esc(k.firmante_nombre || '')}` : ''}</span>` : ''}${k.verificado === false ? `<br>${badge('No coincide con su huella', 'critica')}` : ''}` : k.estado === 'anulado' ? badge('Anulado', 'critica') : badge('Pendiente de firma', 'atencion')}</td>
+        <td class="dova-ext-acciones">${maneja && k.estado === 'pendiente' ? `<button class="dova-btn-link" data-firmar="${i}">Firmar en tablet</button>` : ''}${maneja && k.estado !== 'anulado' ? `<button class="dova-btn-link dova-ext-peligro" data-anular="${k.id}" data-firmado="${k.estado === 'firmado' ? 1 : ''}">Anular</button>` : ''}<button class="dova-btn-link" data-pdf="${k.id}">PDF</button></td></tr>`).join('') || '<tr><td colspan="5">Sin consentimientos.</td></tr>'}
       </tbody></table></div>`;
     const recargar = () => consentimientos(c, pid);
     c.querySelectorAll('[data-pdf]').forEach((b) => b.addEventListener('click', () => DOVA.descargarPdf(`/comprobantes/consentimiento/${b.dataset.pdf}`, `consentimiento-${b.dataset.pdf}.pdf`).catch((e) => toast(e.message, 'error'))));
     c.querySelectorAll('[data-anular]').forEach((b) => b.addEventListener('click', async () => {
+      if (b.dataset.firmado) {
+        X.modalForm('Anular consentimiento firmado', [{ k: 'motivo', label: 'Motivo (queda registrado)', tipo: 'textarea', req: true, ancho: 'completo', max: 500 }], {}, async (d) => {
+          await DOVA.post(`/clinico/consentimientos/${b.dataset.anular}/anular`, { motivo: d.motivo }); toast('Anulado', 'ok'); recargar();
+        });
+        return;
+      }
       if (!(await confirmar('¿Anular el consentimiento?', 'Queda registrado como anulado.', 'Anular'))) return;
       try { await DOVA.post(`/clinico/consentimientos/${b.dataset.anular}/anular`, {}); toast('Anulado', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
     }));
@@ -887,30 +961,10 @@ const DovaOperativo = (() => {
       }, { ancho: 'ancho' });
       form.plantilla.addEventListener('change', () => { const p = plantillas.find((x) => x.codigo === form.plantilla.value); if (p) { form.texto.value = p.texto; if (!form.procedimiento.value) form.procedimiento.value = etiqueta(p.codigo); } });
     });
-    c.querySelectorAll('[data-firmar]').forEach((b) => b.addEventListener('click', () => {
+    c.querySelectorAll('[data-firmar]').forEach((b) => b.addEventListener('click', async () => {
       const k = lista[Number(b.dataset.firmar)];
-      X.modal(`Firma — ${k.procedimiento}`, `
-        <div class="dova-op-consent-texto">${esc(k.texto || '')}</div>
-        <p><strong>Firma del paciente o responsable</strong></p>
-        <canvas class="dova-op-firma" width="600" height="180" data-firma-p></canvas>
-        <button type="button" class="dova-btn-link" data-limpiar-p>Borrar firma</button>
-        <p><strong>Firma del profesional</strong> <span class="dova-nota">(opcional)</span></p>
-        <canvas class="dova-op-firma" width="600" height="140" data-firma-o></canvas>
-        <button type="button" class="dova-btn-link" data-limpiar-o>Borrar firma</button>
-        <p class="dova-error-text" data-error style="display:none"></p>
-        <div class="dova-modal-actions"><button class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button class="dova-btn-primary" data-guardar-firma>Guardar firma</button></div>`, { ancho: 'ancho' });
-      const fp = lienzoFirma(document.querySelector('[data-firma-p]'));
-      const fo = lienzoFirma(document.querySelector('[data-firma-o]'));
-      document.querySelector('[data-limpiar-p]').addEventListener('click', fp.limpiar);
-      document.querySelector('[data-limpiar-o]').addEventListener('click', fo.limpiar);
-      document.querySelector('[data-guardar-firma]').addEventListener('click', async () => {
-        const err = document.querySelector('.dova-modal-box [data-error]');
-        if (fp.vacio()) { err.textContent = 'Falta la firma del paciente.'; err.style.display = 'block'; return; }
-        try {
-          await DOVA.post(`/clinico/consentimientos/${k.id}/firmar`, { firmaPaciente: fp.datos(), firmaOdontologo: fo.vacio() ? undefined : fo.datos() });
-          X.cerrarModal(); toast('Consentimiento firmado', 'ok'); recargar();
-        } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
-      });
+      const pac = await DOVA.get(`/pacientes/${pid}`).catch(() => ({}));
+      modoFirma(k, pac, () => { toast('Consentimiento firmado', 'ok'); recargar(); });
     }));
   }
 
