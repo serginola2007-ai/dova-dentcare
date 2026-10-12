@@ -233,3 +233,13 @@ body.dova-bloqueada #shell-root, body.dova-bloqueada #modal-root, body.dova-bloq
 /* Contador de la campanita: mismo rojo en claro y en oscuro (en oscuro el
    rojo se aclaraba y el número blanco casi no se leía). */
 .dova-campana-num { background: #B8443A; color: #FFFFFF; }
+
+/* ---------- Recordatorios de turnos por WhatsApp ---------- */
+.dova-rec-estado { display: flex; flex-wrap: wrap; gap: 6px 28px; padding: 10px 0; margin-bottom: 4px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.dova-rec-config { margin: 8px 0 12px; font-size: 13px; }
+.dova-rec-config summary { cursor: pointer; color: var(--terracotta-dark); font-weight: 600; padding: 4px 0; }
+.dova-rec-config .dova-check { align-self: flex-end; }
+.dova-rec-ejemplo { margin: 4px 0 8px; padding: 8px 12px; border-left: 3px solid var(--sage); background: var(--cream); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dova-link-wa { color: var(--sage-dark) !important; font-weight: 600; }
+/* Nombres largos dentro de tablas: el enlace se alinea a la izquierda al partirse en dos líneas. */
+.dova-tabla td > .dova-btn-link:first-child { text-align: left; }

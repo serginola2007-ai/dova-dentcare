@@ -85,6 +85,9 @@ variable `ADMIN_PASSWORD` antes del primer seed, el admin se crea con esa clave.
 | `DATABASE_URL` | Cadena de conexión Postgres (`postgres://usuario:password@host:5432/basededatos`) |
 | `JWT_SECRET` | Secreto para firmar los access tokens (15 min) |
 | `JWT_REFRESH_SECRET` | Secreto para los refresh tokens (7 días) — **no reutilizar el de arriba** |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_PLANTILLA`, `WHATSAPP_IDIOMA`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | Opcionales: recordatorios automáticos por WhatsApp Business (ver `docs/WHATSAPP.md`). Sin ellas, se mandan desde el WhatsApp de la recepción. |
+| `CRON_SECRET` | Opcional: clave del disparo programado de recordatorios (`/api/recordatorios/cron`), 32+ caracteres. |
+| `PUBLIC_URL` | Opcional: dirección pública para los enlaces de los mensajes (en Render se toma sola de `RENDER_EXTERNAL_URL`). |
 | `JWT_EXPIRES_IN` | Duración del access token (default `15m`) |
 | `JWT_REFRESH_EXPIRES_IN` | Duración del refresh token (default `7d`) |
 | `CORS_ORIGIN` | Uno o varios orígenes separados por coma (sin barra final) desde los que se acepta el frontend, ej. `https://tu-sitio.netlify.app`, o `*` para permitir cualquiera (solo en desarrollo) |

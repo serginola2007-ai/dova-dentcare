@@ -25,10 +25,20 @@ const CAMPOS_EDITABLES = [
   'facebook', 'horario_atencion', 'ruc', 'moneda',
 ];
 
+const LARGOS = { nombre: 150, color_primario: 20, color_secundario: 20, telefono: 40, whatsapp: 40, email: 150, ruc: 40, moneda: 10 };
 async function actualizar(clinicaId, campos) {
   const filtrados = {};
   for (const key of CAMPOS_EDITABLES) {
-    if (campos[key] !== undefined) filtrados[key] = campos[key];
+    const v = campos[key];
+    if (v === undefined) continue;
+    // Solo texto: una lista o un objeto se guardaba como '{"x"}' (QA).
+    if (v !== null && typeof v !== 'string') throw new ApiError(400, `El dato "${key}" tiene un formato inválido`);
+    const t = v === null ? null : v.trim();
+    if (t && t.length > (LARGOS[key] || 2000)) throw new ApiError(400, `El dato "${key}" es demasiado largo`);
+    if (key === 'nombre' && !t) throw new ApiError(400, 'El nombre de la clínica es obligatorio');
+    if ((key === 'color_primario' || key === 'color_secundario') && t && !/^#[0-9a-fA-F]{6}$/.test(t)) throw new ApiError(400, 'El color tiene que tener la forma #RRGGBB');
+    if (key === 'email' && t && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) throw new ApiError(400, 'El email no es válido');
+    filtrados[key] = t || null;
   }
   return repo.update(clinicaId, filtrados);
 }

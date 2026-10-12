@@ -1,0 +1,80 @@
+# Recordatorios de turnos por WhatsApp
+
+DOVA recuerda cada turno por WhatsApp. El mensaje trae un **enlace privado**: el paciente toca, ve su turno y lo **confirma o cancela** con un botón. La agenda se actualiza sola.
+
+Hay dos formas de mandarlos. Se puede empezar con la primera ya mismo y pasar a la segunda cuando esté listo WhatsApp Business.
+
+## 1. Desde el WhatsApp de la recepción (funciona ya, sin configurar nada)
+
+En **Seguimiento → Recordatorios de turnos**:
+1. Elegí el día; por defecto, mañana.
+2. Tocá **Mandar por mi WhatsApp** en cada turno. Se abre WhatsApp con el mensaje y el enlace ya escritos: solo hay que tocar Enviar.
+
+DOVA anota que se mandó. Cuando el paciente confirma o cancela con el enlace, aparece en la lista y en la agenda.
+
+## 2. Automático con WhatsApp Business (API oficial de Meta)
+
+DOVA los manda solo, a la hora elegida, el día anterior (o 2 o 3 días antes). Registra **entregado** y **leído**. Si el paciente contesta "SÍ" por WhatsApp, el turno queda confirmado. Si contesta "NO" o "reprogramar", avisa a la recepción en la campanita.
+
+### Lo que hay que tener
+- Una cuenta de **Meta Business** (business.facebook.com) a nombre de la clínica.
+- Un **número de celular solo para la API**. No puede ser uno que ya se use en la app de WhatsApp: conviene un chip nuevo.
+- Medio de pago en Meta. Los mensajes de recordatorio son de categoría "utilidad" y tienen un costo bajo por mensaje (ver precios de Meta para Paraguay).
+
+### Pasos (una sola vez)
+1. En **developers.facebook.com** → *Crear app* → tipo **Empresa** → agregar el producto **WhatsApp**.
+2. En *WhatsApp → Configuración de la API*, agregar y verificar el número de la clínica. Anotar el **Phone number ID**.
+3. En *Configuración del negocio → Usuarios del sistema*:
+   1. Crear un usuario del sistema con rol administrador.
+   2. Asignarle la app y la cuenta de WhatsApp.
+   3. **Generar token** con los permisos `whatsapp_business_messaging` y `whatsapp_business_management`, sin vencimiento.
+4. En *WhatsApp → Plantillas de mensajes*, crear una plantilla:
+   - Nombre: `recordatorio_turno`
+   - Categoría: **Utilidad**
+   - Idioma: **Español** (`es`)
+   - Cuerpo:
+     ```
+     Hola {{1}}, te recordamos tu turno en {{2}} el {{3}} a las {{4}}. Confirmá o cancelá tu turno acá: {{5}}
+     ```
+   - Ejemplos para la revisión: `Ana`, `DentCareRC`, `martes 14 de octubre`, `09:30`, `https://dova.onrender.com/web/mi-turno.html#t=ejemplo`
+
+   Esperar la aprobación (suele tardar minutos u horas).
+5. En **Render → servicio dova → Environment**, agregar:
+
+   | Variable | Valor |
+   |---|---|
+   | `WHATSAPP_TOKEN` | el token del paso 3 |
+   | `WHATSAPP_PHONE_NUMBER_ID` | el id del paso 2 |
+   | `WHATSAPP_PLANTILLA` | `recordatorio_turno` |
+   | `WHATSAPP_IDIOMA` | `es` |
+   | `WHATSAPP_APP_SECRET` | *Configuración de la app → Básica → Clave secreta de la app* |
+   | `WHATSAPP_VERIFY_TOKEN` | un texto largo inventado (se usa en el paso 6) |
+   | `CRON_SECRET` | otro texto largo inventado (32+ caracteres; se usa en el paso 7) |
+   | `PUBLIC_URL` | `https://dova.onrender.com` (o el dominio propio de la clínica) |
+
+6. **Webhook** (para entregado, leído y respuestas): en la app de Meta → *WhatsApp → Configuración → Webhook*:
+   - URL de devolución de llamada: `https://dova.onrender.com/api/whatsapp/webhook`
+   - Token de verificación: el mismo `WHATSAPP_VERIFY_TOKEN`
+   - Tocar *Verificar y guardar*, y suscribirse al campo **messages**.
+7. **Que se mande aunque nadie use DOVA.** El plan gratuito de Render duerme el servidor tras 15 minutos sin uso. Un aviso programado de GitHub lo despierta cada 15 minutos entre las 9 y las 21 h:
+   1. En GitHub → repositorio `dova-dentcare` → *Settings → Secrets and variables → Actions*, crear el secreto `DOVA_CRON_SECRET` con el **mismo valor** que `CRON_SECRET`.
+   2. Listo: el flujo `.github/workflows/recordatorios.yml` se encarga del resto.
+
+   Con el plan pago de Render, el servidor no se duerme y DOVA revisa solo cada 10 minutos (igual conviene dejar el aviso como respaldo).
+8. En DOVA → **Seguimiento → Recordatorios de turnos → Configurar envío automático**:
+   1. Tildar "Mandar los recordatorios solo".
+   2. Elegir la hora y la anticipación.
+   3. Guardar.
+
+   Arriba tiene que decir **WhatsApp Business: conectado**.
+
+### Cómo se comporta
+- Cada turno recibe **un solo recordatorio**, aunque el servidor se reinicie o haya dos procesos a la vez.
+- No se manda:
+  - a turnos ya confirmados;
+  - a pacientes que no aceptan recordatorios (ficha → datos de contacto);
+  - si no tienen un celular válido.
+- Nunca se manda de noche: si el servidor estuvo dormido, después de las 21 h espera al día siguiente.
+- Si un envío falla, la recepción recibe un aviso. En la lista aparece **No se pudo enviar** con el motivo y el botón **Reintentar**; también se puede mandar a mano.
+- El enlace del mensaje vale hasta el día siguiente al turno. Solo se guarda su huella: con la base de datos no se pueden reconstruir los enlaces.
+- La firma de cada aviso de Meta se verifica con `WHATSAPP_APP_SECRET`. Un aviso sin firma válida se rechaza.

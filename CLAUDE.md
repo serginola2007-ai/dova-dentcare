@@ -28,7 +28,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0045 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0046 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
@@ -94,6 +94,15 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - **Seguridad:** `backend/tests/seguridad/` contra un servidor local en `NODE_ENV=production` con una base de prueba. Pasos y última corrida en `SECURITY-TESTS.md`.
 - **Pantallas:** se prueban con Playwright en un navegador real (los 3 diseños, escritorio, tablet y celular), verificando que no haya desbordes ni errores de consola.
 - El límite de 10 logins por minuto por cuenta es real: al correr muchas pruebas seguidas, dejar ~1 minuto entre archivos.
+
+## Recordatorios por WhatsApp
+
+- Módulo `backend/src/modules/recordatorios/`.
+- Proveedor en `utils/whatsapp.js`: API oficial de Meta, se activa con variables `WHATSAPP_*`.
+- Webhook firmado: `/api/whatsapp/webhook`.
+- Disparo externo: `POST /api/recordatorios/cron` con `X-DOVA-CRON`.
+- Configuración paso a paso: `docs/WHATSAPP.md`.
+- Pruebas con WhatsApp falso: `backend/tests/recordatorios.test.js`, `backend/tests/ui-recordatorios.js`.
 
 ## Deploy
 

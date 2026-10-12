@@ -100,7 +100,8 @@ app.use(cors((req, cb) => {
 }));
 // Los eventos en tiempo real (/api/eventos) no se comprimen: se tienen que enviar al instante.
 app.use(compression({ filter: (req, res) => (req.path === '/api/eventos' ? false : compression.filter(req, res)) }));
-app.use(express.json({ limit: '2mb' }));
+// El webhook de WhatsApp necesita el cuerpo exacto para verificar la firma de Meta.
+app.use(express.json({ limit: '2mb', verify: (req, res, buf) => { if ((req.originalUrl || '').startsWith('/api/whatsapp/webhook')) req.cuerpoCrudo = buf; } }));
 if (env.nodeEnv !== 'test') {
   // Registro de pedidos SIN datos sensibles: nunca la consulta (?q=nombre del
   // paciente, filtros) ni los tokens de los enlaces de turnos.
@@ -191,6 +192,13 @@ app.use('/api/facturacion', facturacionRoutes);
 app.use('/api/web/publico', webRoutes.publico);
 app.use('/api/web/cuenta', webRoutes.cuenta);
 app.use('/api/web', webRoutes.interno);
+// Recordatorios de turnos por WhatsApp.
+{
+  const rec = require('./modules/recordatorios/recordatorios.routes');
+  app.use('/api/recordatorios/cron', rec.cron);
+  app.use('/api/recordatorios', rec.interno);
+  app.use('/api/whatsapp/webhook', rec.webhook);
+}
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en
    Render, una sola dirección, sin CORS). Si la carpeta frontend/ no está

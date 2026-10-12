@@ -55,6 +55,23 @@ services:
         sync: false
       - key: MAIL_NOMBRE
         value: DentCare
+      # Recordatorios de turnos por WhatsApp Business (OPCIONAL, ver docs/WHATSAPP.md).
+      # Sin estas variables, los recordatorios se mandan desde el WhatsApp de la recepción.
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_PLANTILLA
+        value: recordatorio_turno
+      - key: WHATSAPP_IDIOMA
+        value: es
+      # Clave del disparo programado (GitHub la usa como DOVA_CRON_SECRET).
+      - key: CRON_SECRET
+        generateValue: true
 
 databases:
   - name: dova-db

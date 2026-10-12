@@ -1,0 +1,29 @@
+# Despierta a DOVA cada 15 minutos (de 9 a 21 h de Paraguay) para que mande
+# los recordatorios de turnos por WhatsApp aunque nadie lo esté usando
+# (el plan gratuito de Render duerme el servidor tras 15 min sin uso).
+# Necesita el secreto DOVA_CRON_SECRET en GitHub (Settings → Secrets → Actions)
+# con el mismo valor que CRON_SECRET en Render. Sin el secreto, no hace nada.
+name: Recordatorios de turnos
+on:
+  schedule:
+    - cron: "*/15 12-23 * * *"
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pedir a DOVA que mande los recordatorios pendientes
+        env:
+          SECRETO: ${{ secrets.DOVA_CRON_SECRET }}
+          URL: ${{ vars.DOVA_URL || 'https://dova.onrender.com' }}
+        run: |
+          if [ -z "$SECRETO" ]; then echo "Sin DOVA_CRON_SECRET: no se hace nada."; exit 0; fi
+          # El primer pedido despierta al servidor; se reintenta si todavía está arrancando.
+          for i in 1 2 3 4; do
+            codigo=$(curl -s -o respuesta.json -w "%{http_code}" -X POST -H "X-DOVA-CRON: $SECRETO" --max-time 90 "$URL/api/recordatorios/cron") || codigo=000
+            if [ "$codigo" = "200" ]; then cat respuesta.json; echo; exit 0; fi
+            echo "Intento $i: HTTP $codigo"; sleep 20
+          done
+          exit 1

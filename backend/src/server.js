@@ -10,6 +10,14 @@ const tiempoReal = require('./utils/tiempoReal');
 const server = app.listen(env.port, () => {
   console.log(`DOVA backend escuchando en http://localhost:${env.port} (${env.nodeEnv})`);
   tiempoReal.conectar();
+  // Recordatorios de turnos por WhatsApp: se revisa cada 10 minutos si toca
+  // mandarlos (además del disparo externo por /api/recordatorios/cron).
+  if (process.env.RECORDATORIOS_AUTOMATICOS !== 'false') {
+    const rec = require('./modules/recordatorios/recordatorios.service');
+    const correr = () => rec.ejecutarAutomaticos().then((r) => { if (r.enviados || r.fallidos) console.log(`[recordatorios] enviados ${r.enviados}, fallidos ${r.fallidos}`); }).catch((e) => console.error('[recordatorios]', e.message));
+    setTimeout(correr, 60 * 1000).unref();
+    setInterval(correr, 10 * 60 * 1000).unref();
+  }
 });
 // Las conexiones de tiempo real quedan abiertas: que el servidor no las corte.
 server.keepAliveTimeout = 65000;

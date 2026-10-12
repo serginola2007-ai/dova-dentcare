@@ -563,3 +563,24 @@ Se probó todo DOVA como un QA:
   - el número rojo de la campanita casi no se leía en modo oscuro;
   - la opción activa del menú del diseño técnico tenía poco contraste.
 - Verificación: API sin ningún error 500 en 2.664 pedidos de prueba; pantallas, seguridad y regresión completa en verde.
+
+## Recordatorios de turnos por WhatsApp (migración 0046)
+- **Seguimiento → Recordatorios de turnos** se rehízo:
+  - cada mensaje trae un **enlace privado** con el que el paciente **confirma o cancela su turno con un toque**;
+  - la agenda y la lista se actualizan solas.
+- **Funciona ya, sin configurar nada:** "Mandar por mi WhatsApp" abre el WhatsApp de la recepción con el mensaje y el enlace escritos; solo hay que tocar Enviar.
+- **Automático con WhatsApp Business** (API oficial de Meta), cuando se conecte:
+  - manda solo, a la hora elegida, el día anterior o con 2 o 3 días de anticipación;
+  - marca enviado, entregado, leído y respondido;
+  - si el paciente contesta "SÍ", confirma el turno;
+  - si contesta "NO" o "reprogramar", avisa a la recepción en la campanita.
+- **Protecciones:**
+  - un solo recordatorio por turno, aunque haya dos procesos a la vez;
+  - no se manda a turnos confirmados, a pacientes que no aceptan mensajes ni a quien no tiene celular válido;
+  - nunca de noche;
+  - si falla, avisa y deja "Reintentar";
+  - los avisos de Meta se verifican con su firma;
+  - del enlace solo se guarda su huella.
+- Pasos para conectar WhatsApp Business: `docs/WHATSAPP.md`. Un flujo de GitHub (`.github/workflows/recordatorios.yml`) despierta al servidor gratuito de Render para que se manden aunque nadie use DOVA.
+- **También en esta tanda:** "Configuración de la clínica" aceptaba listas u objetos como nombre o email y los guardaba mal (se vio como `{"x"}` en la marca). Ahora solo acepta texto, valida email y colores, y el nombre es obligatorio.
+- Pruebas: `tests/recordatorios.test.js` (45/45, con un WhatsApp falso que imita a Meta) y `tests/ui-recordatorios.js` (21/21: los 3 diseños, celular y la página del paciente).

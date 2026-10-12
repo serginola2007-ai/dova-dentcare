@@ -335,7 +335,8 @@ async function turnoPorToken(token) {
   const r = await query(`SELECT t.id, t.clinica_id, t.fecha::text AS fecha, to_char(t.hora_inicio,'HH24:MI') AS hora, t.duracion_minutos, t.estado, t.confirmacion, t.motivo,
                                 o.nombre AS odontologo, p.nombre AS paciente_nombre
                            FROM turnos t JOIN odontologos o ON o.id=t.odontologo_id JOIN pacientes p ON p.id=t.paciente_id
-                          WHERE t.web_token_hash=$1`, [hash(token)]);
+                          WHERE t.web_token_hash=$1
+                             OR t.id = (SELECT e.turno_id FROM turno_enlaces e WHERE e.token_hash=$1 AND e.expira_en > now())`, [hash(token)]);
   if (!r.rowCount) throw new ApiError(404, 'No encontramos ese turno');
   return r.rows[0];
 }
@@ -359,12 +360,14 @@ async function accionTurno(token, accion, ip) {
     if (!p.puedeCancelar) throw new ApiError(409, `Falta poco para el turno: para cancelarlo comunicate con la clínica (se puede cancelar online hasta ${p.cancelacionHoras} h antes).`);
     await query("UPDATE turnos SET estado='cancelado', actualizado_en=now() WHERE id=$1", [t.id]);
     await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.id, JSON.stringify({ estado: { antes: t.estado, despues: 'cancelado' }, por: 'el paciente desde la página web' })]);
+    await query("UPDATE recordatorios_envios SET estado='respondido', respuesta='Canceló con el enlace', actualizado_en=now() WHERE turno_id=$1 AND tipo='turno'", [t.id]);
     await auditoria.registrar({ clinicaId: t.clinica_id, usuarioId: null, usuarioNombre: 'Página web', accion: 'cancelar_turno_web', modulo: 'agenda', entidadId: t.id, detalle: { fecha: t.fecha, hora: t.hora } });
     await notificarRecepcion(t.clinica_id, { tipo: 'turno_web', titulo: `Turno cancelado desde la web: ${t.paciente_nombre}`, mensaje: `${nombreDia(t.fecha)} ${t.hora} · ${t.odontologo}. El horario quedó libre.`, entidad: 'turno', entidadId: t.id, ruta: 'agenda' });
   } else if (accion === 'confirmar') {
     if (!p.vigente) throw new ApiError(409, 'Este turno ya no está vigente');
     await query("UPDATE turnos SET confirmacion='confirmado', confirmado_en=now(), estado=CASE WHEN estado='reservado' THEN 'confirmado' ELSE estado END, actualizado_en=now() WHERE id=$1", [t.id]);
     await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.id, JSON.stringify({ confirmacion: 'confirmado por el paciente desde la página web' })]);
+    await query("UPDATE recordatorios_envios SET estado='respondido', respuesta='Confirmó con el enlace', actualizado_en=now() WHERE turno_id=$1 AND tipo='turno' AND estado <> 'respondido'", [t.id]);
   } else throw new ApiError(400, 'Acción inválida');
   return turnoPublico(token);
 }

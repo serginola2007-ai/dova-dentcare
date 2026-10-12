@@ -225,23 +225,94 @@ const DovaSecciones = (() => {
       ${filas.map((r) => `<tr><td>${linkPac(r.paciente_id, r.nombre, r.apellido)}</td><td>${fmtFecha(r.fecha)}</td><td>${r.dias}</td><td>${fmtGs(r.total)}</td><td>${badgeFecha(r.vencimiento)}</td><td>${esc(etiqueta(r.estado))}</td></tr>`).join('') || '<tr><td colspan="6">No hay presupuestos esperando respuesta.</td></tr>'}</tbody></table>`;
   }
 
+  // Recordatorios de turnos por WhatsApp: automáticos con WhatsApp Business,
+  // o desde el WhatsApp de la recepción con un toque. El mensaje lleva un
+  // enlace privado para que el paciente confirme o cancele solo.
+  const ESTADO_ENVIO = { enviando: ['Enviando…', 'info'], enviado: ['Enviado', 'info'], entregado: ['Entregado', 'info'], leido: ['Leído', 'ok'], respondido: ['Respondió', 'ok'], fallo: ['No se pudo enviar', 'critica'] };
   async function subRecordatorios(c) {
-    c.innerHTML = `<form class="dova-ext-filtros" data-f><div><label>Turnos del día</label><input type="date" name="fecha" value="${X.sumarDias(X.hoy(), 1)}"/></div><button class="dova-btn-secundario">Ver</button></form><div data-l></div>`;
+    const puedeCfg = puede('agenda.config', 'clinica.config.manage');
+    const puedeEnviar = puede('agenda.edit', 'whatsapp.send');
+    let cfg = await DOVA.get('/recordatorios/config');
+    const horas = Array.from({ length: 16 }, (_, i) => i + 6);
+    const dibujarCfg = () => `
+      <div class="dova-rec-estado">
+        <div><span class="dova-punto ${cfg.whatsappConectado ? 'dova-punto-ok' : ''}"></span><strong>WhatsApp Business:</strong> ${cfg.whatsappConectado ? 'conectado' : 'no conectado'}
+          <span class="dova-nota">${cfg.whatsappConectado ? '— DOVA manda los recordatorios solo.' : '— los mandás desde tu WhatsApp con el botón verde (el mensaje ya va armado).'}</span></div>
+        <div><span class="dova-punto ${cfg.automatico && cfg.whatsappConectado ? 'dova-punto-ok' : ''}"></span><strong>Envío automático:</strong> ${cfg.automatico ? `todos los días a las ${cfg.hora} h, ${cfg.dias === 1 ? 'el día anterior' : `${cfg.dias} días antes`}` : 'apagado'}${cfg.automatico && !cfg.whatsappConectado ? ' <span class="dova-nota">(se activa cuando WhatsApp Business esté conectado)</span>' : ''}</div>
+      </div>
+      ${puedeCfg ? `<details class="dova-rec-config"><summary>Configurar envío automático</summary>
+        <form data-cfg class="dova-ext-filtros">
+          <label class="dova-check"><input type="checkbox" name="automatico" ${cfg.automatico ? 'checked' : ''}/> Mandar los recordatorios solo</label>
+          <div><label>Hora de envío</label><select name="hora">${horas.map((h) => `<option value="${h}" ${h === cfg.hora ? 'selected' : ''}>${h}:00</option>`).join('')}</select></div>
+          <div><label>Anticipación</label><select name="dias">${[1, 2, 3].map((d) => `<option value="${d}" ${d === cfg.dias ? 'selected' : ''}>${d === 1 ? 'El día anterior' : `${d} días antes`}</option>`).join('')}</select></div>
+          <button class="dova-btn-primary">Guardar</button>
+        </form>
+        <p class="dova-nota">Así le llega al paciente:</p><blockquote class="dova-rec-ejemplo">${esc(cfg.ejemplo)}</blockquote>
+        ${cfg.whatsappConectado ? '' : '<p class="dova-nota">Para que se manden solos hace falta conectar WhatsApp Business (una sola vez). Los pasos están en <code>docs/WHATSAPP.md</code>.</p>'}
+      </details>` : ''}`;
+    c.innerHTML = `<div data-cfgbox>${dibujarCfg()}</div>
+      <form class="dova-ext-filtros" data-f><div><label>Turnos del día</label><input type="date" name="fecha" value="${X.sumarDias(X.hoy(), cfg.dias || 1)}"/></div><button class="dova-btn-secundario">Ver</button><span data-masivo></span></form><div data-l></div>`;
+    const enlazarCfg = () => {
+      const fc = c.querySelector('[data-cfg]');
+      if (fc) fc.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try { cfg = await DOVA.put('/recordatorios/config', { automatico: fc.automatico.checked, hora: Number(fc.hora.value), dias: Number(fc.dias.value) }); X.toast('Configuración guardada', 'ok'); c.querySelector('[data-cfgbox]').innerHTML = dibujarCfg(); enlazarCfg(); } catch (ex) { X.toast(ex.message, 'error'); }
+      });
+    };
+    enlazarCfg();
     const f = c.querySelector('[data-f]'); const l = c.querySelector('[data-l]');
     const cargar = async () => {
-      const filas = await DOVA.get(`/seguimiento/recordatorios-turnos?fecha=${f.fecha.value}`);
-      l.innerHTML = `<p class="dova-nota">Abrí el WhatsApp con el mensaje armado, envialo, y marcá "Enviado". Cuando el paciente responda, marcá "Confirmó".</p>
-        <table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Confirmación</th><th></th></tr></thead><tbody>
-        ${filas.map((t) => `<tr><td>${esc(String(t.hora_inicio).slice(0, 5))}</td><td>${linkPac(t.paciente_id, t.nombre, t.apellido)}</td><td>${esc(t.odontologo_nombre || '-')}</td>
-          <td>${badge(etiqueta(t.confirmacion), t.confirmacion === 'confirmado' ? 'ok' : t.confirmacion === 'recordatorio_enviado' ? 'info' : 'atencion')}${t.recordado_en ? `<br><span class="dova-nota">enviado ${X.fmtFechaHora(t.recordado_en)}</span>` : ''}</td>
-          <td class="dova-ext-acciones">${X.linkWhatsapp(t.whatsapp_link)}<button class="dova-btn-link" data-enviado="${t.id}">Enviado</button><button class="dova-btn-link" data-conf="${t.id}">Confirmó</button><button class="dova-btn-link" data-reprog="${t.id}">Pide reprogramar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay turnos ese día.</td></tr>'}</tbody></table>`;
-      l.querySelectorAll('[data-enviado]').forEach((b) => b.addEventListener('click', async () => { await DOVA.post(`/seguimiento/recordatorios-turnos/${b.dataset.enviado}/enviado`, {}); cargar(); }));
+      const r = await DOVA.get(`/recordatorios/turnos?fecha=${f.fecha.value}`);
+      const pendientes = r.turnos.filter((t) => !t.noEnviable && (!t.envio || t.envio.estado === 'fallo') && t.confirmacion !== 'confirmado');
+      c.querySelector('[data-masivo]').innerHTML = r.whatsappConectado && puedeEnviar && pendientes.length ? `<button type="button" class="dova-btn-primary" data-todos>Enviar ${pendientes.length} pendiente${pendientes.length === 1 ? '' : 's'}</button>` : '';
+      l.innerHTML = `<p class="dova-nota">El mensaje trae un enlace para que el paciente confirme o cancele con un toque; cuando lo hace, se actualiza solo acá y en la agenda.</p>
+        <table class="dova-tabla"><thead><tr><th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Recordatorio</th><th>Confirmación</th><th></th></tr></thead><tbody>
+        ${r.turnos.map((t) => {
+          const e = t.envio ? ESTADO_ENVIO[t.envio.estado] || [t.envio.estado, 'info'] : null;
+          const estadoEnvio = t.noEnviable ? `<span class="dova-nota">${esc(t.noEnviable)}</span>`
+            : e ? `${badge(e[0], e[1])}${t.envio.canal === 'whatsapp_manual' ? ' <span class="dova-nota">a mano</span>' : ''}${t.envio.respuesta ? `<br><span class="dova-nota">«${esc(t.envio.respuesta)}»</span>` : ''}${t.envio.error ? `<br><span class="dova-nota">${esc(t.envio.error)}</span>` : ''}`
+            : badge('Sin enviar', 'atencion');
+          const acciones = [];
+          if (puedeEnviar && !t.noEnviable) {
+            if (r.whatsappConectado && (!t.envio || t.envio.estado === 'fallo')) acciones.push(`<button class="dova-btn-link" data-enviar="${t.id}">${t.envio ? 'Reintentar' : 'Enviar'}</button>`);
+            acciones.push(`<button class="dova-btn-link dova-link-wa" data-manual="${t.id}">${t.envio ? 'Reenviar por mi WhatsApp' : 'Mandar por mi WhatsApp'}</button>`);
+          }
+          if (puede('agenda.edit')) {
+            if (t.confirmacion !== 'confirmado') acciones.push(`<button class="dova-btn-link" data-conf="${t.id}">Confirmó</button>`);
+            if (t.confirmacion !== 'pide_reprogramar') acciones.push(`<button class="dova-btn-link" data-reprog="${t.id}">Pide reprogramar</button>`);
+          }
+          return `<tr><td>${esc(t.hora)}</td><td>${linkPac(t.paciente_id, t.nombre, t.apellido)}</td><td>${esc(t.odontologo_nombre || '-')}</td><td>${estadoEnvio}</td>
+            <td>${badge(etiqueta(t.confirmacion), t.confirmacion === 'confirmado' ? 'ok' : t.confirmacion === 'pide_reprogramar' ? 'critica' : 'atencion')}</td>
+            <td class="dova-ext-acciones">${acciones.join('')}</td></tr>`;
+        }).join('') || '<tr><td colspan="6">No hay turnos ese día.</td></tr>'}</tbody></table>`;
+      l.querySelectorAll('[data-enviar]').forEach((b) => b.addEventListener('click', async () => {
+        try { await DOVA.post(`/recordatorios/turnos/${b.dataset.enviar}/enviar`); X.toast('Recordatorio enviado', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
+        cargar();
+      }));
+      l.querySelectorAll('[data-manual]').forEach((b) => b.addEventListener('click', async () => {
+        // La ventana se abre en el mismo toque (si no, el navegador la bloquea) y después se le pone el mensaje.
+        const ventana = window.open('', '_blank');
+        try {
+          const x = await DOVA.post(`/recordatorios/turnos/${b.dataset.manual}/enlace`);
+          if (ventana) ventana.location.href = x.url; else location.href = x.url;
+          cargar();
+        } catch (ex) { if (ventana) ventana.close(); X.toast(ex.message, 'error'); }
+      }));
+      const todos = c.querySelector('[data-todos]');
+      if (todos) todos.addEventListener('click', async () => {
+        let ok = 0; let mal = 0;
+        for (const t of pendientes) { try { await DOVA.post(`/recordatorios/turnos/${t.id}/enviar`); ok += 1; } catch (_e) { mal += 1; } }
+        X.toast(`${ok} enviado${ok === 1 ? '' : 's'}${mal ? `, ${mal} con error` : ''}`, mal ? 'error' : 'ok');
+        cargar();
+      });
       l.querySelectorAll('[data-conf]').forEach((b) => b.addEventListener('click', async () => { await DOVA.post(`/operaciones/confirmacion/${b.dataset.conf}`, { confirmacion: 'confirmado' }); X.toast('Turno confirmado', 'ok'); cargar(); }));
       l.querySelectorAll('[data-reprog]').forEach((b) => b.addEventListener('click', async () => { await DOVA.post(`/operaciones/confirmacion/${b.dataset.reprog}`, { confirmacion: 'pide_reprogramar' }); cargar(); }));
     };
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
     await cargar();
+    X.vivo(c, ['turnos'], cargar);
   }
+
 
   async function subReactivacion(c) {
     c.innerHTML = `<form class="dova-ext-filtros" data-f><div><label>Sin venir hace más de (meses)</label><input type="number" name="meses" value="12" min="3" max="60"/></div><button class="dova-btn-secundario">Buscar</button></form><div data-l></div>`;
