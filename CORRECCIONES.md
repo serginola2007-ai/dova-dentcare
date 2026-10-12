@@ -662,3 +662,22 @@ Se probó todo DOVA como un QA:
   - El formato .xls viejo se rechaza explicando cómo guardarlo como .xlsx.
 - Planilla modelo descargable. Queda en el historial de cambios quién importó, el archivo y los totales.
 - Pruebas: `tests/importar-pacientes.test.js` (37/37) y `tests/ui-importar-pacientes.js` (16/16, escritorio y celular). Barrido de seguridad: 538 rutas, 0 anomalías.
+
+## Puesta en marcha y Datos de la clínica
+
+- **Configuración → Datos de la clínica** (antes no había pantalla para esto):
+  - nombre, dirección, teléfono, WhatsApp, email, horario, RUC, web y redes;
+  - casilla para usar los mismos datos de contacto en la página web;
+  - cada cambio queda en el historial con el antes y el después.
+- **Inicio → Puesta en marcha** (solo quien configura la clínica): la lista de lo que falta para empezar, calculada con los datos reales:
+  - datos de la clínica;
+  - odontólogos;
+  - tratamientos con precio;
+  - sillones;
+  - usuarios del personal (avisa qué odontólogos no tienen usuario);
+  - datos para facturar;
+  - pacientes;
+  - WhatsApp (opcional).
+- Cada paso tiene "Ir", que lleva directo a la pantalla donde se carga.
+- La lista desaparece sola al completar los pasos, o con "Ocultar" (se vuelve a mostrar desde Datos de la clínica).
+- Pruebas: `tests/puesta-en-marcha.test.js` (24/24: API, escritorio y celular). Regresión: menú 75/75, responsive 78/78, tablet, mecánico 26/26. Seguridad: 540 rutas sin anomalías, permisos 65/65, multiclínica 23/23.

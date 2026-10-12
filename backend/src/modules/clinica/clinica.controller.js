@@ -17,7 +17,7 @@ async function brandingPublico(req, res, next) {
 
 async function actualizar(req, res, next) {
   try {
-    const clinica = await service.actualizar(req.clinicaId, req.body);
+    const clinica = await service.actualizar(req.clinicaId, req.body, req.usuario);
     res.json(clinica);
   } catch (err) { next(err); }
 }

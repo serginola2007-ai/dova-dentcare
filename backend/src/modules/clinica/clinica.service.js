@@ -26,7 +26,8 @@ const CAMPOS_EDITABLES = [
 ];
 
 const LARGOS = { nombre: 150, color_primario: 20, color_secundario: 20, telefono: 40, whatsapp: 40, email: 150, ruc: 40, moneda: 10 };
-async function actualizar(clinicaId, campos) {
+async function actualizar(clinicaId, campos, actor) {
+  if (!campos || typeof campos !== 'object' || Array.isArray(campos)) throw new ApiError(400, 'Datos inválidos');
   const filtrados = {};
   for (const key of CAMPOS_EDITABLES) {
     const v = campos[key];
@@ -40,7 +41,24 @@ async function actualizar(clinicaId, campos) {
     if (key === 'email' && t && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) throw new ApiError(400, 'El email no es válido');
     filtrados[key] = t || null;
   }
-  return repo.update(clinicaId, filtrados);
+  const antes = await repo.findById(clinicaId);
+  const actualizada = await repo.update(clinicaId, filtrados);
+  if (actor) {
+    const cambios = Object.keys(filtrados).filter((k) => (antes ? antes[k] : null) !== filtrados[k]);
+    if (cambios.length) {
+      await require('../../utils/auditoria').registrar({
+        clinicaId, usuarioId: actor.id, usuarioNombre: actor.nombre, accion: 'editar', modulo: 'clinica', entidadId: clinicaId,
+        detalle: { antes: Object.fromEntries(cambios.map((k) => [k, antes ? antes[k] : null])), despues: Object.fromEntries(cambios.map((k) => [k, filtrados[k]])) },
+      });
+    }
+  }
+  // Opcional: los mismos datos de contacto en la página web de la clínica.
+  if (campos.actualizarWeb === true) {
+    const { query } = require('../../config/db');
+    const w = ['direccion', 'telefono', 'whatsapp', 'email', 'instagram', 'facebook'].filter((k) => filtrados[k] !== undefined);
+    if (w.length) await query(`UPDATE web_config SET ${w.map((k, i) => `${k}=$${i + 2}`).join(', ')}, actualizado_en=now() WHERE clinica_id=$1`, [clinicaId, ...w.map((k) => filtrados[k])]);
+  }
+  return actualizada;
 }
 
 const MINUTOS_BLOQUEO = [0, 5, 10, 15, 30, 60, 120];

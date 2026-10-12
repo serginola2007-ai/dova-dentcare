@@ -17,4 +17,16 @@ router.put('/', authMiddleware, resolverClinicaMiddleware, requirePermiso('clini
 router.get('/seguridad', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.obtenerSeguridad);
 router.put('/seguridad', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.actualizarSeguridad);
 
+// Puesta en marcha: qué falta configurar para empezar a usar DOVA.
+const puesta = require('./puesta-en-marcha');
+router.get('/puesta-en-marcha', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), async (req, res, next) => {
+  try { res.json(await puesta.estado(req.clinicaId)); } catch (e) { next(e); }
+});
+router.put('/puesta-en-marcha', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), async (req, res, next) => {
+  try {
+    if (typeof (req.body || {}).oculta !== 'boolean') return next(new (require('../../middlewares/error.middleware').ApiError)(400, 'Falta "oculta" (verdadero o falso)'));
+    return res.json(await puesta.ocultar(req.clinicaId, req.body.oculta));
+  } catch (e) { return next(e); }
+});
+
 module.exports = router;

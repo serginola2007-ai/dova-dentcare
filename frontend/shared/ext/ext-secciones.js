@@ -901,6 +901,7 @@ const DovaSecciones = (() => {
   // ======================= EXTENSIONES DE VISTAS EXISTENTES =======================
   // Panel: resumen de seguimiento para quien lo puede ver.
   async function extenderDashboard(elMain, nav) {
+    await puestaEnMarcha(elMain, nav);
     if (!puede('seguimiento.view', 'recalls.view')) return;
     let p; try { p = await DOVA.get('/seguimiento/panel'); } catch (_e) { return; }
     const titulo = elMain.querySelector('.dova-view-title');
@@ -911,11 +912,12 @@ const DovaSecciones = (() => {
       ${kpi(p.tratamientosSinTurno, 'Tratamientos sin turno', { alerta: p.tratamientosSinTurno > 0, ir: 'sinturno' })}
       ${kpi(p.turnosSinConfirmar, 'Turnos sin confirmar', { alerta: p.turnosSinConfirmar > 0, ir: 'recordatorios' })}
       ${p.cumpleanosHoy ? kpi(p.cumpleanosHoy, 'Cumpleaños hoy', { ir: 'cumpleanos' }) : ''}</div>`;
-    if (titulo) titulo.insertAdjacentElement('afterend', cont); else elMain.prepend(cont);
+    // Debajo de la puesta en marcha (si está), que va primero.
+    const ancla = elMain.querySelector('.dova-puesta') || titulo;
+    if (ancla) ancla.insertAdjacentElement('afterend', cont); else elMain.prepend(cont);
     cont.querySelectorAll('[data-ir-sub]').forEach((b) => b.addEventListener('click', () => nav('seguimiento', b.dataset.irSub)));
   }
 
-  // Configuración: tipos de recall y qué tratamiento dispara cada uno.
   // Mi WhatsApp: cada odontólogo registra su celular para los recordatorios de sus pacientes.
   async function tarjetaMiWhatsapp(elMain) {
     const yo = DOVA.usuarioActual() || {};
@@ -938,8 +940,67 @@ const DovaSecciones = (() => {
     elMain.appendChild(cont);
   }
 
+  // Datos de la clínica (nombre, contacto, horario): los usan los comprobantes, los mensajes y la página web.
+  async function tarjetaDatosClinica(elMain) {
+    if (!puede('clinica.config.manage')) return;
+    let c; try { c = await DOVA.get('/clinica'); } catch (_e) { return; }
+    const campos = [['nombre', 'Nombre de la clínica', 'text', 150, true], ['direccion', 'Dirección', 'text', 300], ['telefono', 'Teléfono', 'tel', 40], ['whatsapp', 'WhatsApp', 'tel', 40],
+      ['email', 'Email', 'email', 150], ['horario_atencion', 'Horario de atención', 'text', 300], ['ruc', 'RUC', 'text', 40], ['sitio_web', 'Sitio web', 'text', 300], ['instagram', 'Instagram', 'text', 150], ['facebook', 'Facebook', 'text', 150]];
+    const cont = document.createElement('section');
+    cont.id = 'cfg-clinica'; cont.className = 'dova-cfg-clinica';
+    cont.innerHTML = `<h2 class="dova-view-title" style="margin-top:32px">Datos de la clínica</h2>
+      <p class="dova-nota">Se usan en los comprobantes, en los mensajes a los pacientes y en la página web.</p>
+      <form data-cfg-clinica class="dova-cfg-clinica-form">
+        ${campos.map(([k, t, tipo, max, req]) => `<div><label for="cc-${k}">${t}</label><input id="cc-${k}" name="${k}" type="${tipo}" maxlength="${max}" ${req ? 'required' : ''} value="${esc(c[k] || '')}"/></div>`).join('')}
+        <label class="dova-check dova-cfg-clinica-web"><input type="checkbox" name="actualizarWeb" checked/> Usar también estos datos de contacto en la página web</label>
+        <div class="dova-cfg-clinica-acc"><button class="dova-btn-primary">Guardar datos de la clínica</button></div>
+      </form>
+      <p class="dova-nota"><button type="button" class="dova-btn-link" data-mostrar-puesta>Mostrar en Inicio la lista de puesta en marcha</button></p>`;
+    cont.querySelector('[data-mostrar-puesta]').addEventListener('click', async () => {
+      try { await DOVA.put('/clinica/puesta-en-marcha', { oculta: false }); X.toast('Listo: aparece en Inicio mientras falte algo por configurar', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
+    });
+    cont.querySelector('[data-cfg-clinica]').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target; const d = {};
+      campos.forEach(([k]) => { d[k] = f[k].value.trim() || null; });
+      d.actualizarWeb = f.actualizarWeb.checked;
+      const b = f.querySelector('button'); b.disabled = true;
+      try { await DOVA.put('/clinica', d); X.toast('Datos de la clínica guardados', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); } finally { b.disabled = false; }
+    });
+    elMain.appendChild(cont);
+  }
+
+  // Inicio: lo que falta configurar para empezar a usar DOVA (solo quien configura la clínica).
+  async function puestaEnMarcha(elMain, nav) {
+    if (!puede('clinica.config.manage')) return;
+    let e; try { e = await DOVA.get('/clinica/puesta-en-marcha'); } catch (_e) { return; }
+    if (e.completa || e.oculta) return;
+    const cont = document.createElement('section');
+    cont.className = 'dova-puesta';
+    cont.innerHTML = `<div class="dova-puesta-cab"><h3 class="dova-section-title">Puesta en marcha: ${e.listos} de ${e.total} listos</h3>
+        <button type="button" class="dova-btn-link" data-ocultar-puesta>Ocultar</button></div>
+      <div class="dova-puesta-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${e.total}" aria-valuenow="${e.listos}"><span style="width:${Math.round((e.listos / e.total) * 100)}%"></span></div>
+      <ul class="dova-puesta-lista">${e.items.map((i) => `<li class="${i.ok ? 'ok' : ''}">
+        <span class="dova-puesta-estado">${i.ok ? 'Listo' : (i.opcional ? 'Opcional' : 'Falta')}</span>
+        <span class="dova-puesta-texto"><strong>${esc(i.titulo)}</strong> <span class="dova-nota">${esc(i.detalle)}</span></span>
+        ${i.ok ? '' : `<button type="button" class="dova-btn-secundario" data-puesta-ir="${esc(i.id)}">Ir</button>`}</li>`).join('')}</ul>`;
+    cont.querySelectorAll('[data-puesta-ir]').forEach((b) => b.addEventListener('click', async () => {
+      const i = e.items.find((x) => x.id === b.dataset.puestaIr);
+      if (i.sub) window.DovaSubPendiente = i.sub;
+      try { await nav(i.ruta); } finally { window.DovaSubPendiente = null; }
+      if (i.ancla) setTimeout(() => { const a = document.getElementById(i.ancla); if (a) a.scrollIntoView({ behavior: 'smooth' }); }, 900);
+    }));
+    cont.querySelector('[data-ocultar-puesta]').addEventListener('click', async () => {
+      try { await DOVA.put('/clinica/puesta-en-marcha', { oculta: true }); cont.remove(); X.toast('Listo. La podés volver a ver en Configuración → Datos de la clínica.', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
+    });
+    const titulo = elMain.querySelector('.dova-view-title');
+    if (titulo) titulo.after(cont); else elMain.prepend(cont);
+  }
+
+  // Configuración: Mi WhatsApp, datos de la clínica, tipos de recall y qué tratamiento dispara cada uno.
   async function extenderConfiguracion(elMain) {
     await tarjetaMiWhatsapp(elMain);
+    await tarjetaDatosClinica(elMain);
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
     cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';
