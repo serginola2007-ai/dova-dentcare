@@ -3,7 +3,7 @@
 
 DOVA es **una sola aplicación, una sola lógica, un solo backend y una sola
 base de datos**, con tres estilos visuales entre los que cada usuario puede
-elegir: **Moderno**, **Minimalista** y **Técnico**. Ningún dato, función,
+elegir: **Moderno**, **Minimalista** y **Técnico** (más **Mecánico**, solo para administradores). Ningún dato, función,
 rol ni permiso cambia según el diseño elegido — el diseño es solamente una
 capa visual.
 
@@ -23,7 +23,8 @@ dova/
     │   └── config.template.js  Plantilla que Netlify usa para generar config.js en el build
     ├── moderno/          Diseño 1: interfaz actual, tarjetas con sombra suave, radios generosos
     ├── minimalista/      Diseño 2: sin bordes marcados, whitespace, tipografía como jerarquía
-    └── tecnico/          Diseño 3: barra superior densa, monoespaciado, estilo panel operativo/ERP
+    ├── tecnico/          Diseño 3: barra superior densa, monoespaciado, estilo panel operativo/ERP
+    └── mecanico/         Diseño 4 (solo admin): sistema de escritorio clásico, área bordó, íconos y parámetros activos
 ```
 
 Los 3 diseños comparten el 100% de la lógica (`shared/*.js`) y solo cambian
@@ -126,7 +127,7 @@ funcione de una.
 Cada usuario elige su estilo visual la primera vez que inicia sesión y esa
 elección queda guardada **en el backend**, ligada a su usuario (columna
 `diseno_preferido` en la tabla `usuarios`, valores `moderno` / `minimalista`
-/ `tecnico`). `localStorage` solo cachea la sesión (igual que el resto de
+/ `tecnico` / `mecanico`, este último solo para admin). `localStorage` solo cachea la sesión (igual que el resto de
 DOVA) — nunca es la única fuente de verdad, así que la preferencia viaja
 con el usuario a cualquier dispositivo donde inicie sesión.
 

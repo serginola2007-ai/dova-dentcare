@@ -1,0 +1,83 @@
+/* global document, window, getComputedStyle, DovaApp */
+// Diseño "mecánico" (solo administradores): API y pantallas (Playwright).
+// Requiere DATABASE_URL, DOVA_URL, PLAYWRIGHT_MODULE / CHROMIUM_PATH y CAPTURAS (opcional).
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { Pool } = require('pg');
+const db = new Pool({ connectionString: process.env.DATABASE_URL });
+const URL0 = process.env.DOVA_URL || 'http://localhost:4500'; const B = `${URL0}/api`;
+const DIR = process.env.CAPTURAS || require('os').tmpdir(); const res = [];
+const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, ok ? '' : String(JSON.stringify(d)).slice(0, 300)); };
+const req = async (m, url, body, tok) => {
+  const r = await fetch(B + url, { method: m, headers: { 'content-type': 'application/json', ...(tok ? { authorization: `Bearer ${tok}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+  return { s: r.status, j: await r.json().catch(() => null) };
+};
+const q1 = async (s, p) => (await db.query(s, p)).rows[0];
+
+(async () => {
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='moderno' WHERE username IN ('admin','recep1')");
+  const A = (await req('POST', '/auth/login', { username: 'admin', password: 'admin' })).j.accessToken;
+  const R = (await req('POST', '/auth/login', { username: 'recep1', password: 'clave123' })).j.accessToken;
+  // ---- API ----
+  P('Recepción no puede elegir el diseño mecánico: 403', (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'mecanico' }, R)).s === 403);
+  P('…y no queda guardado', (await q1("SELECT diseno_preferido FROM usuarios WHERE username='recep1'")).diseno_preferido === 'moderno');
+  P('Diseño inexistente o con otro tipo de dato: 400', (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: ['mecanico'] }, A)).s === 400 && (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'otro' }, A)).s === 400);
+  const r = await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'mecanico' }, A);
+  P('El admin sí puede elegirlo', r.s === 200 && r.j.disenoPreferido === 'mecanico', r);
+  // Si alguien lo tenía guardado y deja de ser admin, al entrar vuelve al diseño de siempre.
+  await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='recep1'");
+  const lr = await req('POST', '/auth/login', { username: 'recep1', password: 'clave123' });
+  P('Un no-admin con "mecánico" guardado entra sin ese diseño', lr.s === 200 && lr.j.usuario.disenoPreferido === null, lr.j && lr.j.usuario);
+  await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='recep1'");
+
+  // ---- Pantallas ----
+  const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+  for (const [nombre, vp] of [['escritorio', { width: 1366, height: 900 }], ['tablet', { width: 1024, height: 768 }], ['celular', { width: 390, height: 844 }]]) {
+    await db.query('DELETE FROM login_intentos');
+    const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = [];
+    p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
+    await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
+    await p.waitForURL(/\/mecanico\//, { timeout: 15000 });
+    await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(1500);
+    P(`[${nombre}] Con "mecánico" guardado, el admin entra en ese diseño`, /\/mecanico\//.test(p.url()));
+    if (nombre === 'escritorio') {
+      P('Tira de íconos a la izquierda con accesos', await p.locator('#mec-iconos .mec-icono').count() >= 8);
+      const params = await p.textContent('#mec-parametros');
+      P('Parámetros activos: usuario, clínica, caja, fecha y reloj', /Usuario/.test(params) && /Clínica/.test(params) && /Caja/.test(params) && /\d{2}:\d{2}:\d{2}/.test(params), params);
+      const t1 = await p.textContent('[data-mec-reloj]'); await p.waitForTimeout(1200);
+      P('…el reloj avanza', t1 !== await p.textContent('[data-mec-reloj]'));
+      P('Menú en mayúsculas', await p.evaluate(() => getComputedStyle(document.querySelector('#menu-root .dova-menu-item')).textTransform === 'uppercase'));
+      P('Área de trabajo bordó y letra Tahoma', await p.evaluate(() => getComputedStyle(document.querySelector('.mec-cuerpo')).backgroundColor === 'rgb(107, 30, 43)' && /Tahoma/.test(getComputedStyle(document.body).fontFamily)));
+      await p.click('#mec-iconos [data-mec-ir="agenda"]'); await p.waitForTimeout(1500);
+      await p.click('#mec-iconos [data-mec-ir="pacientes"]'); await p.waitForTimeout(1500);
+      const rec = await p.textContent('#mec-recientes');
+      P('Ventanas abiertas recientemente: Pacientes, Agenda (lo último primero)', rec.indexOf('Pacientes') > -1 && rec.indexOf('Agenda') > rec.indexOf('Pacientes'), rec);
+      P('El ícono de la sección actual queda marcado', await p.locator('#mec-iconos [data-mec-ir="pacientes"].activo').count() === 1);
+      await p.locator('#mec-recientes [data-mec-rec]', { hasText: 'Agenda' }).click(); await p.waitForTimeout(1200);
+      P('Tocar una ventana reciente la vuelve a abrir', /#agenda/.test(p.url()));
+      await p.evaluate(() => DovaApp.navegar('configuracion')); await p.waitForTimeout(1500);
+      P('Configuración → Apariencia ofrece el diseño mecánico al admin', await p.locator('[data-elegir-diseno-config="mecanico"]').count() === 1);
+      await p.evaluate(() => DovaApp.navegar('dashboard')); await p.waitForTimeout(1800);
+      await p.screenshot({ path: `${DIR}/mecanico-escritorio.png` });
+    } else {
+      await p.screenshot({ path: `${DIR}/mecanico-${nombre}.png` });
+    }
+    P(`[${nombre}] Sin desborde horizontal`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0, await p.evaluate(() => document.documentElement.scrollWidth));
+    P(`[${nombre}] Sin errores de consola`, err.length === 0, err);
+    await ctx.close();
+  }
+  // Recepción: no ve la opción y si entra por la dirección del diseño, la manda al suyo.
+  await db.query('DELETE FROM login_intentos');
+  const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage();
+  await p.goto(`${URL0}/moderno/index.html`);
+  P('En el login no aparece el diseño mecánico', await p.locator('[data-diseno-radio-card="mecanico"]').count() === 0);
+  await p.fill('#login-username', 'recep1'); await p.fill('#login-password', 'clave123'); await p.click('#form-login button[type=submit]');
+  await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800);
+  await p.evaluate(() => DovaApp.navegar('configuracion')); await p.waitForTimeout(1200);
+  P('Recepción: Configuración no ofrece el diseño mecánico', await p.locator('[data-elegir-diseno-config="mecanico"]').count() === 0 && await p.locator('[data-elegir-diseno-config="tecnico"]').count() === 1);
+  await p.goto(`${URL0}/mecanico/index.html`); await p.waitForTimeout(2500);
+  P('Recepción que abre /mecanico/ termina en su diseño', !/\/mecanico\//.test(p.url()), p.url());
+  await ctx.close(); await b.close();
+  await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='admin'");
+  await db.end();
+  const ok = res.filter(Boolean).length; console.log(`\n${ok}/${res.length}`); process.exit(ok === res.length ? 0 : 1);
+})().catch((e) => { console.error(e); process.exit(1); });

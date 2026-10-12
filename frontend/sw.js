@@ -7,12 +7,12 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v39';
+const VERSION = 'dova-v40';
 const PRECARGA = [
-  '/moderno/', '/minimalista/', '/tecnico/',
+  '/moderno/', '/minimalista/', '/tecnico/', '/mecanico/',
   '/shared/base.css', '/shared/ext/ext.css', '/shared/sobrio.css', '/shared/config.js', '/shared/api.js', '/shared/tiempo-real.js', '/shared/iconos.js', '/shared/comandos.js', '/shared/pre-diseno.js', '/shared/arranque.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js', '/shared/seguridad.js', '/shared/bloqueo.js',
   '/shared/ext/ext-core.js', '/shared/ext/ext-ficha.js', '/shared/ext/ext-secciones.js', '/shared/ext/ext-operativo.js', '/shared/ext/ext-facturacion.js', '/shared/ext/ext-web.js', '/shared/ext/ext-clinica.js',
-  '/moderno/skin.css', '/minimalista/skin.css', '/tecnico/skin.css',
+  '/moderno/skin.css', '/minimalista/skin.css', '/tecnico/skin.css', '/mecanico/skin.css', '/shared/mecanico.js',
   '/manifest.webmanifest', '/iconos/icono-192.png', '/iconos/icono-512.png',
 ];
 
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (e) => {
       const guardado = await caches.match(req, { ignoreSearch: req.mode === 'navigate' });
       if (guardado) return guardado;
       if (req.mode === 'navigate') {
-        const tema = (url.pathname.match(/^\/(moderno|minimalista|tecnico)\//) || [])[1] || 'moderno';
+        const tema = (url.pathname.match(/^\/(moderno|minimalista|tecnico|mecanico)\//) || [])[1] || 'moderno';
         return (await caches.match(`/${tema}/`)) || new Response(SIN_CONEXION, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       }
       return Response.error();

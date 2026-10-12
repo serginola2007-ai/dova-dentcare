@@ -54,7 +54,9 @@ const DovaApp = (() => {
   // frontend/tecnico) que comparte TODO este código (shared/). Cambiar de
   // diseño significa navegar a la carpeta hermana correspondiente — la
   // sesión (localStorage) es la misma para las 3, así que no se pierde.
-  const TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
+  const TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
+  // "mecanico" es solo para administradores (el servidor también lo controla).
+  const esAdmin = () => ((DOVA.usuarioActual() || {}).rol === 'admin');
 
   function normalizarTema(t) {
     return TEMAS_VALIDOS.includes(t) ? t : null;
@@ -65,7 +67,7 @@ const DovaApp = (() => {
   // estáticos, como el usado en desarrollo, sirven "clean URLs" sin barra
   // final ni nombre de archivo).
   function temaActual() {
-    const m = location.pathname.match(/\/(moderno|minimalista|tecnico)(?:\/|$)/);
+    const m = location.pathname.match(/\/(moderno|minimalista|tecnico|mecanico)(?:\/|$)/);
     return m ? m[1] : null;
   }
 
@@ -276,6 +278,7 @@ const DovaApp = (() => {
     // Un modal abierto no debe quedar flotando sobre la sección nueva.
     document.querySelectorAll('.dova-modal-overlay').forEach((o) => o.remove());
     window.location.hash = params ? `${ruta}/${params}` : ruta;
+    document.dispatchEvent(new CustomEvent('dova:navegar', { detail: { ruta, params } }));
     elMain.innerHTML = '<div class="dova-cargando">Cargando…</div>';
     try {
       switch (ruta) {
@@ -413,6 +416,7 @@ const DovaApp = (() => {
     // Permisos al día (p. ej. un módulo nuevo como Facturación) sin pedir que se vuelva a iniciar sesión.
     if (DOVA.actualizarSesion) await DOVA.actualizarSesion();
     if (!DOVA.estaAutenticado()) { location.reload(); return; }
+    if (temaActual() === 'mecanico' && !esAdmin()) { irATema('moderno'); return; }
     elLogin.style.display = 'none';
     elShell.style.display = '';
     renderMenu();
@@ -436,6 +440,7 @@ const DovaApp = (() => {
     // confirmación.
     const flash = DOVA.consumeFlash();
     if (flash) Vistas.toast(flash, 'ok');
+    document.dispatchEvent(new CustomEvent('dova:entrar', { detail: { navegar } }));
   }
 
   // Después de un login recién hecho: el diseño elegido en el propio

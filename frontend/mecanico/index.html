@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="../shared/pre-diseno.js" data-tema="mecanico"></script>
+<title>DOVA — DentCareRC</title>
+<!-- App instalable (PWA): ícono, pantalla completa y apertura sin internet -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#2B2420" />
+<link rel="icon" type="image/png" href="/iconos/favicon-32.png" />
+<link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="DOVA" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="stylesheet" href="../shared/base.css" />
+<link rel="stylesheet" href="../shared/ext/ext.css" />
+<link rel="stylesheet" href="/mecanico/skin.css" />
+<link rel="stylesheet" href="../shared/sobrio.css" />
+</head>
+<body>
+  <div id="login-root"></div>
+  <div id="shell-root" class="dova-shell mec-shell" style="display:none;">
+    <header class="dova-topbar">
+      <div id="marca-root" class="dova-marca"></div>
+      <nav id="menu-root" class="dova-menu"></nav>
+      <button id="logout-btn" class="dova-logout">Salir</button>
+    </header>
+    <div class="mec-cuerpo">
+      <nav id="mec-iconos" class="mec-iconos" aria-label="Accesos rápidos"></nav>
+      <main id="main-root" class="dova-main"></main>
+      <aside class="mec-lateral" aria-label="Estado del sistema">
+        <section class="mec-recuadro" id="mec-parametros"><h2 class="mec-recuadro-titulo">Parámetros activos</h2><dl class="mec-param"></dl></section>
+        <section class="mec-recuadro" id="mec-recientes"><h2 class="mec-recuadro-titulo">Ventanas abiertas recientemente</h2><ol class="mec-recientes-lista"></ol></section>
+      </aside>
+    </div>
+    <footer class="mec-estado" id="mec-estado" aria-live="off"></footer>
+  </div>
+
+  <script src="../shared/config.js"></script>
+  <script src="../shared/api.js"></script>
+  <script src="../shared/tiempo-real.js"></script>
+  <script src="../shared/iconos.js"></script>
+  <script src="../shared/comandos.js"></script>
+  <script src="../shared/views.js"></script>
+  <script src="../shared/ext/ext-core.js"></script>
+  <script src="../shared/ext/ext-ficha.js"></script>
+  <script src="../shared/ext/ext-secciones.js"></script>
+  <script src="../shared/ext/ext-operativo.js"></script>
+  <script src="../shared/ext/ext-facturacion.js"></script>
+  <script src="../shared/ext/ext-web.js"></script>
+  <script src="../shared/ext/ext-clinica.js"></script>
+  <script src="../shared/pwa.js"></script>
+  <script src="../shared/seguridad.js"></script>
+  <script src="../shared/bloqueo.js"></script>
+  <script src="../shared/app.js"></script>
+  <script src="../shared/mecanico.js"></script>
+  <script src="../shared/arranque.js"></script>
+</body>
+</html>

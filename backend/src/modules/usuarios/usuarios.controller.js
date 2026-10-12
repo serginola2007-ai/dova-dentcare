@@ -67,7 +67,7 @@ async function quitarOverride(req, res, next) {
 
 async function actualizarMiDisenoPreferido(req, res, next) {
   try {
-    res.json(await service.actualizarMiDisenoPreferido(req.usuario.id, req.body.disenoPreferido));
+    res.json(await service.actualizarMiDisenoPreferido(req.usuario.id, req.body.disenoPreferido, req.usuario));
   } catch (e) { next(e); }
 }
 

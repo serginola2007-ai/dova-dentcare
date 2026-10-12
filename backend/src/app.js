@@ -214,7 +214,7 @@ if (fs.existsSync(path.join(carpetaFrontend, 'moderno', 'index.html'))) {
   // Página web de la clínica: /web/ (con WEB_EN_INICIO=true también es la página de inicio).
   app.get('/', (req, res) => res.redirect(302, process.env.WEB_EN_INICIO === 'true' ? '/web/' : '/moderno/'));
   app.get(/^\/web$/, (req, res) => res.redirect(301, '/web/'));
-  app.get(/^\/(moderno|minimalista|tecnico)$/, (req, res) => res.redirect(301, `${req.path}/`));
+  app.get(/^\/(moderno|minimalista|tecnico|mecanico)$/, (req, res) => res.redirect(301, `${req.path}/`));
   app.use(express.static(carpetaFrontend, {
     index: 'index.html',
     setHeaders: (res, archivo) => {

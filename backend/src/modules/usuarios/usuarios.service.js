@@ -28,7 +28,9 @@ async function codigosValidos(codigos) {
 }
 
 const ROLES_SISTEMA = ['admin', 'odontologo', 'recepcion', 'asistente', 'helpdesk'];
-const DISENOS_VALIDOS = ['moderno', 'minimalista', 'tecnico'];
+const DISENOS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
+// Diseños que solo puede elegir un administrador.
+const DISENOS_SOLO_ADMIN = ['mecanico'];
 
 // ---- Roles ----
 async function listarRoles(clinicaId) {
@@ -333,9 +335,12 @@ async function cerrarSesiones(clinicaId, id, actor) {
 }
 
 // ---- Preferencia de diseño propia (self-service, cualquier usuario logueado) ----
-async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido) {
-  if (!DISENOS_VALIDOS.includes(disenoPreferido)) {
-    throw new ApiError(400, `disenoPreferido debe ser uno de: ${DISENOS_VALIDOS.join(', ')}`);
+async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido, actor) {
+  if (typeof disenoPreferido !== 'string' || !DISENOS_VALIDOS.includes(disenoPreferido)) {
+    throw new ApiError(400, `disenoPreferido debe ser uno de: ${DISENOS_VALIDOS.filter((d) => !DISENOS_SOLO_ADMIN.includes(d)).join(', ')}`);
+  }
+  if (DISENOS_SOLO_ADMIN.includes(disenoPreferido) && (!actor || actor.rolCodigo !== 'admin')) {
+    throw new ApiError(403, 'Ese diseño es solo para administradores');
   }
   const actualizado = await repo.actualizarDisenoPreferido(usuarioId, disenoPreferido);
   if (!actualizado) throw new ApiError(404, 'Usuario no encontrado');

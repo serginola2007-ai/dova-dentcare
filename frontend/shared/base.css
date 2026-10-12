@@ -432,3 +432,8 @@ body.dova-menu-abierto .dova-menu-overlay {
 }
 
 .dova-link-peligro { color: var(--rust) !important; }
+.dova-preview-mecanico .dova-preview-barra { background: #D9D4CC; border-bottom: 1px solid #8F877C; }
+.dova-preview-mecanico .dova-preview-dot { background: #6B1E2B; border-radius: 0; width: 18px; height: 5px; }
+.dova-preview-mecanico .dova-preview-cuerpo { background: #6B1E2B; gap: 4px; padding: 6px; }
+.dova-preview-mecanico .dova-preview-bloque { background: #F3F1ED; border: 1px solid #3F0F18; border-top: 5px solid #3F0F18; border-radius: 0; }
+.dova-preview-mecanico .dova-preview-bloque:first-child { flex: 0 0 12px; background: #D9D4CC; border: 0; }

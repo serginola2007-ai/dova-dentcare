@@ -625,3 +625,19 @@ Se probó todo DOVA como un QA:
 - `scripts/restaurar-copia.sh` comprueba la huella, pide la clave y restaura.
 - Activación y restauración paso a paso: `docs/COPIAS.md`. Necesita dos secretos en GitHub: `DOVA_BACKUP_DATABASE_URL` y `DOVA_BACKUP_CLAVE`.
 - Probado acá: copia → cifrado → restauración en una base vacía y sobre una con datos, con los mismos totales. Con la clave equivocada o el archivo alterado, no restaura.
+
+## Diseño "Mecánico", solo para administradores (migración 0050)
+
+- Cuarto diseño, estilo sistema de escritorio clásico:
+  - barra de menú en mayúsculas;
+  - tira de íconos a la izquierda con accesos a las secciones que el usuario puede ver;
+  - área de trabajo bordó, cada pantalla como una "ventana" con barra de título;
+  - recuadro **Parámetros activos**: usuario, perfil, clínica, estado de la caja, fecha y reloj;
+  - **Ventanas abiertas recientemente** (con el nombre del paciente en las fichas): un toque y se vuelve a abrir;
+  - barra de estado abajo y letra Tahoma chica.
+- Se elige en Configuración → Apariencia. **Solo lo ve y lo puede elegir un admin**:
+  - el servidor rechaza a cualquier otro rol (403);
+  - si alguien lo tenía y deja de ser admin, entra con el diseño normal;
+  - si un no-admin abre `/mecanico/`, lo manda a su diseño.
+- En tablet se oculta la columna de parámetros; en el celular, también la tira de íconos (queda el menú ☰).
+- Pruebas: `tests/ui-mecanico.js` (26/26: API, escritorio, tablet, celular, recepción). Regresión de los otros diseños: menú, submenú, tablet, PWA, responsive y vínculos en verde.

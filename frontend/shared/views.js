@@ -45,7 +45,10 @@ const Vistas = (() => {
     { id: 'moderno', nombre: 'Moderno', desc: 'Una interfaz actual, visual y dinámica, pensada para una experiencia moderna.' },
     { id: 'minimalista', nombre: 'Minimalista', desc: 'Una interfaz limpia, simple y ordenada, enfocada en facilitar el trabajo diario.' },
     { id: 'tecnico', nombre: 'Técnico', desc: 'Una interfaz orientada a información, control y gestión detallada.' },
+    { id: 'mecanico', nombre: 'Mecánico', desc: 'Estilo de sistema de escritorio clásico: menú en mayúsculas, íconos a la izquierda y parámetros activos a la vista. Solo administradores.', soloAdmin: true },
   ];
+  // Diseños que puede elegir el usuario actual (el mecánico, solo un admin; en el login, nunca).
+  const disenosPara = (usuario) => DISENOS.filter((d) => !d.soloAdmin || (usuario && usuario.rol === 'admin'));
 
   // ---------------- LOGIN ----------------
   // El selector de diseño vive acá mismo, junto a usuario/contraseña (en
@@ -76,7 +79,7 @@ const Vistas = (() => {
                 <span><strong>Mi diseño habitual</strong><br><span class="dova-nota">Entrás con el diseño que elegiste la última vez. Elegí otro abajo solo si querés cambiarlo.</span></span>
               </label>
               <div class="dova-disenos-grid dova-disenos-grid-login">
-                ${DISENOS.map((d) => `
+                ${disenosPara(null).map((d) => `
                   <label class="dova-diseno-card dova-diseno-card-radio${d.id === preseleccion ? ' seleccionado' : ''}" data-diseno-radio-card="${d.id}">
                     <input type="radio" name="login-diseno" value="${d.id}" ${d.id === preseleccion ? 'checked' : ''} />
                     ${previewDiseno(d.id)}
@@ -187,7 +190,7 @@ const Vistas = (() => {
         <h1 class="dova-selector-diseno-titulo">Elegí cómo querés ver DOVA</h1>
         <p class="dova-selector-diseno-subtitulo">Seleccioná el estilo de interfaz que mejor se adapte a tu clínica. Podés cambiarlo cuando quieras desde Configuración.</p>
         <div class="dova-disenos-grid">
-          ${DISENOS.map((d) => `
+          ${disenosPara(DOVA.usuarioActual()).map((d) => `
             <div class="dova-diseno-card">
               ${previewDiseno(d.id)}
               <h3>${esc(d.nombre)}</h3>
@@ -228,7 +231,7 @@ const Vistas = (() => {
       <h3 class="dova-section-title">Apariencia</h3>
       <p class="dova-nota">Estilo de DOVA — el cambio se guarda en tu cuenta y te va a acompañar en cualquier dispositivo donde inicies sesión.</p>
       <div class="dova-apariencia-grid">
-        ${DISENOS.map((d) => {
+        ${disenosPara(DOVA.usuarioActual()).map((d) => {
           const esActual = d.id === actual;
           return `
             <div class="dova-diseno-card ${esActual ? 'seleccionado' : ''}">

@@ -127,7 +127,8 @@ async function completarLogin(usuario, clinica, ctx) {
       rolNombre: usuario.rol_nombre,
       odontologoId: usuario.odontologo_id,
       permisos: s.permisos,
-      disenoPreferido: usuario.diseno_preferido || null,
+      // El diseño mecánico es solo para admin (si dejó de serlo, vuelve al de siempre).
+      disenoPreferido: usuario.diseno_preferido === 'mecanico' && usuario.rol_codigo !== 'admin' ? null : (usuario.diseno_preferido || null),
       debeCambiarClave: !!usuario.debe_cambiar_clave,
     },
     clinica: {

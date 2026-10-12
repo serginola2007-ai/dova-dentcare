@@ -28,12 +28,12 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0049 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0050 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
 frontend/           JavaScript puro, sin build
-  moderno/ minimalista/ tecnico/   3 diseños: cada uno es index.html + skin.css
+  moderno/ minimalista/ tecnico/ mecanico/   4 diseños: cada uno es index.html + skin.css (mecanico: solo admin, más shared/mecanico.js)
   shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
   web/              página pública + portal del paciente
   sw.js             service worker (precache con VERSION)
@@ -127,17 +127,4 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 
 ## Pendiente
 
-- Diseño **"mecánico"**, exclusivo para el rol admin. Inspirado en una app de escritorio clásica (RUNI de UPAP):
-  - barra de menú en mayúsculas;
-  - tira de íconos a la izquierda;
-  - área de trabajo color bordó con un panel "Parámetros activos" (usuario, clínica, caja, fecha y reloj);
-  - lista de "Ventanas abiertas recientemente";
-  - recuadros con título y letra Tahoma chica.
-
-  Hay que habilitarlo en:
-  - `DISENOS_VALIDOS` (backend) y en la restricción de base, con una migración nueva;
-  - `TEMAS_VALIDOS` de `shared/app.js` y `shared/pre-diseno.js`;
-  - el redirect de `app.js`.
-
-  Validar en el servidor que solo un admin pueda elegirlo.
 - SIFEN (factura electrónica) y cobro online: necesitan contratos externos.
