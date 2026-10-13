@@ -783,3 +783,10 @@ Se probó todo DOVA como un QA:
   - "Mis pendientes": filas con el total que se despliegan al tocarlas (antes eran pestañas con listas de cientos de pacientes);
   - ya no ve los números de seguimiento de toda la clínica.
 - **Pruebas:** `ui-mi-dia` 98/98 (incluye admin y recepción), puesta en marcha 24/24, mecánico 27/27, menú 75, submenús 53, tablet 12, fase6 78, xss 4.
+
+## Tanda: Inicio sin pendientes muestra la marca (13/10/2026)
+
+- Cuando no hay nada para atender (sin filas en "Para atender" ni puesta en marcha; en el odontólogo: sin turnos ese día, sin pendientes y sin laboratorio por llegar), Inicio muestra el **logo grande con "DentCareRC" debajo**, centrado en alto y corrido hacia la izquierda. En celular, más chico.
+- Si aparece algo (por ejemplo, turnos en "Mañana"), la marca se va sola.
+- "0 turnos hoy" pasa a "Sin turnos hoy".
+- Pruebas: `ui-mi-dia` 131/131 (incluye Inicio vacío en admin, recepción y odontólogo, escritorio y celular), puesta en marcha 24/24, mecánico 27/27.

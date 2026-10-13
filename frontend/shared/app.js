@@ -260,7 +260,11 @@ const DovaApp = (() => {
     } else {
       Vistas.initInicio((rutaDestino) => navegar(rutaDestino));
     }
-    conExtension(() => DovaSecciones.extenderDashboard(elMain, navegar));
+    // Cuando la extensión terminó de sumar sus filas, se decide si Inicio está vacío (muestra la marca).
+    const atender = elMain.querySelector('[data-para-atender]');
+    Promise.resolve().then(() => DovaSecciones.extenderDashboard(elMain, navegar))
+      .catch((e) => console.error('[DOVA ext]', e))
+      .finally(() => { if (atender) atender.dataset.listo = '1'; Vistas.revisarInicioVacio(elMain); });
     aplicarDataThATablas();
   }
 

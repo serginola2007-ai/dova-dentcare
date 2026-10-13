@@ -320,6 +320,38 @@ const Vistas = (() => {
       </section>`;
   }
 
+  // Logo y nombre de la clínica: se muestra cuando no hay nada pendiente.
+  const DIENTE_SVG = '<svg viewBox="12 13 76 76" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 24C42 18 30 14 22 20C13 27 15 44 20 56C24 66 27 82 33 84C39 86 40 70 45 64C47 62 53 62 55 64C60 70 61 86 67 84C73 82 76 66 80 56C85 44 87 27 78 20C70 14 58 18 50 24Z"/></svg>';
+  function marcaClinica() {
+    const c = DOVA.clinicaActual() || {};
+    const nombre = String(c.nombre || 'DentCareRC').trim();
+    const texto = /^dent\s*care\s*rc$/i.test(nombre) ? 'Dent<span class="care">Care</span><span class="rc">RC</span>' : esc(nombre);
+    return `<div class="dova-inicio-marca" data-inicio-marca hidden><span>
+        <span class="dova-inicio-marca-logo">${DIENTE_SVG}</span>
+        <span class="dova-inicio-marca-nombre">${texto}</span>
+      </span></div>`;
+  }
+  // Decide si Inicio está "vacío" (nada para atender) y muestra la marca en su lugar.
+  function revisarInicioVacio(root) {
+    const marca = root && root.querySelector('[data-inicio-marca]');
+    if (!marca) return;
+    let vacio; let ocultar = [];
+    const miDia = root.querySelector('[data-mi-dia]');
+    if (miDia) {
+      if (miDia.dataset.turnos === undefined) return; // la agenda todavía carga
+      const pend = root.querySelector('.dova-mis-pendientes');
+      vacio = miDia.dataset.turnos === '0' && !(pend && pend.querySelector('.dova-atender-fila')) && !miDia.querySelector('.dova-midia-labs');
+      ocultar = [pend, miDia.querySelector('.dova-midia-vacio')];
+    } else {
+      const atender = root.querySelector('[data-para-atender]');
+      if (!atender || !atender.dataset.listo) return; // faltan las filas de seguimiento
+      vacio = !atender.querySelector('.dova-atender-fila') && !root.querySelector('.dova-puesta');
+      ocultar = [atender];
+    }
+    marca.hidden = !vacio;
+    ocultar.forEach((el) => { if (el) el.hidden = vacio; });
+  }
+
   async function vistaDashboard() {
     const usuario = DOVA.usuarioActual();
     if (usuario && usuario.odontologoId) {
@@ -329,7 +361,7 @@ const Vistas = (() => {
       return vistaDashboardSinReportes(usuario);
     }
     const a = await manejarError(() => DOVA.get('/reportes/dashboard/alertas'));
-    const linea = [fechaLarga(), `${a.turnosHoy} turno${a.turnosHoy === 1 ? '' : 's'} hoy`,
+    const linea = [fechaLarga(), a.turnosHoy ? `${a.turnosHoy} turno${a.turnosHoy === 1 ? '' : 's'} hoy` : 'Sin turnos hoy',
       a.cajaAbierta ? 'Caja abierta' : '<span class="dova-inicio-alerta">Sin caja abierta</span>'];
     return `
       <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
@@ -341,6 +373,7 @@ const Vistas = (() => {
         filaAtender(a.listaEsperaPendiente, 'Pacientes en lista de espera', 'agenda', 'espera'),
         filaAtender(a.ticketsHelpdeskAbiertos, 'Pedidos de ayuda técnica sin resolver', 'helpdesk'),
       ].join(''))}
+      ${marcaClinica()}
     `;
   }
 
@@ -361,6 +394,7 @@ const Vistas = (() => {
           <button type="button" class="dova-btn-secundario" data-ir-a="${esc(x.ruta)}">${DovaIcono(x.icono, 16)} ${esc(x.label)}</button>`).join('')}
       </div>` : ''}
       ${seccionAtender('')}
+      ${marcaClinica()}
     `;
   }
 
@@ -423,6 +457,7 @@ const Vistas = (() => {
           </li>`;
         }).join('')}</ul>` : '<p class="dova-atender-vacio">No tenés pendientes.</p>'}
       </section>
+      ${marcaClinica()}
     `;
   }
 
@@ -2094,6 +2129,7 @@ const Vistas = (() => {
     initDashboardOdontologo,
     initDashboardSinReportes,
     initInicio,
+    revisarInicioVacio,
     vistaPacientes, initPacientes,
     vistaFichaPaciente, initFichaPaciente,
     vistaAgenda, initAgenda,

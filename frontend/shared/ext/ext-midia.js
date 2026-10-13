@@ -121,7 +121,7 @@
             <tr class="dova-midia-det" id="midia-det-${t.id}" hidden><td colspan="4"><div class="dova-midia-det-cuerpo">${detalle(p, t, todos)}</div></td></tr>`;
           }).join('')}
         </tbody>
-      </table>` : `<p class="dova-atender-vacio">No tenés turnos para ${esHoy ? 'hoy' : 'mañana'}.</p>`}
+      </table>` : `<p class="dova-atender-vacio dova-midia-vacio">No tenés turnos para ${esHoy ? 'hoy' : 'mañana'}.</p>`}
       ${labsVer.length ? `
         <div class="dova-midia-labs">
           <h3 class="dova-section-title">Laboratorio por llegar</h3>
@@ -131,6 +131,8 @@
           ${labs.length > labsVer.length ? `<p class="dova-nota">Y ${labs.length - labsVer.length} más en Clínica → Laboratorio.</p>` : ''}
         </div>` : ''}`;
 
+    cont.dataset.turnos = String(turnos.length);
+    if (typeof Vistas !== 'undefined' && Vistas.revisarInicioVacio) Vistas.revisarInicioVacio(cont.parentElement);
     cont.querySelectorAll('[data-midia-dia]').forEach((b) => b.addEventListener('click', () => {
       const n = Number(b.dataset.midiaDia);
       if (n === diaElegido) return;

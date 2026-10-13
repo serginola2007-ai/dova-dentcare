@@ -84,10 +84,46 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       await p.waitForSelector('[data-para-atender] .dova-atender-fila', { timeout: 15000 }); await p.waitForTimeout(800);
       const nums = await p.$$eval('[data-para-atender] .dova-atender-n', (xs) => xs.map((x) => Number(x.textContent.replace(/\D/g, ''))));
       P(`[${u}] Para atender: solo filas con algo pendiente`, nums.length > 0 && nums.every((n) => n > 0), nums);
+      P(`[${u}] Con cosas pendientes no aparece la marca`, await p.locator('[data-inicio-marca]').isHidden());
       P(`[${u}] Sin recuadros de números`, await p.locator('.dova-ext-kpi, .dova-cards-grid').count() === 0);
       await p.locator('[data-para-atender] .dova-atender-fila').first().click(); await p.waitForTimeout(1500);
       P(`[${u}] Tocar una fila lleva a esa sección`, !(await p.evaluate(() => location.hash)).startsWith('#dashboard'), await p.evaluate(() => location.hash));
       P(`[${u}] Sin errores de consola`, err.length === 0, err);
+      await ctx.close();
+    }
+    // ---------- Inicio sin nada pendiente: logo y nombre de la clínica ----------
+    const vacios = async (page) => {
+      const json = (route, body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      await page.route('**/api/reportes/dashboard/alertas', (r) => json(r, { turnosHoy: 0, stockBajo: 0, cuotasVencidas: 0, listaEsperaPendiente: 0, insumosPorVencer: 0, ticketsHelpdeskAbiertos: 0, cajaAbierta: { fecha: h } }));
+      await page.route('**/api/seguimiento/panel', (r) => json(r, { recallsVencidos: 0, controlesVencidos: 0, controlesSemana: 0, tratamientosSinTurno: 0, turnosSinConfirmar: 0, cumpleanosHoy: 0 }));
+      await page.route('**/api/clinica/puesta-en-marcha', (r) => json(r, { completa: true, oculta: false, listos: 7, total: 7, items: [] }));
+      await page.route(/\/api\/pendientes(\?.*)?$/, (r) => json(r, { total: 0 }));
+      await page.route('**/api/pendientes/mi-dia**', (r) => json(r, { fecha: h, pacientes: {}, resumen: { pacientes: 0 }, laboratoriosPorLlegar: [] }));
+      await page.route('**/api/agenda?**', (r) => json(r, []));
+    };
+    for (const [u, c, vp] of [['admin', 'admin', { width: 1366, height: 900 }], ['recep1', 'clave123', { width: 1366, height: 900 }], ['odo1', 'clave123', { width: 1366, height: 900 }], ['odo1', 'clave123', { width: 390, height: 844 }], ['admin', 'admin', { width: 390, height: 844 }]]) {
+      const tag = `[vacío ${u} ${vp.width}]`;
+      await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username=$1", [u]);
+      const ctx = await b.newContext({ viewport: vp, timezoneId: TZ }); const p = await ctx.newPage(); const err = errores(p);
+      await vacios(p);
+      await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
+      await p.waitForSelector('[data-inicio-marca]:not([hidden])', { timeout: 15000 });
+      const t = (await p.textContent('[data-inicio-marca]')).replace(/\s+/g, '');
+      P(`${tag} Aparece el logo y el nombre de la clínica`, t === 'DentCareRC' && await p.locator('[data-inicio-marca] svg').count() === 1, t);
+      const caja = await p.locator('[data-inicio-marca]').boundingBox(); const nombre = await p.locator('.dova-inicio-marca-nombre').boundingBox();
+      const main = await p.evaluate(() => { const r = document.querySelector('[data-inicio-marca]').parentElement.getBoundingClientRect(); return { x: r.x, w: r.width }; });
+      const logo = await p.locator('.dova-inicio-marca-logo svg').boundingBox();
+      P(`${tag} Logo grande con el nombre debajo, a la izquierda del centro`, logo.height >= (vp.width < 800 ? 90 : 130) && nombre.y > logo.y + logo.height - 1 && nombre.height >= (vp.width < 800 ? 28 : 40) && nombre.x + nombre.width / 2 < main.x + main.w / 2 + 1, { logo, nombre, main });
+      P(`${tag} Ocupa el centro de la pantalla en alto`, caja.height >= vp.height * 0.4, caja);
+      P(`${tag} No quedan listas vacías ni "Todo al día"`, await p.locator('[data-para-atender]:visible, .dova-mis-pendientes:visible, .dova-midia-vacio:visible').count() === 0);
+      P(`${tag} Sin desborde`, await sinDesborde(p));
+      await p.screenshot({ path: `${DIR}/inicio-vacio-${u}-${vp.width}.png` });
+      if (u === 'odo1' && vp.width > 800) {
+        await p.unroute('**/api/agenda?**');
+        await p.click('[data-midia-dia="1"]'); await p.waitForTimeout(1500);
+        P(`${tag} Mañana con turnos: la marca se va`, (await p.locator('.dova-midia-tabla tbody tr').count()) > 0 && await p.locator('[data-inicio-marca]').isHidden());
+      }
+      P(`${tag} Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }
   } finally {
