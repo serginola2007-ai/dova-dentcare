@@ -282,7 +282,12 @@ async function procesarWebhook(cuerpo) {
         const nuevo = ESTADO_META[st.status];
         if (!nuevo || typeof st.id !== 'string') continue;
         const e = await query('SELECT id, estado FROM recordatorios_envios WHERE proveedor_id=$1', [st.id.slice(0, 120)]);
-        if (!e.rowCount) continue;
+        if (!e.rowCount) {
+          // ¿Es un aviso de cobro?
+          const err = nuevo === 'fallo' && Array.isArray(st.errors) && st.errors[0] ? String(st.errors[0].title || st.errors[0].message || 'falló').slice(0, 300) : null;
+          if (await require('../cobranza/cobranza.service').actualizarEstadoMeta(st.id.slice(0, 120), nuevo, err, ORDEN)) procesados += 1;
+          continue;
+        }
         // Los avisos pueden llegar desordenados: nunca se retrocede (leído no vuelve a entregado).
         if (nuevo !== 'fallo' && ORDEN[nuevo] <= ORDEN[e.rows[0].estado]) continue;
         const err = nuevo === 'fallo' && Array.isArray(st.errors) && st.errors[0] ? String(st.errors[0].title || st.errors[0].message || 'falló').slice(0, 300) : null;
@@ -294,8 +299,13 @@ async function procesarWebhook(cuerpo) {
         const texto = String((m.text && m.text.body) || (m.button && (m.button.text || m.button.payload)) || (m.interactive && m.interactive.button_reply && m.interactive.button_reply.title) || '').trim().slice(0, 500);
         if (!tel || !texto) continue;
         // La respuesta corresponde al último recordatorio enviado a ese número (últimos 4 días).
-        const e = await query(`SELECT e.id, e.turno_id, e.clinica_id, e.paciente_id FROM recordatorios_envios e
+        const e = await query(`SELECT e.id, e.turno_id, e.clinica_id, e.paciente_id, e.creado_en FROM recordatorios_envios e
             WHERE e.telefono=$1 AND e.creado_en > now() - interval '4 days' ORDER BY e.creado_en DESC LIMIT 1`, [tel]);
+        // Si lo último que se le mandó fue un aviso de cobro, la respuesta es para ese aviso
+        // (un "sí" no tiene que confirmar un turno por error).
+        const cob = require('../cobranza/cobranza.service');
+        const aviso = await cob.ultimoAvisoA(tel);
+        if (aviso && (!e.rowCount || new Date(aviso.creado_en) > new Date(e.rows[0].creado_en))) { await cob.registrarRespuesta(aviso, texto); procesados += 1; continue; }
         if (!e.rowCount) continue;
         const env = e.rows[0];
         const t = await query(`${SELECT_TURNO} WHERE t.id=$1`, [env.turno_id]);

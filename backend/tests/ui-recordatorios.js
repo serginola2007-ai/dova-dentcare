@@ -41,6 +41,8 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
       await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 10000 }); await p.waitForTimeout(800);
       await p.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); });
       await p.waitForSelector('.dova-rec-estado', { timeout: 10000 }); await p.waitForTimeout(1200);
+      // El navegador calcula "mañana" con la hora de Paraguay; el servidor de prueba usa otro huso: se elige el día a mano.
+      await p.fill('[data-f] [name=fecha]', manana); await p.click('[data-f] button'); await p.waitForTimeout(1200);
       P(`[${dis}] Muestra WhatsApp Business conectado y el estado del envío automático`, /conectado/.test(await p.textContent('.dova-rec-estado')) && /apagado/.test(await p.textContent('.dova-rec-estado')));
       P(`[${dis}] Lista los turnos de mañana`, await p.locator('main tr', { hasText: LU }).count() === 1);
       P(`[${dis}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
@@ -82,6 +84,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     const o = await q1('SELECT whatsapp_numero, whatsapp_phone_id, whatsapp_envia FROM odontologos WHERE id=$1', [odo]);
     P('…con número e ID: queda conectado', o.whatsapp_envia === true && o.whatsapp_phone_id === '4445556667', o);
     await p.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); }); await p.waitForTimeout(1500);
+    await p.fill('[data-f] [name=fecha]', manana); await p.click('[data-f] button'); await p.waitForTimeout(1200);
     P('La lista muestra de qué número sale cada recordatorio', await p.locator('main tr', { hasText: NO }).filter({ hasText: '555 666' }).count() === 1 && await p.locator('main tr', { hasText: MA }).filter({ hasText: /A mano/ }).count() === 1);
     await ctx.close();
     // El doctor: su WhatsApp y sus turnos
@@ -97,6 +100,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     P('…guarda su número', /777/.test((await q1('SELECT whatsapp_numero FROM odontologos WHERE id=$1', [odo])).whatsapp_numero || ''));
     P('…y le explica cómo salen los recordatorios', /desde tu celular/.test(await pd.textContent('.dova-mi-whatsapp')));
     await pd.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); }); await pd.waitForTimeout(2000);
+    await pd.fill('[data-f] [name=fecha]', manana); await pd.click('[data-f] button'); await pd.waitForTimeout(1200);
     P('Doctor: ve los recordatorios de sus pacientes', await pd.locator('main tr', { hasText: MA }).count() === 1 && await pd.locator('[data-cfgbox] details, .dova-rec-config').count() === 0);
     P('Doctor (celular): sin desborde ni errores', await pd.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0 && errD.length === 0, errD);
     await pd.screenshot({ path: `${DIR}/rec-doctor.png`, fullPage: true });

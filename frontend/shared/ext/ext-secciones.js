@@ -275,7 +275,10 @@ const DovaSecciones = (() => {
       }));
     };
     // "toggle" no burbujea: se escucha en captura para que siga andando cuando se redibuja la configuración.
-    c.addEventListener('toggle', (e) => { if (e.target.matches && e.target.matches('[data-remitentes]') && e.target.open) cargarRemitentes(); }, true);
+    if (!c.dataset.escuchaRem) { // una sola vez por contenedor, aunque se vuelva a abrir la pestaña
+      c.dataset.escuchaRem = '1';
+      c.addEventListener('toggle', (e) => { if (e.target.matches && e.target.matches('[data-remitentes]') && e.target.open) cargarRemitentes(); }, true);
+    }
     const enlazarCfg = () => {
       const fc = c.querySelector('[data-cfg]');
       if (fc) fc.addEventListener('submit', async (e) => {
@@ -556,12 +559,91 @@ const DovaSecciones = (() => {
     root.innerHTML = `<h2 class="dova-view-title">Finanzas</h2><div data-subs></div>`;
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'deuda', texto: 'Quién debe y desde cuándo', visible: puede('cuenta_corriente.view', 'reportes.view'), render: subDeuda },
+      { id: 'cobro', texto: 'Avisos de cobro', visible: puede('cobranza.manage'), render: subCobro },
       { id: 'comisiones', texto: 'Comisiones', visible: puede('comisiones.view', 'comisiones.manage'), render: subComisiones },
       { id: 'metas', texto: 'Metas', visible: puede('metas.manage', 'kpis.view', 'comisiones.view'), render: subMetas },
       { id: 'seguros', texto: 'Seguros y convenios', visible: puede('aseguradoras.manage'), render: subSeguros },
       { id: 'listas', texto: 'Listas de precios', visible: puede('listas_precios.manage'), render: subListas },
       { id: 'cierre', texto: 'Cerrar meses', visible: puede('clinica.config.manage'), render: subCierre },
     ]);
+  }
+
+  // Avisos de cobro por WhatsApp: cuotas por vencer o vencidas y presupuestos sin respuesta.
+  async function subCobro(c) {
+    const puedeCfg = puede('clinica.config.manage');
+    const [cfg, l] = await Promise.all([DOVA.get('/cobranza/config'), DOVA.get('/cobranza/pendientes')]);
+    const ultimo = (x) => (x.avisos || []).filter((a) => a.estado !== 'fallo').slice(-1)[0];
+    const ESTADO = { enviando: 'Enviando', enviado: 'Enviado', entregado: 'Entregado', leido: 'Leído', respondido: 'Respondió', fallo: 'No se pudo enviar' };
+    const avisos = (x) => {
+      const ok = (x.avisos || []).filter((a) => a.estado !== 'fallo');
+      const fallo = (x.avisos || []).find((a) => a.estado === 'fallo');
+      const u = ultimo(x);
+      return `${ok.length ? `${ok.length} · <span class="dova-nota">${esc(ESTADO[u.estado] || u.estado)} ${fmtFecha(u.en)}${u.canal === 'whatsapp_manual' ? ' (a mano)' : ''}</span>` : '<span class="dova-nota">Ninguno</span>'}${fallo ? ` <span title="${esc(fallo.error || '')}">${badge('Falló', 'critica')}</span>` : ''}`;
+    };
+    const acciones = (x) => {
+      if (x.noEnviable) return `<span class="dova-nota">${esc(x.noEnviable)}</span>`;
+      if (x.etapa === null || x.etapa === undefined) return `<span class="dova-nota">${esc(x.motivo || '')}</span>`;
+      return `${x.toca ? `${badge('Toca hoy', 'atencion')} ` : `<span class="dova-nota">${esc(x.motivo || '')}</span> `}
+        ${l.whatsappConectado ? `<button type="button" class="dova-btn-link" data-cob-enviar="${x.tipo}:${x.id}">Enviar</button>` : ''}
+        <button type="button" class="dova-btn-link dova-link-wa" data-cob-manual="${x.tipo}:${x.id}">Mandar por mi WhatsApp</button>`;
+    };
+    const dibujarCfg = () => `<details class="dova-rec-config" data-cob-cfg><summary>Configurar los avisos</summary>
+      <form class="dova-ext-filtros dova-cob-form">
+        <label class="dova-check"><input type="checkbox" name="automatico" ${cfg.automatico ? 'checked' : ''} ${cfg.whatsappConectado ? '' : 'disabled'}/> Mandar los avisos solos${cfg.whatsappConectado ? '' : ' (necesita WhatsApp Business)'}</label>
+        <div><label>Hora de envío</label><select name="hora">${Array.from({ length: 13 }, (_, i) => i + 8).map((h) => `<option value="${h}" ${cfg.hora === h ? 'selected' : ''}>${h}:00</option>`).join('')}</select></div>
+        <div><label>Avisar antes de que venza</label><select name="diasAntes">${[0, 1, 2, 3, 5, 7].map((d) => `<option value="${d}" ${cfg.diasAntes === d ? 'selected' : ''}>${d ? `${d} día${d === 1 ? '' : 's'} antes` : 'No avisar'}</option>`).join('')}</select></div>
+        <div><label>Si vence sin pagar, repetir cada</label><select name="repetirDias">${[3, 5, 7, 10, 15, 30].map((d) => `<option value="${d}" ${cfg.repetirDias === d ? 'selected' : ''}>${d} días</option>`).join('')}</select></div>
+        <div><label>Hasta cuántos avisos</label><select name="maxAvisos">${[1, 2, 3, 4, 5].map((d) => `<option value="${d}" ${cfg.maxAvisos === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+        <label class="dova-check"><input type="checkbox" name="presupuestos" ${cfg.presupuestos ? 'checked' : ''}/> Seguir los presupuestos sin respuesta</label>
+        <div><label>Primer aviso del presupuesto</label><select name="presupuestoDias">${[2, 3, 5, 7, 10, 15].map((d) => `<option value="${d}" ${cfg.presupuestoDias === d ? 'selected' : ''}>${d} días después de enviado</option>`).join('')}</select></div>
+        <button class="dova-btn-primary">Guardar</button>
+      </form>
+      <p class="dova-nota"><strong>Así le llega una cuota vencida:</strong></p><p class="dova-rec-ejemplo">${esc(cfg.ejemplos.cuota)}</p>
+      <p class="dova-nota"><strong>Así le llega un presupuesto:</strong></p><p class="dova-rec-ejemplo">${esc(cfg.ejemplos.presupuesto)}</p>
+      <p class="dova-nota">El enlace abre una página con lo que tiene pendiente, los datos para pagar y, si los pagos online están activos, para mandar el comprobante (llega a Página web → Pagos para revisar). En un presupuesto puede avisar que quiere empezar o que tiene una consulta: te llega a la campanita.</p>
+    </details>`;
+    c.innerHTML = `<div class="dova-rec-estado">
+        <div><span class="dova-vivo-punto ${l.whatsappConectado ? 'ok' : ''}"></span> <strong>WhatsApp Business:</strong> ${l.whatsappConectado ? 'conectado' : 'sin conectar'} <span class="dova-nota">${l.whatsappConectado ? '' : '— los mandás desde tu WhatsApp con el botón verde (el mensaje ya va armado).'}</span></div>
+        <div><strong>Envío automático:</strong> ${l.automatico ? `todos los días a las ${cfg.hora} h` : 'apagado'}</div>
+        <div><strong>Para avisar hoy:</strong> ${l.tocanHoy}</div>
+      </div>
+      ${puedeCfg ? dibujarCfg() : ''}
+      <label class="dova-check"><input type="checkbox" data-solo-hoy/> Ver solo los que toca avisar hoy</label>
+      <h3 class="dova-section-title">Cuotas por vencer y vencidas</h3><div data-cuotas></div>
+      <h3 class="dova-section-title">Presupuestos sin respuesta</h3><div data-press></div>`;
+    const pintar = (lista) => {
+      c.querySelector('[data-cuotas]').innerHTML = lista.cuotas.length ? `<table class="dova-tabla"><thead><tr><th>Paciente</th><th>Cuota</th><th>Monto</th><th>Vence</th><th>Avisos</th><th></th></tr></thead><tbody>
+        ${lista.cuotas.map((x) => `<tr><td>${linkPac(x.pacienteId, x.paciente, '')}</td><td>${x.numero} de ${x.de}</td><td>${fmtGs(x.monto)}</td>
+          <td>${fmtFecha(x.vencimiento)}${x.diasAtraso ? ` ${badge(`${x.diasAtraso} día${x.diasAtraso === 1 ? '' : 's'} de atraso`, 'critica')}` : ''}${x.enRevision ? ` ${badge('Comprobante en revisión', 'info')}` : ''}</td>
+          <td>${avisos(x)}</td><td>${acciones(x)}</td></tr>`).join('')}</tbody></table>` : '<p class="dova-nota">No hay cuotas por vencer ni vencidas.</p>';
+      c.querySelector('[data-press]').innerHTML = lista.presupuestos.length ? `<table class="dova-tabla"><thead><tr><th>Paciente</th><th>Presupuesto</th><th>Total</th><th>Enviado hace</th><th>Avisos</th><th></th></tr></thead><tbody>
+        ${lista.presupuestos.map((x) => `<tr><td>${linkPac(x.pacienteId, x.paciente, '')}</td><td>${fmtFecha(x.fecha)}${x.odontologo ? ` <span class="dova-nota">${esc(x.odontologo)}</span>` : ''}</td><td>${fmtGs(x.total)}</td>
+          <td>${x.dias} día${x.dias === 1 ? '' : 's'}</td><td>${avisos(x)}</td><td>${acciones(x)}</td></tr>`).join('')}</tbody></table>` : '<p class="dova-nota">No hay presupuestos esperando respuesta.</p>';
+    };
+    pintar(l);
+    const recargar = () => subCobro(c);
+    c.querySelector('[data-solo-hoy]').addEventListener('change', async (e) => { try { pintar(await DOVA.get(`/cobranza/pendientes${e.target.checked ? '?soloHoy=1' : ''}`)); } catch (ex) { X.toast(ex.message, 'error'); } });
+    // onclick (no addEventListener): al recargar la pestaña no se suma un segundo manejador.
+    c.onclick = async (e) => {
+      const env = e.target.closest('[data-cob-enviar]'); const man = e.target.closest('[data-cob-manual]');
+      if (env) {
+        const [tipo, id] = env.dataset.cobEnviar.split(':'); env.disabled = true;
+        try { await DOVA.post(`/cobranza/${tipo}/${id}/enviar`); X.toast('Aviso enviado', 'ok'); recargar(); } catch (ex) { X.toast(ex.message, 'error'); env.disabled = false; }
+      } else if (man) {
+        const [tipo, id] = man.dataset.cobManual.split(':');
+        // La ventana se abre antes del pedido (si no, el navegador la bloquea).
+        const w = window.open('', '_blank');
+        try { const r = await DOVA.post(`/cobranza/${tipo}/${id}/enlace`); if (w) { w.opener = null; w.location.href = r.url; } else window.location.href = r.url; recargar(); } catch (ex) { if (w) w.close(); X.toast(ex.message, 'error'); }
+      }
+    };
+    const f = c.querySelector('.dova-cob-form');
+    if (f) f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await DOVA.put('/cobranza/config', { automatico: f.automatico.checked, hora: Number(f.hora.value), diasAntes: Number(f.diasAntes.value), repetirDias: Number(f.repetirDias.value), maxAvisos: Number(f.maxAvisos.value), presupuestos: f.presupuestos.checked, presupuestoDias: Number(f.presupuestoDias.value) });
+        X.toast('Configuración guardada', 'ok'); recargar();
+      } catch (ex) { X.toast(ex.message, 'error'); }
+    });
   }
 
   async function subDeuda(c) {

@@ -37,8 +37,8 @@ const DovaApp = (() => {
     { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores']] },
     { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'], subs: [['trat', 'Tratamientos y precios', 'tratamientos.manage'], ['odo', 'Odontólogos', 'usuarios.manage']] },
     { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
-    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage'],
-      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
+    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage'],
+      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
         ['seguros', 'Seguros y convenios', 'aseguradoras.manage'], ['listas', 'Listas de precios', 'listas_precios.manage'], ['cierre', 'Cerrar meses', 'clinica.config.manage']] },
     { grupo: 'reportes', ruta: 'reportes', label: 'Reportes generales', permiso: 'reportes.view' },
     // Administración. "Configuración" no pide permiso: cada uno cambia su propio diseño.

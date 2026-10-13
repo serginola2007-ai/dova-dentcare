@@ -109,6 +109,7 @@
       }
     }
     if (hay('[data-vista-turno]')) { window.addEventListener('hashchange', ruteoTurno); ruteoTurno(); }
+    if (hay('[data-vista-pago]')) paginaPago();
     const ses = sesion();
     $$('[data-nav-cuenta]').forEach((a) => { a.textContent = ses ? `Hola, ${ses.nombre}` : 'Ingresar'; });
     if (hay('[data-acceso]')) paginaIngresar();
@@ -695,7 +696,7 @@
     $$('[data-pagar]', p).forEach((b) => b.addEventListener('click', () => formPago($('[data-form-pago]', p), e, b.dataset.pagar === 'libre' ? null : deudas[Number(b.dataset.pagar)], () => { panelPagos(p); resumenCuenta(); })));
   }
 
-  function formPago(cont, e, deuda, listo) {
+  function formPago(cont, e, deuda, listo, enviar = (fd) => cuentaApi('/pagos', { method: 'POST', form: fd })) {
     const d = e.datosPago || {};
     const dato = (t, v) => (v ? `<div><dt>${t}</dt><dd>${esc(v)} <button type="button" class="copiar" data-copiar="${esc(v)}" aria-label="Copiar ${t}">Copiar</button></dd></div>` : '');
     cont.innerHTML = `<form class="formulario pago-form" data-f-pago novalidate>
@@ -738,9 +739,61 @@
       if (deuda && deuda.tipo === 'presupuesto') fd.append('presupuestoId', deuda.id);
       fd.append('comprobante', arch);
       const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Enviando…';
-      try { await cuentaApi('/pagos', { method: 'POST', form: fd }); aviso('¡Recibimos tu comprobante! Te avisamos cuando lo confirmemos.'); listo(); }
+      try { await enviar(fd); aviso('¡Recibimos tu comprobante! Te avisamos cuando lo confirmemos.'); listo(); }
       catch (e2) { m(e2.message); b.disabled = false; b.textContent = 'Enviar comprobante'; }
     });
+  }
+
+  // ---- Mi pago: enlace privado que llega en el aviso de cobro (sin cuenta) ----
+  async function apiPago(ruta, { method = 'GET', body, form } = {}) {
+    let r;
+    try { r = await fetch(`${API}/pago/${ruta}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: form || (body ? JSON.stringify(body) : undefined) }); }
+    catch (_e) { throw new Error('No hay conexión. Revisá tu internet y probá de nuevo.'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || 'No se pudo completar. Probá de nuevo en unos minutos.');
+    return j;
+  }
+  async function paginaPago() {
+    const v = $('[data-vista-pago]');
+    const m = location.hash.match(/^#t=([\w-]{20,100})$/);
+    if (!m) { v.innerHTML = '<div class="tarjeta-turno"><h2>Falta el enlace</h2><p style="margin-top:8px">Abrí esta página desde el enlace que te mandamos por WhatsApp.</p><p style="margin-top:20px"><a class="boton" href="index.html">Ir a la página</a></p></div>'; return; }
+    const token = m[1];
+    const cargar = async () => {
+      let e;
+      try { e = await apiPago(encodeURIComponent(token)); } catch (ex) {
+        v.innerHTML = `<div class="tarjeta-turno"><h2>No pudimos abrir el enlace</h2><p style="margin-top:8px">${esc(ex.message)}</p><p style="margin-top:20px"><a class="boton" href="index.html">Ir a la página</a></p></div>`;
+        return;
+      }
+      const wa = e.whatsappClinica ? `https://wa.me/${e.whatsappClinica}?text=${encodeURIComponent(`Hola, soy ${e.nombre}. Te escribo por mi pago.`)}` : null;
+      const deudas = e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.de}`, detalle: `${q.vencida ? 'Venció' : 'Vence'} el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: q.enRevision }));
+      const total = deudas.filter((d) => !d.enRevision).reduce((s, d) => s + d.monto, 0);
+      v.innerHTML = `<div class="tarjeta-turno tarjeta-pago">
+        <p class="saludo-pago">Hola, ${esc(e.nombre)}</p>
+        ${deudas.length ? `<h2>Tus cuotas pendientes</h2>
+          <ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}</span></div>
+            <div class="turno-acc"><strong class="monto">${gs(d.monto)}</strong>${d.enRevision ? '<span class="estado">En revisión</span>' : e.puedeInformar ? `<button type="button" class="boton boton-chico" data-pagar="${i}">Pagar</button>` : ''}</div></li>`).join('')}</ul>
+          ${total ? `<p class="total-pago">Total pendiente: <strong>${gs(total)}</strong></p>` : ''}` : (e.presupuestos.length ? '' : '<h2>¡Estás al día!</h2><p>No tenés cuotas pendientes. Gracias.</p>')}
+        <div data-form-pago></div>
+        ${e.presupuestos.map((p) => `<section class="presu-pago" data-presu="${p.id}"><h2>Presupuesto del ${esc(fechaCorta(p.fecha))}</h2>
+          <ul class="lista-cuenta lista-simple">${p.items.map((i) => `<li><span>${esc(i.descripcion || 'Tratamiento')}${i.pieza ? ` · pieza ${esc(i.pieza)}` : ''}${i.cantidad > 1 ? ` × ${i.cantidad}` : ''}</span><span>${gs(i.subtotal)}</span></li>`).join('')}</ul>
+          <p class="total-pago">Total: <strong>${gs(p.total)}</strong></p>
+          <div class="campo"><label for="nota-${p.id}">¿Querés decirnos algo? <span class="opcional">(opcional)</span></label><input id="nota-${p.id}" maxlength="500" data-nota /></div>
+          <div class="acciones-turno"><button type="button" class="boton" data-resp="quiero_empezar">Quiero empezar</button><button type="button" class="boton boton-claro" data-resp="consulta">Tengo una consulta</button></div></section>`).join('')}
+        ${!e.puedeInformar && deudas.length ? '<p class="ayuda" style="margin-top:12px">Podés pagar en la clínica. Si ya pagaste, avisanos.</p>' : ''}
+        <div class="acciones-turno" style="margin-top:20px">${wa ? `<a class="boton boton-claro" href="${esc(wa)}" target="_blank" rel="noopener">Escribir a la clínica</a>` : ''}<a href="index.html" class="boton-texto">Ir a la página</a></div>
+        <p class="ayuda" style="margin-top:16px">Este enlace es personal: no lo compartas.</p>
+      </div>`;
+      $$('[data-pagar]', v).forEach((b) => b.addEventListener('click', () => formPago($('[data-form-pago]', v), e, deudas[Number(b.dataset.pagar)], cargar,
+        (fd) => apiPago(`${encodeURIComponent(token)}/comprobante`, { method: 'POST', form: fd }))));
+      $$('[data-presu]', v).forEach((s) => $$('[data-resp]', s).forEach((b) => b.addEventListener('click', async () => {
+        $$('[data-resp]', s).forEach((x) => { x.disabled = true; });
+        try {
+          await apiPago(`${encodeURIComponent(token)}/presupuesto/${s.dataset.presu}`, { method: 'POST', body: { respuesta: b.dataset.resp, nota: $('[data-nota]', s).value } });
+          s.querySelector('.acciones-turno').innerHTML = `<p class="ok-pago">${b.dataset.resp === 'quiero_empezar' ? '¡Genial! Te vamos a contactar para darte el turno.' : 'Recibimos tu consulta. Te respondemos a la brevedad.'}</p>`;
+        } catch (ex) { aviso(ex.message); $$('[data-resp]', s).forEach((x) => { x.disabled = false; }); }
+      })));
+    };
+    await cargar();
   }
 
   async function panelComprobantes(p) {

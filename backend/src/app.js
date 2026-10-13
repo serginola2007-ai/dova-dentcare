@@ -189,6 +189,8 @@ app.use('/api/finanzas', finanzasExtRoutes);
 app.use('/api/kpis', kpisRoutes);
 app.use('/api/facturacion', facturacionRoutes);
 // Página web pública (sin sesión) y su panel en DOVA.
+const cobranzaRoutes = require('./modules/cobranza/cobranza.routes');
+app.use('/api/web/publico/pago', cobranzaRoutes.publico);
 app.use('/api/web/publico', webRoutes.publico);
 app.use('/api/web/cuenta', webRoutes.cuenta);
 app.use('/api/web', webRoutes.interno);
@@ -198,6 +200,8 @@ app.use('/api/web', webRoutes.interno);
   app.use('/api/recordatorios/cron', rec.cron);
   app.use('/api/recordatorios', rec.interno);
   app.use('/api/whatsapp/webhook', rec.webhook);
+  // Avisos de cobro por WhatsApp (cuotas y presupuestos).
+  app.use('/api/cobranza', cobranzaRoutes.interno);
 }
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en

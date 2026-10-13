@@ -257,7 +257,7 @@ const DovaWeb = (() => {
         </section>
         <section class="dova-ext-caja"><h4>Horario de atención</h4>
           <div class="dova-ext-tabla-wrap"><table class="dova-tabla dova-web-horario"><tbody>${DIAS.map(filaDia).join('')}</tbody></table></div>
-          <p class="dova-nota">Marcá los días que atienden. "y" agrega un segundo horario (por ejemplo, a la tarde).</p>
+          <p class="dova-nota">Marcá los días que atienden. "y" agrega un segundo horario (por ejemplo, a la tarde). Si un profesional atiende otros días u horas, cargá su horario en Tratamientos → Odontólogos → Horario. La página tampoco ofrece un horario si están todos los sillones ocupados.</p>
         </section>
         <section class="dova-ext-caja"><h4>Qué se puede reservar</h4>
           <p class="dova-nota">Tratamientos que se ofrecen en la página (la duración del turno es la del tratamiento).</p>

@@ -32,7 +32,10 @@ cron.post('/', h(async (req) => {
   const dado = String(req.headers['x-dova-cron'] || '');
   const ok = secreto.length >= 16 && dado.length === secreto.length && crypto.timingSafeEqual(Buffer.from(dado), Buffer.from(secreto));
   if (!ok) throw new ApiError(404, 'Recurso no encontrado');
-  return s.ejecutarAutomaticos();
+  const r = await s.ejecutarAutomaticos();
+  // También los avisos de cobro (a su propia hora).
+  r.cobranza = await require('../cobranza/cobranza.service').ejecutarAutomaticos();
+  return r;
 }));
 
 // ---- Webhook de WhatsApp (Meta) ----

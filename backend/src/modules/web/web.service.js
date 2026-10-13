@@ -157,34 +157,62 @@ async function infoPublica() {
    no respetan la anticipación mínima. */
 async function calcularLibres(clinicaId, cfg, { desde, hasta, duracion, odontologoIds }) {
   if (!odontologoIds.length) return {};
-  const [turnos, bloqueos] = await Promise.all([
+  const [turnos, bloqueos, odos, sillones] = await Promise.all([
+    // Todos los turnos del período (los de cualquier profesional ocupan sillón).
     query(`SELECT odontologo_id, fecha::text AS fecha, to_char(hora_inicio,'HH24:MI') AS hora, duracion_minutos FROM turnos
-            WHERE clinica_id=$1 AND fecha BETWEEN $2 AND $3 AND odontologo_id = ANY($4::int[]) AND estado <> ALL($5::text[])`,
-    [clinicaId, desde, hasta, odontologoIds, ESTADOS_LIBRES]),
-    query(`SELECT fecha::text AS fecha, COALESCE(fecha_hasta, fecha)::text AS fecha_hasta, odontologo_id,
+            WHERE clinica_id=$1 AND fecha BETWEEN $2 AND $3 AND estado <> ALL($4::text[])`,
+    [clinicaId, desde, hasta, ESTADOS_LIBRES]),
+    query(`SELECT fecha::text AS fecha, COALESCE(fecha_hasta, fecha)::text AS fecha_hasta, odontologo_id, sillon_id,
                   to_char(hora_desde,'HH24:MI') AS hora_desde, to_char(hora_hasta,'HH24:MI') AS hora_hasta FROM agenda_bloqueos
-            WHERE clinica_id=$1 AND fecha <= $3 AND COALESCE(fecha_hasta, fecha) >= $2 AND sillon_id IS NULL`, [clinicaId, desde, hasta]),
+            WHERE clinica_id=$1 AND fecha <= $3 AND COALESCE(fecha_hasta, fecha) >= $2`, [clinicaId, desde, hasta]),
+    query('SELECT id, horarios FROM odontologos WHERE clinica_id=$1 AND id = ANY($2::int[])', [clinicaId, odontologoIds]),
+    query('SELECT count(*)::int n FROM sillones WHERE clinica_id=$1 AND activo', [clinicaId]),
   ]);
-  const ocupado = {};
-  for (const t of turnos.rows) (ocupado[`${t.odontologo_id}|${t.fecha}`] ||= []).push([aMin(t.hora), aMin(t.hora) + t.duracion_minutos]);
+  const ocupado = {}; const porDia = {};
+  for (const t of turnos.rows) {
+    const r = [aMin(t.hora), aMin(t.hora) + t.duracion_minutos];
+    (ocupado[`${t.odontologo_id}|${t.fecha}`] ||= []).push(r);
+    (porDia[t.fecha] ||= []).push(r);
+  }
+  // Horario de cada profesional (si no tiene uno propio, el de la clínica).
+  const horarioDe = Object.fromEntries(odos.rows.map((o) => [o.id, o.horarios && typeof o.horarios === 'object' ? o.horarios : cfg.horarios]));
+  const nSillones = sillones.rows[0].n;
+  const bloqDeClinica = bloqueos.rows.filter((b) => b.sillon_id === null);
+  const bloqDeSillon = bloqueos.rows.filter((b) => b.sillon_id !== null);
+  const choca = (b, f, m) => f >= b.fecha && f <= b.fecha_hasta && (!b.hora_desde || (m < aMin(b.hora_hasta) && aMin(b.hora_desde) < m + duracion));
+  // ¿Queda algún sillón libre en ese horario? (sin sillones cargados, no se controla)
+  const haySillon = (f, m) => {
+    if (!nSillones) return true;
+    const enUso = (porDia[f] || []).filter(([a, b]) => m < b && a < m + duracion).length;
+    const bloqueados = new Set(bloqDeSillon.filter((b) => choca(b, f, m)).map((b) => b.sillon_id)).size;
+    return enUso + bloqueados < nSillones;
+  };
   const minAnt = cfg.anticipacion_horas * 60;
+  // "Ahora" se calcula una sola vez (formatear fechas es caro y esto corre por cada horario).
+  const ahora = ahoraLocal();
+  const faltan = (f, m) => Math.round((Date.parse(`${f}T12:00:00Z`) - Date.parse(`${ahora.fecha}T12:00:00Z`)) / 86400000) * 1440 + m - ahora.minutos;
   const out = {};
   for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
-    const franjas = cfg.horarios[String(diaSemana(f))] || [];
-    for (const [ini, fin] of franjas) {
-      for (let m = aMin(ini); m + duracion <= aMin(fin); m += cfg.intervalo_minutos) {
-        if (minutosHasta(f, aHora(m)) < minAnt) continue;
-        for (const oid of odontologoIds) {
-          const choca = (ocupado[`${oid}|${f}`] || []).some(([a, b]) => m < b && a < m + duracion);
-          if (choca) continue;
-          const bloq = bloqueos.rows.some((b) => f >= b.fecha && f <= b.fecha_hasta && (b.odontologo_id === null || b.odontologo_id === oid)
-            && (!b.hora_desde || (m < aMin(b.hora_hasta) && aMin(b.hora_desde) < m + duracion)));
-          if (bloq) continue;
+    const sillonLibre = new Map(); // por horario del día: se calcula una vez para todos los profesionales
+    const bloqDia = bloqDeClinica.filter((b) => f >= b.fecha && f <= b.fecha_hasta);
+    for (const oid of odontologoIds) {
+      const franjas = (horarioDe[oid] || cfg.horarios)[String(diaSemana(f))] || [];
+      const ocupadoOdo = ocupado[`${oid}|${f}`] || [];
+      const bloqOdo = bloqDia.filter((b) => b.odontologo_id === null || b.odontologo_id === oid);
+      for (const [ini, fin] of franjas) {
+        for (let m = aMin(ini); m + duracion <= aMin(fin); m += cfg.intervalo_minutos) {
+          if (faltan(f, m) < minAnt) continue;
+          if (ocupadoOdo.some(([a, b]) => m < b && a < m + duracion)) continue;
+          if (bloqOdo.some((b) => choca(b, f, m))) continue;
+          if (!sillonLibre.has(m)) sillonLibre.set(m, haySillon(f, m));
+          if (!sillonLibre.get(m)) continue;
           ((out[f] ||= {})[aHora(m)] ||= []).push(oid);
         }
       }
     }
   }
+  // Horarios ordenados dentro de cada día.
+  for (const f of Object.keys(out)) out[f] = Object.fromEntries(Object.entries(out[f]).sort(([a], [b]) => a.localeCompare(b)));
   return out; // { fecha: { "HH:MM": [odontologoIds libres] } }
 }
 
@@ -280,11 +308,15 @@ async function ocuparHorario(k, pac, { fecha, hora, comentario, tokenHash }) {
   const n = Object.fromEntries(carga.rows.map((r) => [r.odontologo_id, r.n]));
   const orden = [...candidatos].sort((a, b) => (n[a] || 0) - (n[b] || 0));
   for (const oid of orden) {
-    const r = await conCandado([`agenda:odo:${k.clinicaId}:${oid}:${fecha}`], async () => {
+    // Candado del profesional (el mismo de la agenda) y de los sillones del día (dos reservas web a la vez no toman el último sillón).
+    const r = await conCandado([`agenda:odo:${k.clinicaId}:${oid}:${fecha}`, `web:sillones:${k.clinicaId}:${fecha}`], async () => {
       const choca = await query(`SELECT 1 FROM turnos WHERE clinica_id=$1 AND odontologo_id=$2 AND fecha=$3 AND estado <> ALL($6::text[])
                                    AND hora_inicio < ($4::time + ($5::int * interval '1 minute')) AND $4::time < (hora_inicio + (duracion_minutos * interval '1 minute')) LIMIT 1`,
       [k.clinicaId, oid, fecha, hora, k.duracion, ESTADOS_LIBRES]);
       if (choca.rowCount) return null;
+      // Revalidar con el candado tomado: horario del profesional, bloqueos y sillones.
+      const ahora = await calcularLibres(k.clinicaId, k.cfg, { desde: fecha, hasta: fecha, duracion: k.duracion, odontologoIds: [oid] });
+      if (!((ahora[fecha] || {})[hora] || []).includes(oid)) return null;
       const motivo = k.trat ? k.trat.nombre : 'Consulta (reservado desde la web)';
       const t = await query(`INSERT INTO turnos (clinica_id, paciente_id, odontologo_id, fecha, hora_inicio, duracion_minutos, motivo, tratamiento_id, observaciones, origen, web_token_hash, confirmacion, primera_vez)
                              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'web',$10,'sin_confirmar', NOT EXISTS (SELECT 1 FROM turnos x WHERE x.paciente_id=$2 AND x.estado='atendido')) RETURNING id`,

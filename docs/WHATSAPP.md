@@ -96,3 +96,32 @@ Reglas:
 - Si el doctor cambia su número, DOVA deja de enviar desde el número viejo (vuelve al de la clínica) hasta que se cargue el ID nuevo.
 - Cada envío guarda de qué número salió (columna "Sale de").
 - Un doctor solo puede mandar recordatorios de sus propios turnos (permiso `recordatorios.propios`); recepción y administración, de todos.
+
+## Avisos de cobro (cuotas y presupuestos)
+
+En **Finanzas → Avisos de cobro** se ven las cuotas que vencen pronto, las vencidas y los presupuestos enviados que siguen sin respuesta.
+
+- **Sin WhatsApp Business:** "Mandar por mi WhatsApp" abre el mensaje ya armado, con el enlace privado del paciente.
+- **Con WhatsApp Business:** salen solos a la hora elegida, con el mismo disparo programado de los recordatorios. Hacen falta dos plantillas más, de categoría **Utilidad** e idioma **Español**:
+  - `aviso_pago`:
+    ```
+    Hola {{1}}, te escribimos de {{2}}. Te recordamos que {{3}}. Si ya pagaste, no tengas en cuenta este mensaje. Podés ver los datos para pagar y mandarnos el comprobante acá: {{4}}
+    ```
+    Ejemplos para la revisión: `Ana`, `DentCareRC`, `la cuota 2 de 6 por Gs. 350.000 vence el 15/10/2026`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
+  - `seguimiento_presupuesto`:
+    ```
+    Hola {{1}}, te escribimos de {{2}}. Te contamos que {{3}}. Acá lo podés revisar y avisarnos si querés empezar o si tenés alguna consulta: {{4}}
+    ```
+    Ejemplos para la revisión: `Ana`, `DentCareRC`, `el presupuesto de tu tratamiento por Gs. 2.500.000 está esperando tu respuesta`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
+  - Si en Meta se usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_PAGO` y `WHATSAPP_PLANTILLA_PRESUPUESTO`.
+- **El enlace (página "Mi pago")** vale 30 días y muestra:
+  - lo que el paciente tiene pendiente;
+  - los datos para pagar;
+  - si los pagos online están activos (Página web → Configurar la página), la opción de mandar el comprobante, que llega a *Pagos para revisar*;
+  - en un presupuesto, los botones "Quiero empezar" o "Tengo una consulta", que avisan a la recepción en la campanita.
+- **Reglas:**
+  - nunca a quien no acepta WhatsApp, nunca después de las 20 h;
+  - no se le avisa de una cuota cuyo comprobante está en revisión;
+  - una cuota vencida recibe como máximo N avisos (configurable), separados por los días que se elijan;
+  - un presupuesto recibe 2 avisos como máximo;
+  - si el paciente responde el mensaje, la respuesta queda en el aviso y llega a la campanita: un "sí" a un aviso de cobro no confirma ningún turno.

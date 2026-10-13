@@ -28,7 +28,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0050 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0051 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
@@ -104,6 +104,11 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Configuración paso a paso: `docs/WHATSAPP.md`.
 - Número de cada odontólogo: `odontologos.whatsapp_numero/whatsapp_phone_id/whatsapp_envia`. Permiso `recordatorios.propios` = solo sus turnos.
 - Pruebas con WhatsApp falso: `backend/tests/recordatorios.test.js`, `backend/tests/ui-recordatorios.js`.
+
+## Avisos de cobro y reserva online
+- Módulo `backend/src/modules/cobranza/`: avisos de cuotas y presupuestos (`cobranza_envios`, etapa única por la base), enlace privado `web/mi-pago.html#t=` (`cobranza_enlaces`, solo el hash). Corre junto con el cron de recordatorios.
+- Reserva online: `calcularLibres` en `web.service.js` usa `odontologos.horarios` (o el horario de la clínica) y la cantidad de sillones activos.
+- Pruebas: `tests/cobranza.test.js`, `tests/ui-cobranza.js`, `tests/reserva-horarios.test.js`.
 
 ## Consentimientos
 - Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.

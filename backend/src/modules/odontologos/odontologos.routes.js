@@ -13,6 +13,9 @@ router.get('/', controller.listar);
 router.get('/:id', controller.obtener);
 router.post('/', requirePermiso('usuarios.manage'), controller.crear);
 router.put('/:id', requirePermiso('usuarios.manage'), controller.actualizar);
+router.put('/:id/horarios', requirePermiso('usuarios.manage', 'agenda.config'), async (req, res, next) => {
+  try { res.json(await require('./odontologos.service').guardarHorarios(req.clinicaId, Number(req.params.id), req.body, req.usuario)); } catch (e) { next(e); }
+});
 router.delete('/:id', requirePermiso('usuarios.manage'), controller.desactivar);
 
 module.exports = router;

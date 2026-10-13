@@ -692,3 +692,39 @@ Se probó todo DOVA como un QA:
 - **Lo puede elegir cualquier usuario**, en el login o en Configuración → Apariencia. Cada uno ve en la tira de íconos solo las secciones que tiene permitidas.
 - Los 4 diseños se muestran en una grilla de 2 × 2 (4 en fila en Configuración en pantallas anchas).
 - Pruebas: `tests/ui-mecanico.js` 27/27 (admin y recepción; escritorio, tablet y celular). Regresión: menú 75/75, responsive 78/78, primer ingreso, PWA.
+
+## Avisos de cobro por WhatsApp (migración 0051)
+
+- **Finanzas → Avisos de cobro** (permiso nuevo `cobranza.manage`, ya asignado a recepción) muestra:
+  - las cuotas que vencen pronto y las vencidas, con los días de atraso;
+  - los presupuestos enviados sin respuesta;
+  - qué toca avisar hoy y los avisos ya mandados (enviado, entregado, leído, respondió, falló).
+- **Cada aviso lleva un enlace privado a "Mi pago"** (vale 30 días, sin cuenta). El paciente ve:
+  - lo que debe y los datos para pagar;
+  - la opción de mandar el comprobante, que llega a *Pagos para revisar*;
+  - en un presupuesto, "Quiero empezar" o "Tengo una consulta", que avisan a la recepción.
+- **Automático** (con WhatsApp Business), a la hora elegida:
+  - aviso antes del vencimiento;
+  - después del vencimiento, repetir cada N días hasta un máximo;
+  - presupuestos: a los N días de enviados y una semana después.
+- **Sin WhatsApp Business:** "Mandar por mi WhatsApp" abre el mensaje ya armado.
+- **Protecciones:**
+  - nunca dos veces la misma etapa (lo impide la base) ni dos avisos a mano el mismo día;
+  - nunca a quien no acepta WhatsApp, nunca de noche;
+  - no se avisa de una cuota cuyo comprobante está en revisión;
+  - las respuestas del paciente a un aviso de cobro no se confunden con la confirmación de un turno.
+- Pasos para las plantillas de Meta: `docs/WHATSAPP.md`.
+
+## Reserva online con horarios reales de cada profesional
+
+- **Tratamientos → Odontólogos → Horario:** días y horas en que atiende cada uno. Sin horario propio, usa el de la clínica.
+- **La página web ofrece un horario solo si se cumplen tres condiciones:**
+  - el profesional atiende ese día y a esa hora;
+  - está libre;
+  - **queda un sillón libre**, contando los turnos de todos los profesionales y los sillones bloqueados (mantenimiento).
+- Al reservar, todo se vuelve a controlar con el candado tomado: dos reservas a la vez no toman el último sillón.
+- Se aceleró el cálculo: la disponibilidad del mes pasó de 2,7 s a 0,06 s con 63 profesionales.
+- Pruebas:
+  - nuevas: `tests/cobranza.test.js` 42/42, `tests/ui-cobranza.js` 21/21, `tests/reserva-horarios.test.js` 16/16;
+  - regresión: recordatorios 64/64 y 29/29, web 51/51 y 60/60, portal 64/64;
+  - seguridad: 549 rutas sin anomalías, permisos 65/65, intrusión 20/20.

@@ -7,6 +7,7 @@
      WHATSAPP_IDIOMA           idioma de la plantilla (es)
      WHATSAPP_APP_SECRET       secreto de la app: firma de los avisos que manda Meta
      WHATSAPP_VERIFY_TOKEN     texto para verificar el webhook al configurarlo
+     WHATSAPP_PLANTILLA_PAGO, WHATSAPP_PLANTILLA_PRESUPUESTO  plantillas de los avisos de cobro
    Los mensajes que inicia la clínica tienen que usar una plantilla aprobada
    por Meta (ver docs/WHATSAPP.md). */
 const crypto = require('crypto');
@@ -19,13 +20,16 @@ const cfg = () => ({
   base: (process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0').replace(/\/$/, ''),
   appSecret: process.env.WHATSAPP_APP_SECRET || '',
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || '',
+  // Plantillas de los avisos de cobro ({{1}} nombre, {{2}} clínica, {{3}} detalle, {{4}} enlace).
+  plantillaPago: process.env.WHATSAPP_PLANTILLA_PAGO || 'aviso_pago',
+  plantillaPresupuesto: process.env.WHATSAPP_PLANTILLA_PRESUPUESTO || 'seguimiento_presupuesto',
 });
 
 function configurado() { const c = cfg(); return !!(c.token && c.numeroId); }
 
 /* Envía la plantilla con sus valores ({{1}}, {{2}}…). Devuelve el id del
    mensaje que da Meta (sirve para seguir si se entregó y se leyó). */
-async function enviarPlantilla(telefono, valores, { numeroId } = {}) {
+async function enviarPlantilla(telefono, valores, { numeroId, plantilla } = {}) {
   const c = cfg();
   if (!configurado()) throw new Error('WhatsApp no está configurado');
   // Número que envía: el del odontólogo (si está conectado) o el de la clínica.
@@ -41,7 +45,7 @@ async function enviarPlantilla(telefono, valores, { numeroId } = {}) {
         messaging_product: 'whatsapp',
         to: telefono,
         type: 'template',
-        template: { name: c.plantilla, language: { code: c.idioma }, components: [{ type: 'body', parameters: valores.map((v) => ({ type: 'text', text: String(v).slice(0, 1000) })) }] },
+        template: { name: plantilla || c.plantilla, language: { code: c.idioma }, components: [{ type: 'body', parameters: valores.map((v) => ({ type: 'text', text: String(v).slice(0, 1000) })) }] },
       }),
     });
     const datos = await r.json().catch(() => ({}));

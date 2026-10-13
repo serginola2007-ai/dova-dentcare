@@ -1,6 +1,6 @@
 const { query } = require('../../config/db');
 
-const COLUMNAS = 'id, clinica_id, nombre, matricula, especialidad, telefono, email, color_agenda, activo, creado_en';
+const COLUMNAS = 'id, clinica_id, nombre, matricula, especialidad, telefono, email, color_agenda, activo, creado_en, horarios';
 
 async function listar(clinicaId, { incluirInactivos = false } = {}) {
   const condiciones = ['clinica_id = $1'];
