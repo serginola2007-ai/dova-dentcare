@@ -511,26 +511,61 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 }
 .dova-ext-paginas { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
 .dova-separador { border: 0; border-top: 1px solid var(--border); margin: 18px 0 12px; }
+/* Inicio limpio */
+.dova-inicio-titulo { margin-bottom: 2px; }
+.dova-inicio-sub { margin: 0 0 22px; color: var(--ink-soft); font-size: 14px; }
+.dova-inicio-alerta { color: var(--rust); font-weight: 600; }
+.dova-inicio-accesos { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 22px; }
+.dova-inicio-accesos .dova-btn-secundario { display: inline-flex; align-items: center; gap: 6px; }
+.dova-atender { margin: 0 0 26px; }
+.dova-atender-lista { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.dova-atender-lista > li { border-bottom: 1px solid var(--border); }
+.dova-atender-fila { display: flex; width: 100%; align-items: baseline; justify-content: space-between; gap: 16px; padding: 11px 2px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.dova-atender-fila:hover { background: color-mix(in srgb, var(--cream) 70%, transparent); }
+.dova-atender-fila:focus-visible { outline: 2px solid var(--terracotta); outline-offset: -2px; }
+.dova-atender-txt { min-width: 0; }
+.dova-atender-n { font-variant-numeric: tabular-nums; font-weight: 600; flex-shrink: 0; }
+.dova-atender-n::after { content: '\203A'; margin-left: 10px; color: var(--ink-soft); font-weight: 400; }
+.dova-atender-fila[aria-expanded="true"] .dova-atender-n::after { content: '\2039'; }
+.dova-atender-vacio { color: var(--ink-soft); margin: 8px 0; }
+.dova-atender-lista:not(:empty) + .dova-atender-vacio { display: none; }
+.dova-atender-panel { padding: 2px 2px 12px; }
+.dova-atender-panel .dova-lista-simple { margin: 0; }
+.dova-puesta-lista li[hidden] { display: none; }
+
 /* Mi día del odontólogo */
-.dova-midia-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.dova-midia-cab .dova-section-title { margin-bottom: 0; }
-.dova-midia-fecha { font-weight: 400; opacity: .7; font-size: .85em; margin-left: 6px; }
+.dova-midia { margin-bottom: 30px; }
+.dova-midia-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.dova-midia-cab .dova-inicio-sub { margin: 0; }
 .dova-midia-dias { margin: 0; border-bottom: 0; }
-.dova-midia-chips { line-height: 1.9; max-width: 420px; }
+.dova-midia-tabla td { vertical-align: top; padding-top: 12px; padding-bottom: 12px; }
+.dova-midia-hora { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; width: 1%; }
+.dova-midia-hora > div > div { font-weight: 400; margin-top: 2px; }
+.dova-midia-est, .dova-midia-sinconf { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+.dova-midia-est.critica { color: var(--rust); }
+.dova-midia-est.atencion { color: var(--terracotta-dark); }
+.dova-midia-est.info, .dova-midia-est.ok { color: var(--sage-dark); }
+.dova-midia-nombre { font-weight: 600; text-align: left; }
+.dova-midia-motivo { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+.dova-midia-chips { line-height: 1.9; }
 .dova-midia-chip { white-space: normal; margin: 0 2px 2px 0; display: inline-block; }
-.dova-midia-nada { opacity: .6; font-size: 13px; }
-.dova-midia-dur { opacity: .65; font-size: 12px; white-space: nowrap; }
-.dova-midia-det > td { background: var(--cream, rgba(0,0,0,.03)); font-size: 14px; line-height: 1.55; }
+.dova-midia-mas { font-size: 13px; white-space: nowrap; }
+.dova-midia-accion { text-align: right; white-space: nowrap; width: 1%; }
+.dova-midia-det > td { background: color-mix(in srgb, var(--cream) 60%, transparent); font-size: 14px; line-height: 1.55; padding-top: 10px; }
 .dova-midia-det-cuerpo > div + div { margin-top: 4px; }
 .dova-midia-det[hidden] { display: none !important; }
 .dova-midia-alertas { margin: 4px 0 0 18px; padding: 0; }
 .dova-midia-alertas li.critica { color: var(--rust); font-weight: 600; }
+.dova-midia-labs { margin-top: 22px; }
+.dova-midia-labfecha { font-size: 13px; color: var(--ink-soft); white-space: nowrap; flex-shrink: 0; }
+.dova-midia-labfecha.atrasado { color: var(--rust); font-weight: 600; }
 @media (max-width: 768px) {
   .dova-midia-tabla td > * { min-width: 0; }
-  .dova-ext-kpis.dova-midia-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dova-midia-tabla td[data-th="Tener en cuenta"] { flex-direction: column; justify-content: flex-start; gap: 4px; }
-  .dova-midia-chips { max-width: none; }
+  .dova-midia-tabla td[data-th="Paciente"] > div, .dova-midia-hora > div { text-align: right; }
+  .dova-midia-hora, .dova-midia-accion { width: auto; }
   .dova-midia-det > td { display: block; }
   .dova-midia-det > td::before { content: none !important; }
   .dova-midia-det-cuerpo { overflow-wrap: anywhere; }
+  .dova-atender-fila { padding: 13px 2px; }
 }

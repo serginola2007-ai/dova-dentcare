@@ -770,3 +770,16 @@ Se probó todo DOVA como un QA:
 - Franja arriba con los totales del día y lista de **trabajos de laboratorio por llegar** (atrasados marcados).
 - API `GET /api/pendientes/mi-dia?fecha=` (`pendientes.midia.js`): el odontólogo ve solo lo suyo aunque pida otro; admin puede elegir odontólogo. Recepción no tiene acceso (403).
 - **Pruebas:** nuevas `tests/mi-dia.test.js` 29/29 y `tests/ui-mi-dia.js` 72/72 (4 diseños, tablet y celular); regresión ui-menu 75, ui-fase6 78, ui-tablet 12; seguridad: 560 rutas sin anomalías, permisos 65/65.
+
+## Tanda: Inicio más limpio (13/10/2026)
+
+- **Todos:** saludo con el nombre ("Buenas tardes, Carmen", sin el título) y una línea con la fecha. Se sacaron los recuadros de números.
+- **Administración y recepción:** una sola lista **"Para atender"** con lo que tiene algo pendiente (lo que está en cero no aparece); cada fila lleva a su sección. Turnos de hoy y estado de la caja van en la línea de arriba. Recepción tiene los accesos directos como botones chicos.
+- **Puesta en marcha:** muestra solo lo que falta ("Ver todo" despliega el resto).
+- **Odontólogo:**
+  - agenda con hora, paciente y motivo; "Tener en cuenta" muestra solo los 2 avisos más importantes y "+N más" despliega el resto;
+  - el resumen del día es una línea de texto;
+  - laboratorio por llegar: hasta 3 trabajos;
+  - "Mis pendientes": filas con el total que se despliegan al tocarlas (antes eran pestañas con listas de cientos de pacientes);
+  - ya no ve los números de seguimiento de toda la clínica.
+- **Pruebas:** `ui-mi-dia` 98/98 (incluye admin y recepción), puesta en marcha 24/24, mecánico 27/27, menú 75, submenús 53, tablet 12, fase6 78, xss 4.

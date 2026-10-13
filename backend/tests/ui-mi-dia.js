@@ -46,15 +46,22 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       await p.waitForSelector('.dova-midia-tabla', { timeout: 15000 });
       const filaAna = p.locator('.dova-midia-tabla tbody tr', { hasText: `Ana Midia${suf}` });
       const txtAna = await filaAna.textContent();
-      P(`${tag} Ana: alergia grave, laboratorio sin llegar, primera vez y cumpleaños`, /Alergia: Látex/.test(txtAna) && /Laboratorio sin llegar: Corona pieza 21/.test(txtAna) && /Primera vez/.test(txtAna) && /Cumple \d+ años/.test(txtAna), txtAna);
+      P(`${tag} Ana: en la fila solo lo más importante (alergia grave y laboratorio) y "+N más"`, /Alergia: Látex/.test(txtAna) && /Laboratorio sin llegar: Corona pieza 21/.test(txtAna) && !/Primera vez/.test(txtAna) && /\+\d+ más/.test(txtAna), txtAna);
+      await filaAna.locator('[data-midia-ver]').click();
+      const detAna = await p.locator('.dova-midia-det:not([hidden])').first().textContent();
+      P(`${tag} "+N más": primera vez y cumpleaños`, /Primera vez/.test(detAna) && /Cumple \d+ años/.test(detAna), detAna);
+      await filaAna.locator('[data-midia-ver]').click();
       const filaBeto = p.locator('.dova-midia-tabla tbody tr', { hasText: `Beto Midia${suf}` });
       P(`${tag} Beto: no es primera vez`, !/Primera vez/.test(await filaBeto.textContent()));
       await filaBeto.locator('[data-midia-ver]').click();
       const det = p.locator('.dova-midia-det:not([hidden])');
       P(`${tag} "Ver más": última visita y próximo paso`, /Próximo paso indicado:\s*Sellar molares inferiores/.test(await det.textContent()), await det.textContent());
-      P(`${tag} Franja: alerta importante y laboratorio`, Number(await p.locator('.dova-midia-kpis .dova-ext-kpi.alerta').count()) >= 2);
+      const sub = await p.textContent('.dova-midia .dova-inicio-sub');
+      P(`${tag} Una sola línea de resumen (sin recuadros)`, /con alerta médica/.test(sub) && /sin el trabajo de laboratorio/.test(sub) && await p.locator('.dova-ext-kpi').count() === 0, sub);
       P(`${tag} Botón "Iniciar consulta" en los turnos de hoy`, await filaAna.locator('[data-ir-consulta]').count() === 1);
-      P(`${tag} Laboratorio por llegar: la corona atrasada`, /Corona · pieza 21[\s\S]*Atrasado/.test(await p.locator('.dova-midia').textContent()));
+      P(`${tag} Laboratorio por llegar: la corona atrasada`, /Corona · pieza 21[\s\S]*Atrasado/.test(await p.locator('.dova-midia-labs').textContent()));
+      P(`${tag} Saludo sin el título ("Buenas …, Carmen")`, /^Buen[ao]s? (días|tardes|noches), (?!Dra)/.test((await p.textContent('.dova-view-title')).trim()));
+      P(`${tag} Pendientes: filas cerradas hasta tocarlas`, await p.locator('.dova-mis-pendientes .dova-atender-panel:not([hidden])').count() === 0);
       if (vp.width === 1366 && dis === 'moderno') await p.screenshot({ path: `${DIR}/midia-hoy.png`, fullPage: true });
       P(`${tag} Sin desborde horizontal (hoy)`, await sinDesborde(p));
       await p.click('[data-midia-dia="1"]');
@@ -69,6 +76,18 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       await filaAna.locator('[data-ir-paciente]').click(); await p.waitForTimeout(1200);
       P(`${tag} Tocar el nombre abre la ficha`, (await p.evaluate(() => location.hash)).startsWith(`#paciente/${ana}`));
       P(`${tag} Sin errores de consola`, err.length === 0, err);
+      await ctx.close();
+    }
+    for (const [u, c] of [['admin', 'admin'], ['recep1', 'clave123']]) {
+      await db.query("UPDATE usuarios SET debe_cambiar_clave=false WHERE username=$1", [u]);
+      const { ctx, p, err } = await login(b, { width: 1366, height: 900 }, u, c);
+      await p.waitForSelector('[data-para-atender] .dova-atender-fila', { timeout: 15000 }); await p.waitForTimeout(800);
+      const nums = await p.$$eval('[data-para-atender] .dova-atender-n', (xs) => xs.map((x) => Number(x.textContent.replace(/\D/g, ''))));
+      P(`[${u}] Para atender: solo filas con algo pendiente`, nums.length > 0 && nums.every((n) => n > 0), nums);
+      P(`[${u}] Sin recuadros de números`, await p.locator('.dova-ext-kpi, .dova-cards-grid').count() === 0);
+      await p.locator('[data-para-atender] .dova-atender-fila').first().click(); await p.waitForTimeout(1500);
+      P(`[${u}] Tocar una fila lleva a esa sección`, !(await p.evaluate(() => location.hash)).startsWith('#dashboard'), await p.evaluate(() => location.hash));
+      P(`[${u}] Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }
   } finally {

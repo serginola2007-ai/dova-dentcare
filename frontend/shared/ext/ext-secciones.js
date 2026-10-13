@@ -988,20 +988,20 @@ const DovaSecciones = (() => {
   // Panel: resumen de seguimiento para quien lo puede ver.
   async function extenderDashboard(elMain, nav) {
     await puestaEnMarcha(elMain, nav);
+    // El odontólogo ve su propio día; los números de toda la clínica son para recepción y administración.
+    if ((DOVA.usuarioActual() || {}).odontologoId) return;
     if (!puede('seguimiento.view', 'recalls.view')) return;
+    const lista = elMain.querySelector('[data-para-atender] .dova-atender-lista');
+    if (!lista) return;
     let p; try { p = await DOVA.get('/seguimiento/panel'); } catch (_e) { return; }
-    const titulo = elMain.querySelector('.dova-view-title');
-    const cont = document.createElement('div');
-    cont.innerHTML = `<h3 class="dova-section-title">Seguimiento de pacientes</h3><div class="dova-ext-kpis">
-      ${kpi(p.recallsVencidos, 'Controles periódicos atrasados', { alerta: p.recallsVencidos > 0, ir: 'recalls' })}
-      ${kpi(p.controlesVencidos + p.controlesSemana, 'Controles después de un tratamiento (atrasados o esta semana)', { alerta: p.controlesVencidos > 0, ir: 'controles' })}
-      ${kpi(p.tratamientosSinTurno, 'Tratamientos sin turno', { alerta: p.tratamientosSinTurno > 0, ir: 'sinturno' })}
-      ${kpi(p.turnosSinConfirmar, 'Turnos sin confirmar', { alerta: p.turnosSinConfirmar > 0, ir: 'recordatorios' })}
-      ${p.cumpleanosHoy ? kpi(p.cumpleanosHoy, 'Cumpleaños hoy', { ir: 'cumpleanos' }) : ''}</div>`;
-    // Debajo de la puesta en marcha (si está), que va primero.
-    const ancla = elMain.querySelector('.dova-puesta') || titulo;
-    if (ancla) ancla.insertAdjacentElement('afterend', cont); else elMain.prepend(cont);
-    cont.querySelectorAll('[data-ir-sub]').forEach((b) => b.addEventListener('click', () => nav('seguimiento', b.dataset.irSub)));
+    const fila = (n, label, sub) => (n ? `<li><button type="button" class="dova-atender-fila" data-ir-ruta="seguimiento" data-ir-sub-ruta="${sub}"><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>` : '');
+    lista.insertAdjacentHTML('afterbegin', [
+      fila(p.turnosSinConfirmar, 'Turnos sin confirmar', 'recordatorios'),
+      fila(p.recallsVencidos, 'Controles periódicos atrasados', 'recalls'),
+      fila(p.controlesVencidos + p.controlesSemana, 'Controles después de un tratamiento', 'controles'),
+      fila(p.tratamientosSinTurno, 'Tratamientos sin turno', 'sinturno'),
+      fila(p.cumpleanosHoy, 'Cumpleaños hoy', 'cumpleanos'),
+    ].join(''));
   }
 
   // Mi WhatsApp: cada odontólogo registra su celular para los recordatorios de sus pacientes.
@@ -1064,12 +1064,18 @@ const DovaSecciones = (() => {
     const cont = document.createElement('section');
     cont.className = 'dova-puesta';
     cont.innerHTML = `<div class="dova-puesta-cab"><h3 class="dova-section-title">Puesta en marcha: ${e.listos} de ${e.total} listos</h3>
-        <button type="button" class="dova-btn-link" data-ocultar-puesta>Ocultar</button></div>
+        <span><button type="button" class="dova-btn-link" data-ver-puesta aria-expanded="false">Ver todo</button> · <button type="button" class="dova-btn-link" data-ocultar-puesta>Ocultar</button></span></div>
       <div class="dova-puesta-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${e.total}" aria-valuenow="${e.listos}"><span style="width:${Math.round((e.listos / e.total) * 100)}%"></span></div>
-      <ul class="dova-puesta-lista">${e.items.map((i) => `<li class="${i.ok ? 'ok' : ''}">
+      <ul class="dova-puesta-lista">${e.items.map((i) => `<li class="${i.ok ? 'ok' : ''}"${i.ok ? ' hidden' : ''}>
         <span class="dova-puesta-estado">${i.ok ? 'Listo' : (i.opcional ? 'Opcional' : 'Falta')}</span>
         <span class="dova-puesta-texto"><strong>${esc(i.titulo)}</strong> <span class="dova-nota">${esc(i.detalle)}</span></span>
         ${i.ok ? '' : `<button type="button" class="dova-btn-secundario" data-puesta-ir="${esc(i.id)}">Ir</button>`}</li>`).join('')}</ul>`;
+    cont.querySelector('[data-ver-puesta]').addEventListener('click', (ev) => {
+      const ver = ev.currentTarget.getAttribute('aria-expanded') !== 'true';
+      cont.querySelectorAll('.dova-puesta-lista li.ok').forEach((li) => { li.hidden = !ver; });
+      ev.currentTarget.setAttribute('aria-expanded', String(ver));
+      ev.currentTarget.textContent = ver ? 'Ver solo lo que falta' : 'Ver todo';
+    });
     cont.querySelectorAll('[data-puesta-ir]').forEach((b) => b.addEventListener('click', async () => {
       const i = e.items.find((x) => x.id === b.dataset.puestaIr);
       if (i.sub) window.DovaSubPendiente = i.sub;
@@ -1079,8 +1085,8 @@ const DovaSecciones = (() => {
     cont.querySelector('[data-ocultar-puesta]').addEventListener('click', async () => {
       try { await DOVA.put('/clinica/puesta-en-marcha', { oculta: true }); cont.remove(); X.toast('Listo. La podés volver a ver en Configuración → Datos de la clínica.', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
     });
-    const titulo = elMain.querySelector('.dova-view-title');
-    if (titulo) titulo.after(cont); else elMain.prepend(cont);
+    const ancla = elMain.querySelector('.dova-inicio-sub') || elMain.querySelector('.dova-view-title');
+    if (ancla) ancla.after(cont); else elMain.prepend(cont);
   }
 
   // Configuración: Mi WhatsApp, datos de la clínica, tipos de recall y qué tratamiento dispara cada uno.

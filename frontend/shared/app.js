@@ -257,8 +257,8 @@ const DovaApp = (() => {
     elMain.innerHTML = html;
     if (DOVA.usuarioActual() && DOVA.usuarioActual().odontologoId) {
       Vistas.initDashboardOdontologo((pacienteId) => navegar('consulta', pacienteId), (pacienteId) => navegar('paciente', pacienteId));
-    } else if (!DOVA.tienePermiso('reportes.view')) {
-      Vistas.initDashboardSinReportes((rutaDestino) => navegar(rutaDestino));
+    } else {
+      Vistas.initInicio((rutaDestino) => navegar(rutaDestino));
     }
     conExtension(() => DovaSecciones.extenderDashboard(elMain, navegar));
     aplicarDataThATablas();

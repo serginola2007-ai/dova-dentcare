@@ -293,6 +293,33 @@ const Vistas = (() => {
   }
 
   // ---------------- DASHBOARD ----------------
+  // Inicio limpio: saludo, una línea con el día y una sola lista "Para atender"
+  // que muestra únicamente lo que tiene algo pendiente (lo que está en cero no
+  // aparece). Las extensiones (seguimiento) suman filas a esa misma lista.
+  function saludo(usuario) {
+    const h = new Date().getHours();
+    // Primer nombre, sin el título ("Dra. Carmen Rodríguez" → "Carmen").
+    const palabras = usuario && (usuario.nombre || usuario.username) ? String(usuario.nombre || usuario.username).trim().split(/\s+/) : [];
+    const nombre = palabras.find((w) => !/^(dra?|lic|od|odont|prof|sr|sra)\.?$/i.test(w)) || '';
+    return `${h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'}${nombre ? ', ' + esc(nombre) : ''}`;
+  }
+  function fechaLarga() {
+    const t = new Date().toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  // Una fila de "Para atender". Solo se dibuja si n > 0.
+  function filaAtender(n, label, ruta, sub) {
+    if (!n) return '';
+    return `<li><button type="button" class="dova-atender-fila" data-ir-ruta="${esc(ruta)}"${sub ? ` data-ir-sub-ruta="${esc(sub)}"` : ''}><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>`;
+  }
+  function seccionAtender(filas) {
+    return `<section class="dova-atender" data-para-atender>
+        <h3 class="dova-section-title">Para atender</h3>
+        <ul class="dova-atender-lista">${filas}</ul>
+        <p class="dova-atender-vacio">Todo al día.</p>
+      </section>`;
+  }
+
   async function vistaDashboard() {
     const usuario = DOVA.usuarioActual();
     if (usuario && usuario.odontologoId) {
@@ -301,113 +328,101 @@ const Vistas = (() => {
     if (!DOVA.tienePermiso('reportes.view')) {
       return vistaDashboardSinReportes(usuario);
     }
-    const alertas = await manejarError(() => DOVA.get('/reportes/dashboard/alertas'));
-    const items = [
-      { label: 'Turnos hoy', valor: alertas.turnosHoy, tono: 'info' },
-      { label: 'Insumos por acabarse', valor: alertas.stockBajo, tono: alertas.stockBajo > 0 ? 'alerta' : 'ok' },
-      { label: 'Cuotas vencidas', valor: alertas.cuotasVencidas, tono: alertas.cuotasVencidas > 0 ? 'alerta' : 'ok' },
-      { label: 'Lista de espera', valor: alertas.listaEsperaPendiente, tono: 'info' },
-      { label: 'Insumos por vencer (30d)', valor: alertas.insumosPorVencer, tono: alertas.insumosPorVencer > 0 ? 'alerta' : 'ok' },
-      { label: 'Pedidos de ayuda técnica sin resolver', valor: alertas.ticketsHelpdeskAbiertos, tono: alertas.ticketsHelpdeskAbiertos > 0 ? 'alerta' : 'ok' },
-    ];
+    const a = await manejarError(() => DOVA.get('/reportes/dashboard/alertas'));
+    const linea = [fechaLarga(), `${a.turnosHoy} turno${a.turnosHoy === 1 ? '' : 's'} hoy`,
+      a.cajaAbierta ? 'Caja abierta' : '<span class="dova-inicio-alerta">Sin caja abierta</span>'];
     return `
-      <h2 class="dova-view-title">Inicio</h2>
-      <div class="dova-cards-grid">
-        ${items.map((it) => `
-          <div class="dova-card dova-card-${it.tono}">
-            <div class="dova-card-valor">${it.valor}</div>
-            <div class="dova-card-label">${esc(it.label)}</div>
-          </div>`).join('')}
-      </div>
-      ${alertas.cajaAbierta
-        ? `<p class="dova-nota">Caja abierta desde ${fmtFecha(alertas.cajaAbierta.fecha)}.</p>`
-        : `<p class="dova-nota dova-nota-alerta">No hay una caja abierta hoy.</p>`}
+      <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
+      <p class="dova-inicio-sub">${linea.join(' · ')}</p>
+      ${seccionAtender([
+        filaAtender(a.cuotasVencidas, 'Cuotas vencidas', 'finanzas', 'deuda'),
+        filaAtender(a.stockBajo, 'Insumos por acabarse', 'inventario', 'insumos'),
+        filaAtender(a.insumosPorVencer, 'Insumos que vencen en 30 días', 'inventario', 'vencen'),
+        filaAtender(a.listaEsperaPendiente, 'Pacientes en lista de espera', 'agenda', 'espera'),
+        filaAtender(a.ticketsHelpdeskAbiertos, 'Pedidos de ayuda técnica sin resolver', 'helpdesk'),
+      ].join(''))}
     `;
   }
 
-  // Panel para roles sin el permiso 'reportes.view' (recepción, asistente,
-  // helpdesk): no pide datos agregados de reportes, así que no puede fallar
-  // por permisos. Muestra un saludo y accesos directos a lo que ese rol sí
-  // puede usar, en vez de una pantalla en blanco.
+  // Inicio para roles sin 'reportes.view' (recepción, asistente, helpdesk):
+  // saludo, accesos directos en una línea y "Para atender" (lo completa
+  // la extensión de seguimiento si el rol lo puede ver).
   function vistaDashboardSinReportes(usuario) {
-    const nombre = usuario && (usuario.nombre || usuario.username) ? esc(usuario.nombre || usuario.username) : '';
     const accesos = [
-      { ruta: 'pacientes', label: 'Pacientes', icono: 'pacientes' },
       { ruta: 'agenda', label: 'Agenda', icono: 'calendario' },
+      { ruta: 'pacientes', label: 'Pacientes', icono: 'pacientes' },
       { ruta: 'inventario', label: 'Inventario', icono: 'caja' },
-      { ruta: 'helpdesk', label: 'Helpdesk', icono: 'ticket' },
-    ].filter((a) => DOVA.tienePermiso(`${a.ruta}.view`));
+      { ruta: 'helpdesk', label: 'Ayuda técnica', icono: 'ticket' },
+    ].filter((x) => DOVA.tienePermiso(`${x.ruta}.view`));
     return `
-      <h2 class="dova-view-title">Inicio</h2>
-      <p class="dova-nota">${nombre ? `Hola, ${nombre}. ` : ''}Estos son tus accesos rápidos:</p>
-      <div class="dova-cards-grid">
-        ${accesos.map((a) => `
-          <button type="button" class="dova-card dova-card-info dova-card-clicable" data-ir-a="${esc(a.ruta)}">
-            <div class="dova-card-valor dova-card-icono">${DovaIcono(a.icono, 22)}</div>
-            <div class="dova-card-label">${esc(a.label)}</div>
-          </button>`).join('')}
-      </div>
+      <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
+      <p class="dova-inicio-sub">${fechaLarga()}</p>
+      ${accesos.length ? `<div class="dova-inicio-accesos">${accesos.map((x) => `
+          <button type="button" class="dova-btn-secundario" data-ir-a="${esc(x.ruta)}">${DovaIcono(x.icono, 16)} ${esc(x.label)}</button>`).join('')}
+      </div>` : ''}
+      ${seccionAtender('')}
     `;
   }
 
-  function initDashboardSinReportes(irA) {
-    document.querySelectorAll('[data-ir-a]').forEach((btn) => {
-      btn.addEventListener('click', () => irA(btn.dataset.irA));
+  // Botones de "Para atender" y accesos: se enlazan una sola vez por pantalla.
+  function initInicio(irA) {
+    const atender = document.querySelector('[data-para-atender]');
+    if (atender) atender.addEventListener('click', (e) => {
+      const f = e.target.closest('[data-ir-ruta]');
+      if (!f) return;
+      window.DovaSubPendiente = f.dataset.irSubRuta || null;
+      Promise.resolve(irA(f.dataset.irRuta)).finally(() => { window.DovaSubPendiente = null; });
     });
+    document.querySelectorAll('.dova-inicio-accesos [data-ir-a]').forEach((b) => b.addEventListener('click', () => irA(b.dataset.irA)));
   }
+  function initDashboardSinReportes(irA) { initInicio(irA); }
 
-  // Dashboard específico del odontólogo (sección 23 del prompt): Mi día,
-  // Mis tratamientos, Mis pendientes, Resumen — sin datos administrativos
-  // ni financieros salvo que tenga permiso explícito para verlos.
+  // Inicio del odontólogo: su agenda (ext-midia.js) y, debajo, sus pendientes
+  // agrupados en filas que se despliegan solo si se tocan.
   const CATEGORIAS_PENDIENTES = [
-    { key: 'tratamientosAbiertos', label: 'Tratamientos abiertos', icono: 'lista' },
-    { key: 'pacientesSinProximaCita', label: 'Sin próxima cita', icono: 'calendario' },
-    { key: 'evolucionesSinFirmar', label: 'Evoluciones sin firmar', icono: 'firma' },
-    { key: 'estudiosPendientes', label: 'Estudios sin resultado', icono: 'estudio' },
-    { key: 'consentimientosPendientes', label: 'Consentimientos pendientes', icono: 'firma' },
-    { key: 'controlesVencidos', label: 'Controles postop. vencidos', icono: 'curacion' },
-    { key: 'pacientesParaRevisar', label: 'Pacientes para revisar', icono: 'alerta' },
-    { key: 'derivacionesRecibidas', label: 'Derivaciones recibidas', icono: 'flecha' },
-    { key: 'recetasPendientes', label: 'Recetas pendientes', icono: 'medicamento' },
-    { key: 'presupuestosPendientes', label: 'Presupuestos sin aceptar', icono: 'comprobante' },
+    { key: 'evolucionesSinFirmar', label: 'Evoluciones sin firmar' },
+    { key: 'consentimientosPendientes', label: 'Consentimientos pendientes' },
+    { key: 'recetasPendientes', label: 'Recetas pendientes' },
+    { key: 'estudiosPendientes', label: 'Estudios sin resultado' },
+    { key: 'controlesVencidos', label: 'Controles después de un tratamiento vencidos' },
+    { key: 'derivacionesRecibidas', label: 'Derivaciones recibidas' },
+    { key: 'pacientesParaRevisar', label: 'Pacientes para revisar' },
+    { key: 'presupuestosPendientes', label: 'Presupuestos sin aceptar' },
+    { key: 'pacientesSinProximaCita', label: 'Tratamientos sin próxima cita' },
+    { key: 'tratamientosAbiertos', label: 'Tratamientos abiertos' },
   ];
+  const MAX_PEND = 15;
 
   function nombrePaciente(item) {
     return esc((item.paciente_nombre || '') + ' ' + (item.paciente_apellido || ''));
   }
+  function textoPendiente(item) {
+    return esc(item.nombre || item.tratamiento_nombre || item.procedimiento || (item.medicacion ? `Indicó: ${item.medicacion}` : '') || (item.total !== undefined && item.estado ? `Presupuesto ${item.estado} · Gs. ${Number(item.total).toLocaleString('es-PY')}` : '') || item.motivo || item.detalle || '');
+  }
 
   async function vistaDashboardOdontologo() {
     const pendientes = await manejarError(() => DOVA.get('/pendientes'));
-    const puedeFinanzas = DOVA.tienePermiso('presupuestos.view') || DOVA.tienePermiso('pagos.view');
-
+    const cats = CATEGORIAS_PENDIENTES.filter((c) => (pendientes[c.key] || []).length);
     return `
-      <h2 class="dova-view-title">Mi día</h2>
-      <p class="dova-subtitulo">${esc(DOVA.usuarioActual().nombre)}</p>
+      <h2 class="dova-view-title dova-inicio-titulo">${saludo(DOVA.usuarioActual())}</h2>
 
       <section class="dova-midia" data-mi-dia><div class="dova-cargando">Preparando tu día…</div></section>
 
-      <h3 class="dova-section-title">Mis pendientes (${pendientes.total})</h3>
-      <div class="dova-tabs" id="pendientes-tabs">
-        ${CATEGORIAS_PENDIENTES.map((c, i) => `
-          <button class="dova-tab ${i === 0 ? 'activo' : ''}" data-tab-pend="${c.key}">${esc(c.label)} (${(pendientes[c.key] || []).length})</button>
-        `).join('')}
-      </div>
-      ${CATEGORIAS_PENDIENTES.map((c, i) => `
-        <div class="dova-tab-panel" data-panel-pend="${c.key}" style="${i === 0 ? '' : 'display:none;'}">
-          ${(pendientes[c.key] || []).length ? `
-            <ul class="dova-lista-simple">
-              ${(pendientes[c.key] || []).map((item) => `
-                <li>
-                  <button class="dova-btn-link" data-ir-paciente="${item.paciente_id}">${nombrePaciente(item)}</button>
-                  — ${esc(item.nombre || item.tratamiento_nombre || item.procedimiento || (item.medicacion ? `Indicó: ${item.medicacion}` : '') || (item.total !== undefined && item.estado ? `Presupuesto ${item.estado} · Gs. ${Number(item.total).toLocaleString('es-PY')}` : '') || item.motivo || item.detalle || '')}
-                </li>
-              `).join('')}
-            </ul>
-          ` : '<p class="dova-vacio">Sin pendientes en esta categoría.</p>'}
-        </div>
-      `).join('')}
-
-      ${puedeFinanzas ? '<p class="dova-nota">Para ver presupuestos y pagos de tus pacientes, abrí su ficha clínica → pestaña Administrativo.</p>' : ''}
+      <section class="dova-atender dova-mis-pendientes">
+        <h3 class="dova-section-title">Mis pendientes</h3>
+        ${cats.length ? `<ul class="dova-atender-lista">${cats.map((c) => {
+          const items = pendientes[c.key];
+          return `<li>
+            <button type="button" class="dova-atender-fila" data-tab-pend="${c.key}" aria-expanded="false" aria-controls="pend-${c.key}"><span class="dova-atender-txt">${esc(c.label)}</span><span class="dova-atender-n">${items.length}</span></button>
+            <div class="dova-atender-panel" id="pend-${c.key}" data-panel-pend="${c.key}" hidden>
+              <ul class="dova-lista-simple">${items.slice(0, MAX_PEND).map((item) => `
+                <li><button type="button" class="dova-btn-link" data-ir-paciente="${item.paciente_id}">${nombrePaciente(item)}</button>${textoPendiente(item) ? ` — ${textoPendiente(item)}` : ''}</li>`).join('')}
+              </ul>
+              ${items.length > MAX_PEND ? `<p class="dova-nota">Y ${items.length - MAX_PEND} más.</p>` : ''}
+            </div>
+          </li>`;
+        }).join('')}</ul>` : '<p class="dova-atender-vacio">No tenés pendientes.</p>'}
+      </section>
     `;
   }
 
@@ -416,18 +431,13 @@ const Vistas = (() => {
     if (miDia && window.DovaMiDia) DovaMiDia.montar(miDia, { navegarAConsulta, navegarAFicha }).catch(() => { miDia.innerHTML = '<p class="dova-nota">No se pudo cargar la agenda del día.</p>'; });
     document.querySelectorAll('[data-tab-pend]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-tab-pend]').forEach((b) => b.classList.remove('activo'));
-        btn.classList.add('activo');
-        const key = btn.dataset.tabPend;
-        document.querySelectorAll('[data-panel-pend]').forEach((p) => {
-          p.style.display = p.dataset.panelPend === key ? '' : 'none';
-        });
+        const panel = document.querySelector(`[data-panel-pend="${btn.dataset.tabPend}"]`);
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
+        btn.setAttribute('aria-expanded', String(!panel.hidden));
       });
     });
-    document.querySelectorAll('[data-ir-consulta]').forEach((btn) => {
-      btn.addEventListener('click', () => navegarAConsulta(btn.dataset.irConsulta));
-    });
-    document.querySelectorAll('[data-ir-paciente]').forEach((btn) => {
+    document.querySelectorAll('.dova-mis-pendientes [data-ir-paciente]').forEach((btn) => {
       btn.addEventListener('click', () => navegarAFicha(Number(btn.dataset.irPaciente)));
     });
   }
@@ -2083,6 +2093,7 @@ const Vistas = (() => {
     vistaDashboard,
     initDashboardOdontologo,
     initDashboardSinReportes,
+    initInicio,
     vistaPacientes, initPacientes,
     vistaFichaPaciente, initFichaPaciente,
     vistaAgenda, initAgenda,
