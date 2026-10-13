@@ -790,3 +790,9 @@ Se probó todo DOVA como un QA:
 - Si aparece algo (por ejemplo, turnos en "Mañana"), la marca se va sola.
 - "0 turnos hoy" pasa a "Sin turnos hoy".
 - Pruebas: `ui-mi-dia` 131/131 (incluye Inicio vacío en admin, recepción y odontólogo, escritorio y celular), puesta en marcha 24/24, mecánico 27/27.
+
+## Tanda: marca de fondo en Inicio (13/10/2026)
+
+- La marca ya no desaparece: con novedades queda **de fondo, difuminada**; sin nada pendiente se ve entera (con una transición suave). No tapa ningún botón.
+- Logo más grande que el nombre (240 px en escritorio, 160 px en celular) y más a la izquierda.
+- Pruebas: `ui-mi-dia` 133/133, mecánico en verde.

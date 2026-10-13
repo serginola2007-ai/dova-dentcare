@@ -320,13 +320,13 @@ const Vistas = (() => {
       </section>`;
   }
 
-  // Logo y nombre de la clínica: se muestra cuando no hay nada pendiente.
+  // Logo y nombre de la clínica: de fondo y difuminado cuando hay novedades; entero cuando no hay nada.
   const DIENTE_SVG = '<svg viewBox="12 13 76 76" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 24C42 18 30 14 22 20C13 27 15 44 20 56C24 66 27 82 33 84C39 86 40 70 45 64C47 62 53 62 55 64C60 70 61 86 67 84C73 82 76 66 80 56C85 44 87 27 78 20C70 14 58 18 50 24Z"/></svg>';
   function marcaClinica() {
     const c = DOVA.clinicaActual() || {};
     const nombre = String(c.nombre || 'DentCareRC').trim();
     const texto = /^dent\s*care\s*rc$/i.test(nombre) ? 'Dent<span class="care">Care</span><span class="rc">RC</span>' : esc(nombre);
-    return `<div class="dova-inicio-marca" data-inicio-marca hidden><span>
+    return `<div class="dova-inicio-marca atenuada" data-inicio-marca aria-hidden="true"><span>
         <span class="dova-inicio-marca-logo">${DIENTE_SVG}</span>
         <span class="dova-inicio-marca-nombre">${texto}</span>
       </span></div>`;
@@ -348,7 +348,8 @@ const Vistas = (() => {
       vacio = !atender.querySelector('.dova-atender-fila') && !root.querySelector('.dova-puesta');
       ocultar = [atender];
     }
-    marca.hidden = !vacio;
+    // Con novedades la marca queda de fondo, difuminada; sin nada, se ve entera.
+    marca.classList.toggle('atenuada', !vacio);
     ocultar.forEach((el) => { if (el) el.hidden = vacio; });
   }
 
@@ -364,6 +365,7 @@ const Vistas = (() => {
     const linea = [fechaLarga(), a.turnosHoy ? `${a.turnosHoy} turno${a.turnosHoy === 1 ? '' : 's'} hoy` : 'Sin turnos hoy',
       a.cajaAbierta ? 'Caja abierta' : '<span class="dova-inicio-alerta">Sin caja abierta</span>'];
     return `
+      <div class="dova-inicio">
       <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
       <p class="dova-inicio-sub">${linea.join(' · ')}</p>
       ${seccionAtender([
@@ -374,6 +376,7 @@ const Vistas = (() => {
         filaAtender(a.ticketsHelpdeskAbiertos, 'Pedidos de ayuda técnica sin resolver', 'helpdesk'),
       ].join(''))}
       ${marcaClinica()}
+      </div>
     `;
   }
 
@@ -388,6 +391,7 @@ const Vistas = (() => {
       { ruta: 'helpdesk', label: 'Ayuda técnica', icono: 'ticket' },
     ].filter((x) => DOVA.tienePermiso(`${x.ruta}.view`));
     return `
+      <div class="dova-inicio">
       <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
       <p class="dova-inicio-sub">${fechaLarga()}</p>
       ${accesos.length ? `<div class="dova-inicio-accesos">${accesos.map((x) => `
@@ -395,6 +399,7 @@ const Vistas = (() => {
       </div>` : ''}
       ${seccionAtender('')}
       ${marcaClinica()}
+      </div>
     `;
   }
 
@@ -438,6 +443,7 @@ const Vistas = (() => {
     const pendientes = await manejarError(() => DOVA.get('/pendientes'));
     const cats = CATEGORIAS_PENDIENTES.filter((c) => (pendientes[c.key] || []).length);
     return `
+      <div class="dova-inicio">
       <h2 class="dova-view-title dova-inicio-titulo">${saludo(DOVA.usuarioActual())}</h2>
 
       <section class="dova-midia" data-mi-dia><div class="dova-cargando">Preparando tu día…</div></section>
@@ -458,6 +464,7 @@ const Vistas = (() => {
         }).join('')}</ul>` : '<p class="dova-atender-vacio">No tenés pendientes.</p>'}
       </section>
       ${marcaClinica()}
+      </div>
     `;
   }
 

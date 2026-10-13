@@ -84,7 +84,9 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       await p.waitForSelector('[data-para-atender] .dova-atender-fila', { timeout: 15000 }); await p.waitForTimeout(800);
       const nums = await p.$$eval('[data-para-atender] .dova-atender-n', (xs) => xs.map((x) => Number(x.textContent.replace(/\D/g, ''))));
       P(`[${u}] Para atender: solo filas con algo pendiente`, nums.length > 0 && nums.every((n) => n > 0), nums);
-      P(`[${u}] Con cosas pendientes no aparece la marca`, await p.locator('[data-inicio-marca]').isHidden());
+      P(`[${u}] Con novedades la marca queda de fondo, difuminada (no desaparece)`, await p.locator('[data-inicio-marca]').isVisible() && await p.locator('[data-inicio-marca].atenuada').count() === 1 && Number(await p.$eval('[data-inicio-marca]', (e) => getComputedStyle(e).opacity)) < 0.2);
+      await p.waitForTimeout(700);
+      P(`[${u}] La marca no tapa los botones`, await p.$eval('[data-para-atender] .dova-atender-fila', (e) => { const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!x && !!x.closest('.dova-atender-fila'); }));
       P(`[${u}] Sin recuadros de números`, await p.locator('.dova-ext-kpi, .dova-cards-grid').count() === 0);
       await p.locator('[data-para-atender] .dova-atender-fila').first().click(); await p.waitForTimeout(1500);
       P(`[${u}] Tocar una fila lleva a esa sección`, !(await p.evaluate(() => location.hash)).startsWith('#dashboard'), await p.evaluate(() => location.hash));
@@ -107,21 +109,21 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       const ctx = await b.newContext({ viewport: vp, timezoneId: TZ }); const p = await ctx.newPage(); const err = errores(p);
       await vacios(p);
       await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
-      await p.waitForSelector('[data-inicio-marca]:not([hidden])', { timeout: 15000 });
+      await p.waitForSelector('[data-inicio-marca]:not(.atenuada)', { timeout: 15000 }); await p.waitForTimeout(800);
       const t = (await p.textContent('[data-inicio-marca]')).replace(/\s+/g, '');
       P(`${tag} Aparece el logo y el nombre de la clínica`, t === 'DentCareRC' && await p.locator('[data-inicio-marca] svg').count() === 1, t);
       const caja = await p.locator('[data-inicio-marca]').boundingBox(); const nombre = await p.locator('.dova-inicio-marca-nombre').boundingBox();
       const main = await p.evaluate(() => { const r = document.querySelector('[data-inicio-marca]').parentElement.getBoundingClientRect(); return { x: r.x, w: r.width }; });
       const logo = await p.locator('.dova-inicio-marca-logo svg').boundingBox();
-      P(`${tag} Logo grande con el nombre debajo, a la izquierda del centro`, logo.height >= (vp.width < 800 ? 90 : 130) && nombre.y > logo.y + logo.height - 1 && nombre.height >= (vp.width < 800 ? 28 : 40) && nombre.x + nombre.width / 2 < main.x + main.w / 2 + 1, { logo, nombre, main });
-      P(`${tag} Ocupa el centro de la pantalla en alto`, caja.height >= vp.height * 0.4, caja);
+      P(`${tag} Logo más grande que el nombre, nombre debajo, bien a la izquierda`, logo.width > nombre.width && nombre.y > logo.y + logo.height - 1 && caja.x - main.x < main.w * 0.06 && Number(await p.$eval('[data-inicio-marca]', (e) => getComputedStyle(e).opacity)) === 1, { logo, nombre, caja, main });
+      P(`${tag} A media altura de la pantalla`, Math.abs((caja.y + caja.height / 2) - vp.height / 2) < vp.height * 0.2, caja);
       P(`${tag} No quedan listas vacías ni "Todo al día"`, await p.locator('[data-para-atender]:visible, .dova-mis-pendientes:visible, .dova-midia-vacio:visible').count() === 0);
       P(`${tag} Sin desborde`, await sinDesborde(p));
       await p.screenshot({ path: `${DIR}/inicio-vacio-${u}-${vp.width}.png` });
       if (u === 'odo1' && vp.width > 800) {
         await p.unroute('**/api/agenda?**');
         await p.click('[data-midia-dia="1"]'); await p.waitForTimeout(1500);
-        P(`${tag} Mañana con turnos: la marca se va`, (await p.locator('.dova-midia-tabla tbody tr').count()) > 0 && await p.locator('[data-inicio-marca]').isHidden());
+        P(`${tag} Mañana con turnos: la marca se difumina, no desaparece`, (await p.locator('.dova-midia-tabla tbody tr').count()) > 0 && await p.locator('[data-inicio-marca].atenuada').isVisible());
       }
       P(`${tag} Sin errores de consola`, err.length === 0, err);
       await ctx.close();
