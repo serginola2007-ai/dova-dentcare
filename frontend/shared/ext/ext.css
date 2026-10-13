@@ -511,3 +511,26 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 }
 .dova-ext-paginas { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
 .dova-separador { border: 0; border-top: 1px solid var(--border); margin: 18px 0 12px; }
+/* Mi día del odontólogo */
+.dova-midia-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dova-midia-cab .dova-section-title { margin-bottom: 0; }
+.dova-midia-fecha { font-weight: 400; opacity: .7; font-size: .85em; margin-left: 6px; }
+.dova-midia-dias { margin: 0; border-bottom: 0; }
+.dova-midia-chips { line-height: 1.9; max-width: 420px; }
+.dova-midia-chip { white-space: normal; margin: 0 2px 2px 0; display: inline-block; }
+.dova-midia-nada { opacity: .6; font-size: 13px; }
+.dova-midia-dur { opacity: .65; font-size: 12px; white-space: nowrap; }
+.dova-midia-det > td { background: var(--cream, rgba(0,0,0,.03)); font-size: 14px; line-height: 1.55; }
+.dova-midia-det-cuerpo > div + div { margin-top: 4px; }
+.dova-midia-det[hidden] { display: none !important; }
+.dova-midia-alertas { margin: 4px 0 0 18px; padding: 0; }
+.dova-midia-alertas li.critica { color: var(--rust); font-weight: 600; }
+@media (max-width: 768px) {
+  .dova-midia-tabla td > * { min-width: 0; }
+  .dova-ext-kpis.dova-midia-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dova-midia-tabla td[data-th="Tener en cuenta"] { flex-direction: column; justify-content: flex-start; gap: 4px; }
+  .dova-midia-chips { max-width: none; }
+  .dova-midia-det > td { display: block; }
+  .dova-midia-det > td::before { content: none !important; }
+  .dova-midia-det-cuerpo { overflow-wrap: anywhere; }
+}

@@ -1,4 +1,6 @@
 const service = require('./pendientes.service');
+const miDia = require('./pendientes.midia');
+const { ApiError } = require('../../middlewares/error.middleware');
 
 async function obtener(req, res, next) {
   try {
@@ -14,4 +16,16 @@ async function obtener(req, res, next) {
   } catch (e) { next(e); }
 }
 
-module.exports = { obtener };
+// Preparar el día: mismo criterio que obtener() para elegir el odontólogo.
+async function prepararDia(req, res, next) {
+  try {
+    let odontologoId = req.usuario.odontologoId || undefined;
+    if (!odontologoId && req.query.odontologoId !== undefined && req.query.odontologoId !== '' && req.usuario.permisos.includes('pacientes.clinical.view')) {
+      odontologoId = Number(req.query.odontologoId);
+      if (!Number.isInteger(odontologoId) || odontologoId <= 0) throw new ApiError(400, 'Odontólogo inválido');
+    }
+    res.json(await miDia.preparar(req.clinicaId, odontologoId, req.query.fecha, req.usuario.permisos));
+  } catch (e) { next(e); }
+}
+
+module.exports = { obtener, prepararDia };

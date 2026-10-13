@@ -757,3 +757,16 @@ Se probó todo DOVA como un QA:
   - nuevas: `tests/mensajes.test.js` 35/35 y `tests/ui-mensajes.js` 33/33 (incluye odontograma y visor, escritorio y celular);
   - regresión: cobranza, recordatorios, reservas, web, portal, menú, submenús, responsive, tablet y mecánico, todo en verde;
   - seguridad: 559 rutas sin anomalías, permisos 65/65, intrusión 20/20.
+
+## Tanda: Mi día del odontólogo (13/10/2026)
+
+- **Inicio del odontólogo → Agenda de hoy / mañana** (mañana sirve para preparar el día la tarde anterior). Cada turno muestra "Tener en cuenta":
+  - alertas médicas importantes (alergias graves, premedicación, anticoagulantes, presión alta, anamnesis vencida…);
+  - primera vez y cumpleaños (con la edad);
+  - trabajo de laboratorio que no llegó (o que ya llegó);
+  - pagos atrasados: el odontólogo ve solo el aviso, los montos los ve quien tiene permiso de pagos;
+  - presupuestos sin aceptar y consentimientos sin firmar.
+- "Ver más": última visita, próximo paso indicado en esa consulta, tratamiento en curso con sesiones y detalle de salud.
+- Franja arriba con los totales del día y lista de **trabajos de laboratorio por llegar** (atrasados marcados).
+- API `GET /api/pendientes/mi-dia?fecha=` (`pendientes.midia.js`): el odontólogo ve solo lo suyo aunque pida otro; admin puede elegir odontólogo. Recepción no tiene acceso (403).
+- **Pruebas:** nuevas `tests/mi-dia.test.js` 29/29 y `tests/ui-mi-dia.js` 72/72 (4 diseños, tablet y celular); regresión ui-menu 75, ui-fase6 78, ui-tablet 12; seguridad: 560 rutas sin anomalías, permisos 65/65.

@@ -10,6 +10,7 @@ router.use(authMiddleware, resolverClinicaMiddleware);
 // Cada usuario ve su propio trabajo pendiente (si es odontólogo) o el de
 // toda la clínica (si tiene permiso clínico amplio y no es un odontólogo
 // puntual). Requiere al menos un permiso clínico base para entrar.
+router.get('/mi-dia', requirePermiso('pacientes.clinical.view', 'historia_clinica.view'), controller.prepararDia);
 router.get('/', requirePermiso('pacientes.clinical.view', 'historia_clinica.view'), controller.obtener);
 
 module.exports = router;

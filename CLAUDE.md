@@ -112,6 +112,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Mensajes automáticos (`backend/src/modules/mensajes/`): turno liberado (`ofertas_turno`, lo llama la cancelación en agenda/web/portal), controles con enlace `reservar.html#c=`, encuesta `encuesta.html#t=`. Envíos en `avisos_envios` (clave única), enlaces en `avisos_enlaces`. Pruebas: `tests/mensajes.test.js`, `tests/ui-mensajes.js`.
 - Visor de radiografías: `shared/ext/ext-visor.js` (`DovaVisor.abrir`). Presupuesto desde el odontograma: `presupuestoDesdeOdontograma` en `ext-operativo.js`.
 - Guías por rol: `docs/generar-guias.py` → `frontend/docs/guias/*.pdf`.
+- Mi día del odontólogo: `GET /api/pendientes/mi-dia` (`modules/pendientes/pendientes.midia.js`) + `shared/ext/ext-midia.js`. Pruebas: `tests/mi-dia.test.js`, `tests/ui-mi-dia.js`.
 
 ## Consentimientos
 - Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.

@@ -377,64 +377,16 @@ const Vistas = (() => {
   }
 
   async function vistaDashboardOdontologo() {
-    // "Hoy" en la hora de la clínica (no en UTC: después de las 21 h ya sería mañana).
-    const ahora = new Date(); const hoy = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    const yo = DOVA.usuarioActual() || {};
-    const [pendientes, todos] = await Promise.all([
-      manejarError(() => DOVA.get('/pendientes')),
-      manejarError(() => DOVA.get(`/agenda?desde=${hoy}&hasta=${hoy}${yo.odontologoId ? `&odontologoId=${yo.odontologoId}` : ''}`)).catch(() => []),
-    ]);
-    const turnosHoy = (todos || []).filter((t) => !['cancelado', 'reprogramado'].includes(t.estado))
-      .sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
-    const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
-    const estadoFlujo = (t) => {
-      if (t.estado === 'no_asistio') return '<span class="dova-badge dova-ext-badge-critica">No asistió</span>';
-      if (t.finalizado_en || t.estado === 'atendido') return '<span class="dova-badge dova-badge-ok">Finalizado</span>';
-      if (t.en_sillon_en) return `<span class="dova-badge dova-ext-badge-atencion">En consulta · ${hora(t.en_sillon_en)}</span>`;
-      if (t.llegada_en) return `<span class="dova-badge dova-ext-badge-info">En espera · ${hora(t.llegada_en)}</span>`;
-      return `<span class="dova-badge">${t.estado === 'confirmado' ? 'Confirmado' : 'Reservado'}</span>`;
-    };
-    const accion = (t) => {
-      if (t.estado === 'no_asistio' || !DOVA.tienePermiso('historia_clinica.edit')) return '';
-      const txt = t.finalizado_en || t.estado === 'atendido' ? 'Ver consulta' : t.en_sillon_en ? 'Continuar consulta' : 'Iniciar consulta';
-      return `<button class="dova-btn-link" data-ir-consulta="${t.paciente_id}/t${t.id}">${txt}</button>`;
-    };
+    const pendientes = await manejarError(() => DOVA.get('/pendientes'));
     const puedeFinanzas = DOVA.tienePermiso('presupuestos.view') || DOVA.tienePermiso('pagos.view');
 
     return `
       <h2 class="dova-view-title">Mi día</h2>
-      <p class="dova-subtitulo">${esc(DOVA.usuarioActual().nombre)} — ${turnosHoy.length} turno(s) hoy</p>
+      <p class="dova-subtitulo">${esc(DOVA.usuarioActual().nombre)}</p>
 
-      <div class="dova-cards-grid">
-        <div class="dova-card ${pendientes.total > 0 ? 'dova-card-alerta' : 'dova-card-ok'}">
-          <div class="dova-card-valor">${pendientes.total}</div>
-          <div class="dova-card-label">Pendientes totales</div>
-        </div>
-        <div class="dova-card">
-          <div class="dova-card-valor">${turnosHoy.length}</div>
-          <div class="dova-card-label">Turnos de hoy</div>
-        </div>
-      </div>
+      <section class="dova-midia" data-mi-dia><div class="dova-cargando">Preparando tu día…</div></section>
 
-      <h3 class="dova-section-title">Agenda de hoy</h3>
-      <table class="dova-tabla">
-        <thead><tr><th>Hora</th><th>Paciente</th><th>Motivo</th><th>Duración</th><th>Sillón</th><th>Estado</th><th></th></tr></thead>
-        <tbody>
-          ${turnosHoy.map((t) => `
-            <tr>
-              <td>${esc(String(t.hora_inicio).slice(0, 5))}</td>
-              <td><button class="dova-btn-link" data-ir-paciente="${t.paciente_id}">${esc(t.paciente_nombre || '')} ${esc(t.paciente_apellido || '')}</button></td>
-              <td>${esc(t.tratamiento_nombre || t.motivo || '-')}</td>
-              <td>${t.duracion_minutos ? `${t.duracion_minutos} min` : '-'}</td>
-              <td>${esc(t.sillon_nombre || '-')}</td>
-              <td>${estadoFlujo(t)}</td>
-              <td>${accion(t)}</td>
-            </tr>
-          `).join('') || '<tr><td colspan="7">No tenés turnos programados para hoy.</td></tr>'}
-        </tbody>
-      </table>
-
-      <h3 class="dova-section-title">Mis pendientes</h3>
+      <h3 class="dova-section-title">Mis pendientes (${pendientes.total})</h3>
       <div class="dova-tabs" id="pendientes-tabs">
         ${CATEGORIAS_PENDIENTES.map((c, i) => `
           <button class="dova-tab ${i === 0 ? 'activo' : ''}" data-tab-pend="${c.key}">${esc(c.label)} (${(pendientes[c.key] || []).length})</button>
@@ -460,6 +412,8 @@ const Vistas = (() => {
   }
 
   function initDashboardOdontologo(navegarAConsulta, navegarAFicha) {
+    const miDia = document.querySelector('[data-mi-dia]');
+    if (miDia && window.DovaMiDia) DovaMiDia.montar(miDia, { navegarAConsulta, navegarAFicha }).catch(() => { miDia.innerHTML = '<p class="dova-nota">No se pudo cargar la agenda del día.</p>'; });
     document.querySelectorAll('[data-tab-pend]').forEach((btn) => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('[data-tab-pend]').forEach((b) => b.classList.remove('activo'));
