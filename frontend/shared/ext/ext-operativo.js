@@ -414,9 +414,21 @@ const DovaOperativo = (() => {
 
   async function listaEspera(c, navegar) {
     const { odos, trats } = await catalogosTurno();
-    const filas = await DOVA.get('/clinico/lista-espera');
+    const [filas, of] = await Promise.all([DOVA.get('/clinico/lista-espera'), DOVA.get('/mensajes/ofertas').catch(() => ({ ofertas: [] }))]);
     const PRIO = { alta: 'critica', media: 'atencion', baja: 'info' };
-    c.innerHTML = `
+    const ESTADO_OF = { abierta: ['Disponible', 'atencion'], tomada: ['Tomado', 'ok'], vencida: ['Pasó la fecha', 'info'], cancelada: ['Cerrado', 'info'] };
+    // Turnos que se liberaron (cancelaciones) y se ofrecen a la lista de espera.
+    const panelOfertas = of.ofertas.length ? `<section class="dova-ofertas"><h3 class="dova-section-title">Turnos liberados</h3>
+      <p class="dova-nota">Cuando se cancela un turno, se ofrece a la lista de espera${of.whatsappConectado ? ' (por WhatsApp, solo, si está activado en Configuración → Mensajes automáticos)' : ''}. El primero que lo toma desde su enlace queda agendado y confirmado.</p>
+      ${of.ofertas.map((o) => `<div class="dova-oferta">
+        <div class="dova-oferta-cab"><strong>${fmtFecha(o.fecha)} ${esc(o.hora)}</strong> · ${esc(o.odontologo)} ${badge(ESTADO_OF[o.estado][0], ESTADO_OF[o.estado][1])}
+          ${o.tomadoPor ? `<span class="dova-nota">— lo tomó ${esc(o.tomadoPor)}</span>` : ''}
+          ${o.estado === 'abierta' ? `<button class="dova-btn-link" data-cerrar-oferta="${o.id}">Ya lo resolví</button>` : ''}</div>
+        ${o.estado === 'abierta' ? (o.candidatos.length ? `<ul class="dova-oferta-lista">${o.candidatos.map((p) => `<li><span>${esc(p.nombre)}</span> ${badge(etiqueta(p.prioridad || 'media'), PRIO[p.prioridad] || 'info')}
+          ${p.enviado ? `<span class="dova-nota">Ofrecido ${fmtFecha(p.enviado.creado_en)}${p.enviado.canal === 'whatsapp_manual' ? ' (a mano)' : ''}</span>` : ''}
+          ${p.noEnviable ? `<span class="dova-nota">${esc(p.noEnviable)}</span>` : (p.enviado ? '' : `<button class="dova-btn-link dova-link-wa" data-ofrecer="${o.id}:${p.pacienteId}">Ofrecer por mi WhatsApp</button>`)}</li>`).join('')}</ul>` : '<p class="dova-nota">Nadie en la lista de espera para este horario.</p>') : ''}
+      </div>`).join('')}</section>` : '';
+    c.innerHTML = `${panelOfertas}
       <div class="dova-toolbar"><p class="dova-nota" style="margin:0">Pacientes que quieren un turno antes. Cuando se libera un horario, llamalos y asignales el turno.</p>
       <button class="dova-btn-primary" data-nuevo>+ Agregar a la lista</button></div>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Desde</th><th>Paciente</th><th>Tratamiento</th><th>Odontólogo</th><th>Preferencia</th><th>Prioridad</th><th>Estado</th><th></th></tr></thead><tbody>
@@ -453,6 +465,14 @@ const DovaOperativo = (() => {
       form.insertAdjacentHTML('afterbegin', campoPacienteHtml());
       activarBuscadorPaciente(form);
     });
+    c.querySelectorAll('[data-ofrecer]').forEach((b) => b.addEventListener('click', async () => {
+      const [oid, pid] = b.dataset.ofrecer.split(':');
+      const w = window.open('', '_blank'); // antes del pedido: si no, el navegador la bloquea
+      try { const r = await DOVA.post(`/mensajes/ofertas/${oid}/ofrecer/${pid}`); if (w) { w.opener = null; w.location.href = r.url; } else window.location.href = r.url; recargar(); } catch (e) { if (w) w.close(); toast(e.message, 'error'); }
+    }));
+    c.querySelectorAll('[data-cerrar-oferta]').forEach((b) => b.addEventListener('click', async () => {
+      try { await DOVA.post(`/mensajes/ofertas/${b.dataset.cerrarOferta}/cancelar`); recargar(); } catch (e) { toast(e.message, 'error'); }
+    }));
     const cambiar = async (r, est) => { await DOVA.patch(`/clinico/lista-espera/${r.id}/estado`, { estado: est }); };
     c.querySelectorAll('[data-est]').forEach((b) => b.addEventListener('click', async () => {
       try { await cambiar(filas[Number(b.dataset.i)], b.dataset.est); toast('Actualizado', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
@@ -712,7 +732,7 @@ const DovaOperativo = (() => {
     if (bn) bn.addEventListener('click', () => modalPresupuesto(pid, recargar));
   }
 
-  async function modalPresupuesto(pid, alGuardar) {
+  async function modalPresupuesto(pid, alGuardar, { items: iniciales = [] } = {}) {
     const trats = await X.catalogo('tratamientos', '/tratamientos').catch(() => []);
     const odos = await X.opcionesOdontologos();
     X.modal('Nuevo presupuesto', `
@@ -731,7 +751,7 @@ const DovaOperativo = (() => {
       </form>`, { ancho: 'ancho' });
     const form = document.querySelector('[data-pres]');
     const tbody = form.querySelector('[data-items]');
-    const fila = () => {
+    const fila = (ini) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td><select data-t><option value="">— Otro (escribir) —</option>${trats.filter((t) => t.activo !== false).map((t) => `<option value="${t.id}" data-p="${num(t.precio)}">${esc(t.nombre)}</option>`).join('')}</select><input data-desc placeholder="Descripción" style="margin-top:4px"/></td>
         <td><input data-pieza maxlength="2" size="3" inputmode="numeric"/></td><td><input data-cant type="number" min="1" value="1" style="width:64px"/></td>
@@ -745,6 +765,12 @@ const DovaOperativo = (() => {
       });
       tr.querySelectorAll('input').forEach((i) => i.addEventListener('input', total));
       tr.querySelector('[data-quitar]').addEventListener('click', () => { tr.remove(); total(); });
+      if (ini && typeof ini === 'object' && !(ini instanceof Event)) {
+        if (ini.tratamientoId) sel.value = String(ini.tratamientoId);
+        tr.querySelector('[data-desc]').value = ini.descripcion || (sel.value ? sel.selectedOptions[0].textContent : '');
+        tr.querySelector('[data-pieza]').value = ini.pieza || '';
+        tr.querySelector('input[data-precio]').value = ini.precioUnitario !== undefined ? ini.precioUnitario : (sel.value ? sel.selectedOptions[0].dataset.p : 0);
+      }
     };
     const leerItems = () => [...tbody.querySelectorAll('tr')].map((tr) => ({
       tratamientoId: tr.querySelector('[data-t]').value ? Number(tr.querySelector('[data-t]').value) : undefined,
@@ -760,8 +786,8 @@ const DovaOperativo = (() => {
       form.querySelector('[data-total]').textContent = fmtGs(Math.round(s * (1 - desc / 100)));
     }
     form.descuento.addEventListener('input', total);
-    form.querySelector('[data-agregar]').addEventListener('click', fila);
-    fila();
+    form.querySelector('[data-agregar]').addEventListener('click', () => fila());
+    if (iniciales.length) { iniciales.forEach((i) => fila(i)); total(); } else fila();
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const err = form.querySelector('[data-error]'); err.style.display = 'none';
@@ -970,6 +996,75 @@ const DovaOperativo = (() => {
 
   // Agrega a la ficha: subpestañas de cobros/presupuestos/planes en "Cuenta",
   // turnos en "Agenda" y consentimientos en "Documentación".
+  /* Presupuesto desde el odontograma: se tocan las piezas, se elige el
+     tratamiento de cada una (con una sugerencia según el hallazgo) y se arma
+     el presupuesto con los precios del catálogo. */
+  const SUGERENCIA = {
+    caries: /resina|composite|restaur|obtura/i, fractura: /corona|restaur|resina/i, extraccion_indicada: /extracci/i,
+    endodoncia: /endodon|conducto/i, ausente: /implante|pr[oó]tesis|puente/i,
+  };
+  const CON_HALLAZGO = ['caries', 'fractura', 'extraccion_indicada'];
+  function presupuestoDesdeOdontograma(pid) {
+    const panel = document.querySelector('.dova-tab-panel[data-panel="odontograma"]');
+    const grid = panel && panel.querySelector('.dova-odontograma-grid');
+    if (!grid) return;
+    const elegidas = new Map(); // pieza -> { tratamientoId, precio }
+    let trats = []; let activo = false;
+    const barra = document.createElement('div');
+    barra.className = 'dova-odo-pres';
+    barra.innerHTML = '<button type="button" class="dova-btn-secundario" data-modo-pres>Armar presupuesto desde el odontograma</button>';
+    grid.before(barra);
+    const lista = document.createElement('div'); lista.className = 'dova-odo-pres-lista'; lista.hidden = true;
+    grid.after(lista);
+    const estadoDe = (b) => ((b.className.match(/pieza-([a-z_]+)/) || [])[1] || 'sano');
+    const sugerir = (estado) => { const re = SUGERENCIA[estado]; const t = re && trats.find((x) => re.test(x.nombre)); return t || null; };
+    const pintarLista = () => {
+      grid.querySelectorAll('[data-ver-pieza]').forEach((b) => b.classList.toggle('dova-pieza-elegida', elegidas.has(b.dataset.verPieza)));
+      const filas = [...elegidas.entries()];
+      lista.innerHTML = `<p class="dova-nota">${filas.length ? 'Elegí el tratamiento de cada pieza (con el precio del catálogo).' : 'Tocá las piezas que van en el presupuesto.'}</p>
+        ${filas.length ? `<table class="dova-tabla"><thead><tr><th>Pieza</th><th>Tratamiento</th><th>Precio</th><th></th></tr></thead><tbody>
+        ${filas.map(([p, x]) => `<tr data-fila-pieza="${esc(p)}"><td><strong>${esc(p)}</strong> <span class="dova-nota">${esc(etiqueta(x.estado))}</span></td>
+          <td><select data-trat-pieza aria-label="Tratamiento de la pieza ${esc(p)}"><option value="">— Elegí —</option>${trats.map((t) => `<option value="${t.id}" ${x.tratamientoId === t.id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></td>
+          <td>${fmtGs((trats.find((t) => t.id === x.tratamientoId) || {}).precio || 0)}</td>
+          <td><button type="button" class="dova-btn-link dova-ext-peligro" data-sacar-pieza>Sacar</button></td></tr>`).join('')}</tbody></table>` : ''}
+        <div class="dova-modal-actions" style="justify-content:flex-start">
+          <button type="button" class="dova-btn-link" data-marcar-hallazgos>Marcar las piezas con hallazgos</button>
+          <button type="button" class="dova-btn-secundario" data-salir-pres>Cancelar</button>
+          <button type="button" class="dova-btn-primary" data-crear-pres ${filas.length ? '' : 'disabled'}>Crear presupuesto (${filas.length})</button></div>`;
+      lista.querySelectorAll('[data-trat-pieza]').forEach((sel) => sel.addEventListener('change', () => { elegidas.get(sel.closest('tr').dataset.filaPieza).tratamientoId = sel.value ? Number(sel.value) : null; pintarLista(); }));
+      lista.querySelectorAll('[data-sacar-pieza]').forEach((b) => b.addEventListener('click', () => { elegidas.delete(b.closest('tr').dataset.filaPieza); pintarLista(); }));
+      lista.querySelector('[data-marcar-hallazgos]').addEventListener('click', () => {
+        grid.querySelectorAll('[data-ver-pieza]').forEach((b) => { const e = estadoDe(b); if (CON_HALLAZGO.includes(e) && !elegidas.has(b.dataset.verPieza)) elegidas.set(b.dataset.verPieza, { estado: e, tratamientoId: (sugerir(e) || {}).id || null }); });
+        pintarLista();
+      });
+      lista.querySelector('[data-salir-pres]').addEventListener('click', salir);
+      lista.querySelector('[data-crear-pres]').addEventListener('click', () => {
+        const items = filas.map(([p, x]) => {
+          const t = trats.find((y) => y.id === x.tratamientoId);
+          return { tratamientoId: t ? t.id : undefined, descripcion: t ? t.nombre : `Pieza ${p}`, pieza: p, precioUnitario: t ? Math.round(Number(t.precio) || 0) : 0 };
+        });
+        if (items.some((i) => !i.tratamientoId)) { toast('Elegí el tratamiento de cada pieza (o sacala de la lista)', 'error'); return; }
+        modalPresupuesto(pid, () => { salir(); toast('Presupuesto creado: está en Pagos y presupuestos', 'ok'); }, { items });
+      });
+    };
+    const salir = () => { activo = false; elegidas.clear(); lista.hidden = true; panel.classList.remove('dova-odo-modo-pres'); grid.querySelectorAll('.dova-pieza-elegida').forEach((b) => b.classList.remove('dova-pieza-elegida')); barra.querySelector('[data-modo-pres]').hidden = false; };
+    barra.querySelector('[data-modo-pres]').addEventListener('click', async () => {
+      try { trats = (await X.catalogo('tratamientos', '/tratamientos')).filter((t) => t.activo !== false); } catch (e) { toast(e.message, 'error'); return; }
+      activo = true; lista.hidden = false; panel.classList.add('dova-odo-modo-pres'); barra.querySelector('[data-modo-pres]').hidden = true;
+      const ex = document.getElementById('pieza-expediente-root'); if (ex) ex.innerHTML = '';
+      pintarLista();
+    });
+    // En modo presupuesto, tocar una pieza la suma o la saca (no abre el expediente).
+    grid.addEventListener('click', (e) => {
+      if (!activo) return;
+      const b = e.target.closest('[data-ver-pieza]'); if (!b) return;
+      e.stopPropagation(); e.preventDefault();
+      const p = b.dataset.verPieza;
+      if (elegidas.has(p)) elegidas.delete(p); else { const est = estadoDe(b); elegidas.set(p, { estado: est, tratamientoId: (sugerir(est) || {}).id || null }); }
+      pintarLista();
+    }, true);
+  }
+
   function extenderFicha(pacienteId, navegar) {
     const pid = Number(pacienteId);
     navegarFicha = navegar;
@@ -981,6 +1076,7 @@ const DovaOperativo = (() => {
       const cargar = () => { if (cargado) return; cargado = true; panel.innerHTML = cargando; Promise.resolve(render(panel)).catch((e) => { panel.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; cargado = false; }); };
       tab.addEventListener('click', cargar);
     };
+    if (puede('presupuestos.manage')) presupuestoDesdeOdontograma(pid);
     reemplazarPanel('agenda', puede('agenda.view'), (p) => turnosPaciente(p, pid, navegar));
     reemplazarPanel('documentacion', puede('consentimientos.manage', 'pacientes.clinical.view'), (p) => {
       p.innerHTML = '<div data-consent></div><p class="dova-nota" style="margin-top:16px">Fotos, estudios y recetas están en la línea de tiempo (pestaña Historial clínico) y se cargan desde el Modo Consulta.</p>';
@@ -1131,7 +1227,7 @@ const DovaOperativo = (() => {
     const form = c.querySelector('[data-compra]');
     const tbody = form.querySelector('[data-items]');
     const total = () => { let s = 0; tbody.querySelectorAll('tr').forEach((tr) => { s += Number(tr.querySelector('[data-cant]').value || 0) * Number(tr.querySelector('input[data-precio]').value || 0); }); form.querySelector('[data-total]').textContent = fmtGs(s); };
-    const fila = () => {
+    const fila = (ini) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td><select data-ins required><option value="">—</option>${lista.map((i) => `<option value="${i.id}" data-p="${num(i.precio_compra)}">${esc(i.nombre)}</option>`).join('')}</select></td>
         <td><input data-cant type="number" min="1" value="1" style="width:80px" required/></td><td><input data-precio type="number" min="0" step="100" value="0" style="width:120px"/></td>
@@ -1142,9 +1238,15 @@ const DovaOperativo = (() => {
       sel.addEventListener('change', () => { tr.querySelector('input[data-precio]').value = sel.selectedOptions[0].dataset.p || 0; total(); });
       tr.querySelectorAll('input').forEach((i) => i.addEventListener('input', total));
       tr.querySelector('[data-quitar]').addEventListener('click', () => { tr.remove(); total(); });
+      if (ini && typeof ini === 'object' && !(ini instanceof Event)) {
+        if (ini.tratamientoId) sel.value = String(ini.tratamientoId);
+        tr.querySelector('[data-desc]').value = ini.descripcion || (sel.value ? sel.selectedOptions[0].textContent : '');
+        tr.querySelector('[data-pieza]').value = ini.pieza || '';
+        tr.querySelector('input[data-precio]').value = ini.precioUnitario !== undefined ? ini.precioUnitario : (sel.value ? sel.selectedOptions[0].dataset.p : 0);
+      }
     };
-    form.querySelector('[data-agregar]').addEventListener('click', fila);
-    fila();
+    form.querySelector('[data-agregar]').addEventListener('click', () => fila());
+    if (iniciales.length) { iniciales.forEach((i) => fila(i)); total(); } else fila();
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const err = form.querySelector('[data-error]'); err.style.display = 'none';

@@ -35,6 +35,7 @@ cron.post('/', h(async (req) => {
   const r = await s.ejecutarAutomaticos();
   // También los avisos de cobro (a su propia hora).
   r.cobranza = await require('../cobranza/cobranza.service').ejecutarAutomaticos();
+  r.mensajes = await require('../mensajes/mensajes.service').ejecutarAutomaticos();
   return r;
 }));
 

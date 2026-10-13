@@ -413,7 +413,8 @@ const DovaClinica = (() => {
       <div class="dova-cli-galeria" data-galeria></div>
       <div class="dova-toolbar dova-cli-toolbar" style="margin-top:28px">
         <h3 class="dova-section-title" style="margin:0">Estudios <span class="dova-nota">(${estudios.length})</span></h3>
-        ${puede('estudios.manage') ? '<button class="dova-btn-primary" data-nuevo-estudio>+ Agregar estudio</button>' : ''}
+        <div class="dova-cli-filtros">${window.DovaVisor && estudios.some((e) => e.tiene_archivo && /^image\//.test(e.mime || '')) ? '<button class="dova-btn-secundario" data-abrir-visor>Abrir visor de radiografías</button>' : ''}
+        ${puede('estudios.manage') ? '<button class="dova-btn-primary" data-nuevo-estudio>+ Agregar estudio</button>' : ''}</div>
       </div>
       <div data-form-estudio></div>
       <div class="dova-cli-estudios">${estudios.length ? estudios.map((e) => `
@@ -443,7 +444,9 @@ const DovaClinica = (() => {
     const nf = c.querySelector('[data-nueva-foto]'); if (nf) nf.addEventListener('click', () => formFoto(c.querySelector('[data-form-foto]'), pid, { alGuardar: recargar }));
     const ne = c.querySelector('[data-nuevo-estudio]'); if (ne) ne.addEventListener('click', () => formEstudio(c.querySelector('[data-form-estudio]'), pid, { alGuardar: recargar }));
     const cmp = c.querySelector('[data-comparar]'); if (cmp) cmp.addEventListener('click', () => comparar(fotos));
-    c.querySelectorAll('[data-ver-estudio]').forEach((b) => b.addEventListener('click', () => visorEstudio(estudios.find((x) => String(x.id) === b.dataset.verEstudio))));
+    c.querySelectorAll('[data-ver-estudio]').forEach((b) => b.addEventListener('click', () => visorEstudio(estudios.find((x) => String(x.id) === b.dataset.verEstudio), estudios)));
+    const av = c.querySelector('[data-abrir-visor]');
+    if (av) av.addEventListener('click', () => { const img = estudios.filter((e) => e.tiene_archivo && /^image\//.test(e.mime || '')); visorEstudio(img[0], estudios); });
     c.querySelectorAll('[data-compartir-estudio]').forEach((b) => b.addEventListener('change', async () => {
       b.disabled = true;
       try { await DOVA.post(`/clinico/estudios/${b.dataset.compartirEstudio}/compartir`, { visible: b.checked }); toast(b.checked ? 'El paciente ya lo puede ver en su cuenta' : 'Dejó de estar visible para el paciente', 'ok'); }
@@ -491,8 +494,17 @@ const DovaClinica = (() => {
     }
   }
 
-  async function visorEstudio(e) {
+  async function visorEstudio(e, todos) {
     const ruta = `/clinico/estudios/${e.id}/archivo`;
+    // Imágenes (radiografías): visor completo con zoom, ajustes, medición y comparación.
+    if (window.DovaVisor && e.mime && e.mime.startsWith('image/')) {
+      const imgs = (todos || [e]).filter((x) => x.tiene_archivo !== false && x.mime && x.mime.startsWith('image/'));
+      DovaVisor.abrir({
+        items: imgs.map((x) => ({ id: x.id, titulo: `${TIPO_NOMBRE[x.tipo] || x.tipo}${x.pieza ? ` · pieza ${x.pieza}` : ''}`, fecha: fmtFecha(x.fecha), ruta: `/clinico/estudios/${x.id}/archivo` })),
+        inicial: e.id, urlArchivo,
+      });
+      return;
+    }
     X.modal(`${TIPO_NOMBRE[e.tipo] || e.tipo}${e.pieza ? ` · pieza ${e.pieza}` : ''}`, `<div class="dova-cli-visor" data-v>${cargando}</div>
       <p class="dova-nota">${esc(fmtFecha(e.fecha))}${e.odontologo_nombre ? ` · ${esc(e.odontologo_nombre)}` : ''}</p>
       ${e.descripcion ? `<p>${esc(e.descripcion)}</p>` : ''}${e.observaciones ? `<p class="dova-nota">${esc(e.observaciones)}</p>` : ''}
@@ -702,7 +714,7 @@ const DovaClinica = (() => {
       });
     }
     root.querySelectorAll('[data-ver-foto]').forEach((b) => b.addEventListener('click', () => { const f = fotos.find((x) => String(x.id) === b.dataset.verFoto); if (f) visorFoto(f, recargar); }));
-    root.querySelectorAll('[data-ver-est]').forEach((b) => b.addEventListener('click', () => { const e = estudios.find((x) => String(x.id) === b.dataset.verEst); if (e) visorEstudio(e); }));
+    root.querySelectorAll('[data-ver-est]').forEach((b) => b.addEventListener('click', () => { const e = estudios.find((x) => String(x.id) === b.dataset.verEst); if (e) visorEstudio(e, estudios); }));
     root.querySelectorAll('[data-etapa]').forEach((li) => {
       const etapa = etapas.find((x) => String(x.id) === li.dataset.etapa);
       const sub = li.querySelector('[data-sub]');

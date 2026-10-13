@@ -17,7 +17,8 @@ const server = app.listen(env.port, () => {
     const cob = require('./modules/cobranza/cobranza.service');
     const correr = () => {
       rec.ejecutarAutomaticos().then((r) => { if (r.enviados || r.fallidos) console.log(`[recordatorios] enviados ${r.enviados}, fallidos ${r.fallidos}`); }).catch((e) => console.error('[recordatorios]', e.message))
-        .then(() => cob.ejecutarAutomaticos()).then((r) => { if (r && (r.enviados || r.fallidos)) console.log(`[cobranza] enviados ${r.enviados}, fallidos ${r.fallidos}`); }).catch((e) => console.error('[cobranza]', e.message));
+        .then(() => cob.ejecutarAutomaticos()).then((r) => { if (r && (r.enviados || r.fallidos)) console.log(`[cobranza] enviados ${r.enviados}, fallidos ${r.fallidos}`); }).catch((e) => console.error('[cobranza]', e.message))
+        .then(() => require('./modules/mensajes/mensajes.service').ejecutarAutomaticos()).then((r) => { if (r && (r.enviados || r.fallidos)) console.log(`[mensajes] enviados ${r.enviados}, fallidos ${r.fallidos}`); }).catch((e) => console.error('[mensajes]', e.message));
     };
     setTimeout(correr, 60 * 1000).unref();
     setInterval(correr, 10 * 60 * 1000).unref();

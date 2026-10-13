@@ -375,3 +375,12 @@ input[type=file] { padding: 10px; background: var(--porcelana); }
 .presu-pago { margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--linea); }
 .presu-pago .campo { margin-top: 12px; }
 .ok-pago { color: var(--ok); font-weight: 600; }
+
+/* Encuesta y avisos */
+.nps { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 6px; margin-top: 16px; }
+.nps-n { min-height: 44px; border: 1px solid var(--linea); border-radius: 12px; background: var(--blanco); font: inherit; font-weight: 700; color: var(--tinta); cursor: pointer; }
+.nps-n:hover { border-color: var(--cobalto); }
+.nps-n[aria-checked="true"] { background: var(--cobalto); border-color: var(--cobalto); color: #fff; }
+.nps-ref { display: flex; justify-content: space-between; font-size: .85rem; color: var(--pizarra); margin-top: 6px; }
+@media (max-width: 480px) { .nps { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.aviso-control { background: var(--suave); border-radius: var(--radio); padding: 14px 18px; margin-bottom: 16px; }

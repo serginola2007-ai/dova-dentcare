@@ -72,6 +72,13 @@ services:
         value: aviso_pago
       - key: WHATSAPP_PLANTILLA_PRESUPUESTO
         value: seguimiento_presupuesto
+      # Mensajes automáticos: turno liberado, control periódico y encuesta.
+      - key: WHATSAPP_PLANTILLA_LISTA_ESPERA
+        value: turno_liberado
+      - key: WHATSAPP_PLANTILLA_CONTROL
+        value: control_periodico
+      - key: WHATSAPP_PLANTILLA_ENCUESTA
+        value: encuesta_atencion
       - key: WHATSAPP_IDIOMA
         value: es
       # Clave del disparo programado (GitHub la usa como DOVA_CRON_SECRET).

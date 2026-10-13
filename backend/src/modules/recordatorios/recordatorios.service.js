@@ -285,7 +285,8 @@ async function procesarWebhook(cuerpo) {
         if (!e.rowCount) {
           // ¿Es un aviso de cobro?
           const err = nuevo === 'fallo' && Array.isArray(st.errors) && st.errors[0] ? String(st.errors[0].title || st.errors[0].message || 'falló').slice(0, 300) : null;
-          if (await require('../cobranza/cobranza.service').actualizarEstadoMeta(st.id.slice(0, 120), nuevo, err, ORDEN)) procesados += 1;
+          if (await require('../cobranza/cobranza.service').actualizarEstadoMeta(st.id.slice(0, 120), nuevo, err, ORDEN)
+            || await require('../mensajes/mensajes.service').actualizarEstadoMeta(st.id.slice(0, 120), nuevo, err, ORDEN)) procesados += 1;
           continue;
         }
         // Los avisos pueden llegar desordenados: nunca se retrocede (leído no vuelve a entregado).
@@ -303,9 +304,10 @@ async function procesarWebhook(cuerpo) {
             WHERE e.telefono=$1 AND e.creado_en > now() - interval '4 days' ORDER BY e.creado_en DESC LIMIT 1`, [tel]);
         // Si lo último que se le mandó fue un aviso de cobro, la respuesta es para ese aviso
         // (un "sí" no tiene que confirmar un turno por error).
-        const cob = require('../cobranza/cobranza.service');
-        const aviso = await cob.ultimoAvisoA(tel);
-        if (aviso && (!e.rowCount || new Date(aviso.creado_en) > new Date(e.rows[0].creado_en))) { await cob.registrarRespuesta(aviso, texto); procesados += 1; continue; }
+        // Lo mismo con los demás mensajes (turno liberado, control, encuesta): manda el más reciente.
+        const cob = require('../cobranza/cobranza.service'); const men = require('../mensajes/mensajes.service');
+        const otros = [[cob, await cob.ultimoAvisoA(tel)], [men, await men.ultimoAvisoA(tel)]].filter(([, a]) => a).sort(([, a], [, b]) => new Date(b.creado_en) - new Date(a.creado_en));
+        if (otros.length && (!e.rowCount || new Date(otros[0][1].creado_en) > new Date(e.rows[0].creado_en))) { await otros[0][0].registrarRespuesta(otros[0][1], texto); procesados += 1; continue; }
         if (!e.rowCount) continue;
         const env = e.rows[0];
         const t = await query(`${SELECT_TURNO} WHERE t.id=$1`, [env.turno_id]);

@@ -125,3 +125,41 @@ En **Finanzas → Avisos de cobro** se ven las cuotas que vencen pronto, las ven
   - una cuota vencida recibe como máximo N avisos (configurable), separados por los días que se elijan;
   - un presupuesto recibe 2 avisos como máximo;
   - si el paciente responde el mensaje, la respuesta queda en el aviso y llega a la campanita: un "sí" a un aviso de cobro no confirma ningún turno.
+
+## Mensajes automáticos: turno liberado, controles y encuesta
+
+Se activan en **Configuración → Mensajes automáticos**, que también tiene el enlace para reseñas de Google. Sin WhatsApp Business, los turnos liberados y los controles se mandan a mano con un toque (Agenda → Lista de espera y Seguimiento → Controles periódicos).
+
+Las tres plantillas son de categoría **Utilidad** e idioma **Español**, con `{{1}}` nombre, `{{2}}` clínica, `{{3}}` detalle y `{{4}}` enlace:
+
+- `turno_liberado`:
+  ```
+  Hola {{1}}, te escribimos de {{2}}. Te contamos que {{3}}. Si lo querés, tomalo acá (es para el primero que lo confirme): {{4}}
+  ```
+  Ejemplos: `Ana`, `DentCareRC`, `se liberó un turno el martes 14 de octubre a las 10:00 con Dra. Pérez`, `https://dova.onrender.com/web/tomar-turno.html#t=ejemplo`
+- `control_periodico`:
+  ```
+  Hola {{1}}, te escribimos de {{2}}. Te avisamos que {{3}}. Elegí el día y la hora que te queden mejor acá: {{4}}
+  ```
+  Ejemplos: `Ana`, `DentCareRC`, `ya te toca tu limpieza y control`, `https://dova.onrender.com/web/reservar.html#c=ejemplo`
+- `encuesta_atencion`:
+  ```
+  Hola {{1}}, gracias por atenderte en {{2}}: {{3}}. Del 0 al 10, ¿qué tan probable es que nos recomiendes? Respondé acá: {{4}}
+  ```
+  Ejemplos: `Ana`, `DentCareRC`, `queremos saber cómo te atendimos`, `https://dova.onrender.com/web/encuesta.html#t=ejemplo`
+
+Si en Meta usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_LISTA_ESPERA`, `WHATSAPP_PLANTILLA_CONTROL` y `WHATSAPP_PLANTILLA_ENCUESTA`.
+
+**Reglas:**
+- **Turno liberado:**
+  - se ofrece hasta a 5 personas de la lista de espera, por prioridad y antigüedad;
+  - el primero que lo toma queda agendado y confirmado, y a los demás les aparece "otra persona ya lo tomó";
+  - no se ofrecen turnos a menos de 2 horas ni a más de 21 días.
+- **Controles:**
+  - el aviso sale una semana antes del control, solo si el paciente no tiene un turno próximo;
+  - si no reserva, recibe un segundo aviso 3 semanas después;
+  - cada día salen como máximo 200, empezando por los más recientes.
+- **Encuesta:**
+  - sale al día siguiente de la atención, como máximo una cada 60 días por paciente;
+  - con 9 o 10 se le ofrece dejar una reseña en Google;
+  - con 6 o menos, la clínica recibe el aviso para llamarlo.

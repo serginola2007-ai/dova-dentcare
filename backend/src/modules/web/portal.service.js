@@ -289,6 +289,7 @@ async function accionTurno(pt, id, accion) {
     await query("UPDATE turnos SET estado='cancelado', actualizado_en=now() WHERE id=$1", [t.id]);
     await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.id, JSON.stringify({ estado: { antes: t.estado, despues: 'cancelado' }, por: 'el paciente desde su cuenta web' })]);
     await w.notificarRecepcion(pt.clinicaId, { tipo: 'turno_web', titulo: `Turno cancelado desde la web: ${pt.nombre} ${pt.apellido}`, mensaje: `${w.nombreDia(t.fecha)} ${t.hora}. El horario quedó libre.`, entidad: 'turno', entidadId: t.id, ruta: 'agenda' });
+    require('../mensajes/mensajes.service').turnoLiberado(pt.clinicaId, t.id).catch(() => {}); // ofrecer el horario a la lista de espera (no demora la respuesta)
   } else if (accion === 'confirmar') {
     await query("UPDATE turnos SET confirmacion='confirmado', confirmado_en=now(), estado=CASE WHEN estado='reservado' THEN 'confirmado' ELSE estado END, actualizado_en=now() WHERE id=$1", [t.id]);
     await query('INSERT INTO turno_historial (turno_id, usuario_id, cambio) VALUES ($1,NULL,$2)', [t.id, JSON.stringify({ confirmacion: 'confirmado por el paciente desde su cuenta web' })]);

@@ -166,6 +166,9 @@ async function actualizar(clinicaId, id, datos, usuario) {
     if (datos.estado === 'confirmado') {
       await query("UPDATE turnos SET confirmacion='confirmado', confirmado_en=COALESCE(confirmado_en, now()) WHERE id=$1 AND clinica_id=$2", [id, clinicaId]);
     }
+    if (datos.estado === 'cancelado') {
+      require('../mensajes/mensajes.service').turnoLiberado(clinicaId, Number(id)).catch(() => {}); // ofrecer el horario a la lista de espera (no demora la respuesta)
+    }
     if (datos.estado === 'atendido') {
       await query('UPDATE turnos SET finalizado_en=COALESCE(finalizado_en, now()) WHERE id=$1 AND clinica_id=$2', [id, clinicaId]);
       // Recall: si el tratamiento del turno tiene un control periódico

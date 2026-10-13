@@ -728,3 +728,32 @@ Se probó todo DOVA como un QA:
   - nuevas: `tests/cobranza.test.js` 42/42, `tests/ui-cobranza.js` 21/21, `tests/reserva-horarios.test.js` 16/16;
   - regresión: recordatorios 64/64 y 29/29, web 51/51 y 60/60, portal 64/64;
   - seguridad: 549 rutas sin anomalías, permisos 65/65, intrusión 20/20.
+
+## Mensajes automáticos, presupuesto desde el odontograma, visor de radiografías y guías (migración 0052)
+
+- **Turno liberado:**
+  - al cancelarse un turno (en la agenda, en la web o en el portal), el horario se ofrece por WhatsApp a la lista de espera;
+  - el primero que toca "Quiero este turno" en su enlace queda agendado y confirmado; dos a la vez no pueden tomar el mismo horario;
+  - en Agenda → Lista de espera aparecen los **Turnos liberados**, a quién se ofrecieron, y la opción de ofrecerlos a mano.
+- **Controles periódicos:**
+  - el aviso lleva un enlace para reservar sin cargar datos: el paciente solo elige día y hora, con los horarios libres reales;
+  - el turno queda vinculado al control;
+  - a mano: Seguimiento → Controles periódicos → "Mandar enlace para reservar".
+- **Encuesta después de la atención:**
+  - al día siguiente, "del 0 al 10";
+  - con 9 o 10 se ofrece la reseña de Google; con 6 o menos llega un aviso a la clínica para llamarlo;
+  - los resultados se suman a la satisfacción (NPS) que ya existía.
+- **Presupuesto desde el odontograma:**
+  - se tocan las piezas o "Marcar las piezas con hallazgos";
+  - DOVA sugiere el tratamiento según el hallazgo y arma el presupuesto con los precios del catálogo, editable antes de guardar.
+- **Visor de radiografías** (pantalla completa):
+  - zoom (rueda, dos dedos o botones) y mover arrastrando;
+  - brillo, contraste, negativo y rotación;
+  - medir, y calibrar con una medida conocida para ver milímetros;
+  - comparar dos estudios lado a lado con los ajustes sincronizados.
+- **Guías rápidas** de una página (Recepción, Odontólogo, Administración) en PDF: Configuración → Guías rápidas. Se generan con `docs/generar-guias.py`.
+- **Configuración → Mensajes automáticos:** qué sale solo, la hora y el enlace de reseña de Google. Plantillas de Meta: `docs/WHATSAPP.md`.
+- **Pruebas:**
+  - nuevas: `tests/mensajes.test.js` 35/35 y `tests/ui-mensajes.js` 33/33 (incluye odontograma y visor, escritorio y celular);
+  - regresión: cobranza, recordatorios, reservas, web, portal, menú, submenús, responsive, tablet y mecánico, todo en verde;
+  - seguridad: 559 rutas sin anomalías, permisos 65/65, intrusión 20/20.

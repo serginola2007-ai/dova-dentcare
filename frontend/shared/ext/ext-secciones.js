@@ -174,9 +174,13 @@ const DovaSecciones = (() => {
       const q = new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v !== ''))).toString();
       filas = await DOVA.get(`/recalls/lista?${q}`);
       l.innerHTML = `<p class="dova-nota">${filas.length} paciente(s).</p><div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr>${cols.map((x) => `<th>${x.t}</th>`).join('')}<th></th></tr></thead><tbody>
-        ${filas.map((r, i) => `<tr>${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}<td class="dova-ext-acciones">${X.linkWhatsapp(r.whatsapp_link)}${puede('recalls.manage') ? `<button class="dova-btn-link" data-contacto="${i}">Registrar contacto</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Nada pendiente con estos filtros.</td></tr>'}
+        ${filas.map((r, i) => `<tr>${cols.map((x) => `<td>${x.v(r)}</td>`).join('')}<td class="dova-ext-acciones">${r.whatsapp_link && puede('recalls.manage', 'seguimiento.manage') ? `<button class="dova-btn-link dova-link-wa" data-enlace-control="${r.id}" title="Le llega un enlace para elegir día y hora, con los horarios libres reales">Mandar enlace para reservar</button>` : X.linkWhatsapp(r.whatsapp_link)}${puede('recalls.manage') ? `<button class="dova-btn-link" data-contacto="${i}">Registrar contacto</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">Nada pendiente con estos filtros.</td></tr>'}
       </tbody></table></div>`;
       l.querySelectorAll('[data-contacto]').forEach((b) => b.addEventListener('click', () => DovaFicha.modalContactoRecall(filas[Number(b.dataset.contacto)], cargar)));
+      l.querySelectorAll('[data-enlace-control]').forEach((b) => b.addEventListener('click', async () => {
+        const w = window.open('', '_blank'); // antes del pedido: si no, el navegador la bloquea
+        try { const r = await DOVA.post(`/mensajes/controles/${b.dataset.enlaceControl}/enlace`); if (w) { w.opener = null; w.location.href = r.url; } else window.location.href = r.url; X.toast('Mensaje armado con el enlace para reservar', 'ok'); } catch (e) { if (w) w.close(); X.toast(e.message, 'error'); }
+      }));
     };
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
     c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`controles-periodicos-${X.hoy()}.csv`, filas, cols));
@@ -1080,9 +1084,54 @@ const DovaSecciones = (() => {
   }
 
   // Configuración: Mi WhatsApp, datos de la clínica, tipos de recall y qué tratamiento dispara cada uno.
+  // Mensajes automáticos: turno liberado, controles periódicos y encuesta.
+  async function tarjetaMensajes(elMain) {
+    if (!puede('clinica.config.manage')) return;
+    let m; try { m = await DOVA.get('/mensajes/config'); } catch (_e) { return; }
+    const cont = document.createElement('section');
+    cont.id = 'cfg-mensajes'; cont.className = 'dova-cfg-mensajes';
+    const op = (k, t, d, ej) => `<div class="dova-msg-op"><label class="dova-check"><input type="checkbox" name="${k}" ${m[k] ? 'checked' : ''} ${m.whatsappConectado ? '' : 'disabled'}/> <strong>${t}</strong></label>
+      <p class="dova-nota">${d}</p><details><summary>Ver el mensaje</summary><p class="dova-rec-ejemplo">${esc(ej)}</p></details></div>`;
+    cont.innerHTML = `<h2 class="dova-view-title" style="margin-top:32px">Mensajes automáticos</h2>
+      <p class="dova-nota">${m.whatsappConectado ? 'Salen solos por WhatsApp Business.' : 'Para que salgan solos hace falta conectar WhatsApp Business (docs/WHATSAPP.md). Mientras tanto, los turnos liberados y los controles se mandan a mano con un toque.'} Nunca a quien no acepta WhatsApp ni de noche.</p>
+      <form data-cfg-mensajes>
+        ${op('listaEspera', 'Ofrecer los turnos liberados a la lista de espera', 'Cuando alguien cancela, el horario se ofrece a los primeros de la lista de espera. El primero que lo toma desde su enlace queda agendado y confirmado.', m.ejemplos.oferta)}
+        ${op('controles', 'Avisar los controles periódicos', 'Una semana antes del control (y un recordatorio 3 semanas después si no reservó), con un enlace para elegir día y hora sin cargar datos.', m.ejemplos.control)}
+        ${op('encuesta', 'Encuesta después de la atención', 'Al día siguiente: "del 0 al 10, ¿nos recomendarías?". Con 9 o 10 se le pide una reseña en Google; con 6 o menos te avisa para llamarlo. Una vez cada 60 días como máximo.', m.ejemplos.encuesta)}
+        <div class="dova-ext-filtros"><div><label for="msg-hora">Hora de envío (controles y encuestas)</label><select id="msg-hora" name="hora">${Array.from({ length: 13 }, (_, i) => i + 8).map((h) => `<option value="${h}" ${m.hora === h ? 'selected' : ''}>${h}:00</option>`).join('')}</select></div>
+          <div style="flex:1;min-width:240px"><label for="msg-resena">Enlace para dejar una reseña en Google</label><input id="msg-resena" name="resenaUrl" type="url" maxlength="500" placeholder="https://g.page/r/…/review" value="${esc(m.resenaUrl || '')}"/></div></div>
+        <p class="dova-nota">El enlace de reseña está en tu Perfil de Empresa de Google → "Pedir reseñas".</p>
+        <button class="dova-btn-primary">Guardar</button>
+      </form>`;
+    cont.querySelector('[data-cfg-mensajes]').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = e.target;
+      try {
+        m = await DOVA.put('/mensajes/config', { listaEspera: f.listaEspera.checked, controles: f.controles.checked, encuesta: f.encuesta.checked, hora: Number(f.hora.value), resenaUrl: f.resenaUrl.value.trim() || null });
+        X.toast('Mensajes automáticos guardados', 'ok');
+      } catch (ex) { X.toast(ex.message, 'error'); }
+    });
+    elMain.appendChild(cont);
+  }
+
+  // Guías rápidas (PDF de una página por rol); la del propio rol, primero.
+  function tarjetaGuias(elMain) {
+    const rol = (DOVA.usuarioActual() || {}).rol || '';
+    const guias = [['recepcion', 'Recepción', 'Agenda, pacientes, cobros, caja y mensajes'], ['odontologo', 'Odontólogo', 'Consulta, ficha, presupuesto desde el odontograma y radiografías'], ['administracion', 'Administración', 'Puesta en marcha, usuarios, precios, mensajes y control']];
+    const mia = rol === 'admin' ? 'administracion' : rol === 'odontologo' ? 'odontologo' : 'recepcion';
+    guias.sort((a, b) => (a[0] === mia ? -1 : b[0] === mia ? 1 : 0));
+    const cont = document.createElement('section');
+    cont.className = 'dova-guias'; cont.id = 'cfg-guias';
+    cont.innerHTML = `<h2 class="dova-view-title" style="margin-top:32px">Guías rápidas</h2>
+      <p class="dova-nota">Una página por puesto, para imprimir o tener en el celular.</p>
+      <ul class="dova-guias-lista">${guias.map(([k, t, d]) => `<li><a class="dova-btn-link" href="/docs/guias/guia-${k}.pdf" target="_blank" rel="noopener" download>Guía de ${esc(t)} (PDF)</a> <span class="dova-nota">${esc(d)}${k === mia ? ' · la tuya' : ''}</span></li>`).join('')}</ul>`;
+    elMain.appendChild(cont);
+  }
+
   async function extenderConfiguracion(elMain) {
+    tarjetaGuias(elMain);
     await tarjetaMiWhatsapp(elMain);
     await tarjetaDatosClinica(elMain);
+    await tarjetaMensajes(elMain);
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
     cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';

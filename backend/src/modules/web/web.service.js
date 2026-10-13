@@ -395,6 +395,7 @@ async function accionTurno(token, accion, ip) {
     await query("UPDATE recordatorios_envios SET estado='respondido', respuesta='Canceló con el enlace', actualizado_en=now() WHERE turno_id=$1 AND tipo='turno'", [t.id]);
     await auditoria.registrar({ clinicaId: t.clinica_id, usuarioId: null, usuarioNombre: 'Página web', accion: 'cancelar_turno_web', modulo: 'agenda', entidadId: t.id, detalle: { fecha: t.fecha, hora: t.hora } });
     await notificarRecepcion(t.clinica_id, { tipo: 'turno_web', titulo: `Turno cancelado desde la web: ${t.paciente_nombre}`, mensaje: `${nombreDia(t.fecha)} ${t.hora} · ${t.odontologo}. El horario quedó libre.`, entidad: 'turno', entidadId: t.id, ruta: 'agenda' });
+    require('../mensajes/mensajes.service').turnoLiberado(t.clinica_id, t.id).catch(() => {}); // ofrecer el horario a la lista de espera (no demora la respuesta)
   } else if (accion === 'confirmar') {
     if (!p.vigente) throw new ApiError(409, 'Este turno ya no está vigente');
     await query("UPDATE turnos SET confirmacion='confirmado', confirmado_en=now(), estado=CASE WHEN estado='reservado' THEN 'confirmado' ELSE estado END, actualizado_en=now() WHERE id=$1", [t.id]);

@@ -95,6 +95,18 @@
       if (pausadas) $('[data-libres]').innerHTML = '<p class="libres-vacio">Las reservas online están pausadas por ahora. Escribinos por WhatsApp o llamanos.</p>';
       else cargarLibres();
     }
+    // Enlace del aviso de control periódico (#c=…): reserva sin cargar datos.
+    const ctl = location.hash.match(/^#c=([\w-]{20,100})$/);
+    if (ctl && hay('[data-reserva]')) {
+      try {
+        const a = await apiAviso(encodeURIComponent(ctl[1]));
+        if (a.tipo === 'control') {
+          st.control = { token: ctl[1], nombre: a.nombre, titulo: a.control };
+          if (a.tratamientoId && info.tratamientos.some((t) => t.id === a.tratamientoId)) st.tratamientoId = a.tratamientoId;
+          if (a.odontologoId && info.odontologos.some((o) => o.id === a.odontologoId)) st.odontologoId = a.odontologoId;
+        }
+      } catch (e) { $('[data-reserva]').insertAdjacentHTML('beforebegin', `<p class="error">${esc(e.message)}</p>`); }
+    }
     if (hay('[data-reserva]')) {
       if (pausadas) { $('[data-reserva]').innerHTML = '<p>Las reservas online están pausadas por ahora. Comunicate con la clínica para coordinar tu turno.</p>'; $('[data-pasos]').hidden = true; }
       else {
@@ -104,12 +116,15 @@
         st.odontologoId = info.odontologos.some((o) => o.id === num('o')) ? num('o') : null;
         const f = params.get('f'); const h = params.get('h');
         if (/^\d{4}-\d{2}-\d{2}$/.test(f || '') && /^\d{2}:\d{2}$/.test(h || '')) { st.fecha = f; st.hora = h; st.paso = 4; }
-        else st.paso = st.odontologoId ? 3 : st.tratamientoId ? 2 : 1;
+        else st.paso = st.control ? (st.odontologoId ? 3 : 2) : (st.odontologoId ? 3 : st.tratamientoId ? 2 : 1);
+        if (st.control) $('[data-reserva]').insertAdjacentHTML('beforebegin', `<p class="aviso-control">Hola, ${esc(st.control.nombre)}: elegí el día para tu <strong>${esc(st.control.titulo.toLowerCase())}</strong>. Tus datos ya los tenemos.</p>`);
         pintarPaso();
       }
     }
     if (hay('[data-vista-turno]')) { window.addEventListener('hashchange', ruteoTurno); ruteoTurno(); }
     if (hay('[data-vista-pago]')) paginaPago();
+    if (hay('[data-vista-oferta]')) paginaOferta();
+    if (hay('[data-vista-encuesta]')) paginaEncuesta();
     const ses = sesion();
     $$('[data-nav-cuenta]').forEach((a) => { a.textContent = ses ? `Hola, ${ses.nombre}` : 'Ingresar'; });
     if (hay('[data-acceso]')) paginaIngresar();
@@ -306,6 +321,23 @@
   const leer = (form) => Object.fromEntries(new FormData(form).entries());
 
   function pasoDatos(c) {
+    if (st.control) {
+      c.innerHTML = `${resumenHtml()}<h3>Confirmá tu turno</h3><p class="reserva-ayuda">Reservás como <strong>${esc(st.control.nombre)}</strong> (desde el enlace que te mandamos).</p>
+        <p class="error" data-error role="alert" hidden></p>
+        <div class="reserva-pie"><button type="button" class="boton-texto" data-atras>Cambiar día u hora</button><button class="boton" type="button" data-confirmar-control>Confirmar turno</button></div>`;
+      $('[data-atras]', c).addEventListener('click', () => irPaso(st.fecha ? 3 : 1));
+      const btn = $('[data-confirmar-control]', c);
+      btn.addEventListener('click', async () => {
+        const err = $('[data-error]', c); err.hidden = true; btn.disabled = true; btn.textContent = 'Reservando…';
+        try {
+          const r = await apiAviso(`${encodeURIComponent(st.control.token)}/reservar`, { method: 'POST', body: { tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora } });
+          guardarTurno({ token: r.token, fecha: st.fecha, hora: st.hora, motivo: st.control.titulo });
+          try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+          location.href = `mi-turno.html#t=${r.token}`;
+        } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno'; if (/ocup/.test(e.message)) st.hora = null; }
+      });
+      return;
+    }
     const ses = sesion();
     if (ses) {
       c.innerHTML = `${resumenHtml()}<h3>Confirmá tu turno</h3><p class="reserva-ayuda">Reservás como <strong>${esc(ses.nombre)} ${esc(ses.apellido || '')}</strong>. <a href="#" data-otro>¿No sos vos?</a></p>
@@ -741,6 +773,81 @@
       const b = $('button[type=submit]', f); b.disabled = true; b.textContent = 'Enviando…';
       try { await enviar(fd); aviso('¡Recibimos tu comprobante! Te avisamos cuando lo confirmemos.'); listo(); }
       catch (e2) { m(e2.message); b.disabled = false; b.textContent = 'Enviar comprobante'; }
+    });
+  }
+
+  // ---- Enlaces de los mensajes automáticos (turno liberado, control, encuesta) ----
+  async function apiAviso(ruta, { method = 'GET', body } = {}) {
+    let r;
+    try { r = await fetch(`${API}/aviso/${ruta}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined }); }
+    catch (_e) { throw new Error('No hay conexión. Revisá tu internet y probá de nuevo.'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || 'No se pudo completar. Probá de nuevo en unos minutos.');
+    return j;
+  }
+  const tokenDe = (letra) => { const m = location.hash.match(new RegExp(`^#${letra}=([\\w-]{20,100})$`)); return m ? m[1] : null; };
+  const tarjetaError = (v, titulo, msg) => { v.innerHTML = `<div class="tarjeta-turno"><h2>${esc(titulo)}</h2><p style="margin-top:8px">${esc(msg)}</p><p style="margin-top:20px"><a class="boton" href="index.html">Ir a la página</a></p></div>`; };
+
+  async function paginaOferta() {
+    const v = $('[data-vista-oferta]'); const token = tokenDe('t');
+    if (!token) { tarjetaError(v, 'Falta el enlace', 'Abrí esta página desde el enlace que te mandamos por WhatsApp.'); return; }
+    let a;
+    try { a = await apiAviso(encodeURIComponent(token)); } catch (e) { tarjetaError(v, 'No pudimos abrir el enlace', e.message); return; }
+    if (a.tipo !== 'oferta') { tarjetaError(v, 'Enlace equivocado', 'Este enlace no es de un turno liberado.'); return; }
+    v.innerHTML = `<div class="tarjeta-turno">
+      <span class="estado ${a.disponible ? 'ok' : 'no'}">${a.disponible ? 'Disponible' : 'Ya no está disponible'}</span>
+      <p class="saludo-pago" style="margin-top:12px">Hola, ${esc(a.nombre)}</p>
+      <p>Se liberó este turno y estás en nuestra lista de espera:</p>
+      <p class="cuando">${esc(mayus(a.fechaTexto))}<br>a las ${esc(a.hora)}</p>
+      <dl><dt>Profesional</dt><dd>${esc(a.odontologo)}</dd><dt>Duración</dt><dd>${a.duracion} minutos</dd>${info && info.direccion ? `<dt>Dónde</dt><dd>${esc(info.direccion)}</dd>` : ''}</dl>
+      <div class="acciones-turno">${a.disponible ? '<button type="button" class="boton" data-tomar>Quiero este turno</button>' : ''}<a href="index.html" class="boton-texto">Ir a la página</a></div>
+      ${a.disponible ? '<p class="ayuda" style="margin-top:12px">Es para el primero que lo confirme.</p>' : '<p class="ayuda" style="margin-top:12px">Otra persona lo tomó primero o ya pasó la fecha. Te avisamos cuando se libere otro.</p>'}
+    </div>`;
+    const b = $('[data-tomar]', v);
+    if (b) b.addEventListener('click', async () => {
+      b.disabled = true; b.textContent = 'Reservando…';
+      try {
+        const r = await apiAviso(`${encodeURIComponent(token)}/tomar`, { method: 'POST' });
+        guardarTurno({ token: r.token, fecha: a.fecha, hora: a.hora, motivo: 'Turno' });
+        try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+        location.href = `mi-turno.html#t=${r.token}`;
+      } catch (e) { aviso(e.message); paginaOferta(); }
+    });
+  }
+
+  async function paginaEncuesta() {
+    const v = $('[data-vista-encuesta]'); const token = tokenDe('t');
+    if (!token) { tarjetaError(v, 'Falta el enlace', 'Abrí esta página desde el enlace que te mandamos por WhatsApp.'); return; }
+    let a;
+    try { a = await apiAviso(encodeURIComponent(token)); } catch (e) { tarjetaError(v, 'No pudimos abrir el enlace', e.message); return; }
+    if (a.tipo !== 'encuesta') { tarjetaError(v, 'Enlace equivocado', 'Este enlace no es de una encuesta.'); return; }
+    if (a.respondida) { v.innerHTML = '<div class="tarjeta-turno"><h2>¡Gracias!</h2><p style="margin-top:8px">Ya recibimos tu respuesta.</p></div>'; return; }
+    v.innerHTML = `<div class="tarjeta-turno">
+      <p class="saludo-pago">Hola, ${esc(a.nombre)}</p>
+      <h2 style="margin-top:8px">Del 0 al 10, ¿qué tan probable es que nos recomiendes a un familiar o amigo?</h2>
+      ${a.odontologo ? `<p class="ayuda">Sobre tu atención${a.fecha ? ` del ${esc(fechaCorta(a.fecha))}` : ''} con ${esc(a.odontologo)}.</p>` : ''}
+      <div class="nps" role="radiogroup" aria-label="Puntaje del 0 al 10">${Array.from({ length: 11 }, (_, i) => `<button type="button" class="nps-n" role="radio" aria-checked="false" data-n="${i}">${i}</button>`).join('')}</div>
+      <div class="nps-ref"><span>Nada probable</span><span>Muy probable</span></div>
+      <div class="campo" style="margin-top:16px"><label for="enc-com">¿Querés contarnos algo? <span class="opcional">(opcional)</span></label><textarea id="enc-com" rows="3" maxlength="1000"></textarea></div>
+      <p class="error" data-error role="alert" hidden></p>
+      <div class="acciones-turno"><button type="button" class="boton" data-enviar disabled>Enviar</button></div>
+    </div>`;
+    let n = null;
+    $$('[data-n]', v).forEach((b) => b.addEventListener('click', () => {
+      n = Number(b.dataset.n);
+      $$('[data-n]', v).forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      $('[data-enviar]', v).disabled = false;
+    }));
+    $('[data-enviar]', v).addEventListener('click', async (ev) => {
+      const b = ev.currentTarget; b.disabled = true; b.textContent = 'Enviando…';
+      try {
+        const r = await apiAviso(`${encodeURIComponent(token)}/encuesta`, { method: 'POST', body: { nps: n, comentario: $('#enc-com', v).value } });
+        v.innerHTML = `<div class="tarjeta-turno"><h2>¡Gracias, ${esc(a.nombre)}!</h2>
+          ${r.resenaUrl ? `<p style="margin-top:8px">Nos alegra mucho. ¿Nos ayudás contándolo en Google? A otras personas les sirve para elegirnos.</p>
+            <p style="margin-top:16px"><a class="boton" href="${esc(r.resenaUrl)}" target="_blank" rel="noopener">Dejar mi opinión en Google</a></p>`
+          : `<p style="margin-top:8px">${n <= 6 ? 'Lamentamos que no haya sido como esperabas. Alguien de la clínica se va a comunicar con vos.' : 'Tu respuesta nos ayuda a mejorar.'}</p>`}
+          <p style="margin-top:20px"><a href="index.html" class="boton-texto">Ir a la página</a></p></div>`;
+      } catch (e) { const err = $('[data-error]', v); err.textContent = e.message; err.hidden = false; b.disabled = false; b.textContent = 'Enviar'; }
     });
   }
 
