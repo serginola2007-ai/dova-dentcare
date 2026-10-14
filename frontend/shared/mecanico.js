@@ -10,7 +10,7 @@
   const ACCESOS = [
     ['dashboard', 'Inicio', 'grafico'], ['agenda', 'Agenda', 'calendario'], ['pacientes', 'Pacientes', 'pacientes'],
     ['caja', 'Caja', 'efectivo'], ['facturacion', 'Facturación', 'comprobante'], ['seguimiento', 'Seguimiento', 'telefono'],
-    ['inventario', 'Inventario', 'caja'], ['finanzas', 'Finanzas', 'tarjeta'], ['reportes', 'Reportes generales', 'documento'],
+    ['inventario', 'Inventario', 'caja'], ['finanzas', 'Finanzas', 'tarjeta'], ['presupuestos', 'Presupuestos', 'lista'], ['informes', 'Informes', 'documento'],
     ['usuarios', 'Usuarios', 'persona'], ['auditoria', 'Historial de cambios', 'historial'], ['configuracion', 'Configuración', 'herramienta'],
   ];
   const NOMBRES = { paciente: 'Ficha del paciente', consulta: 'Consulta' };
@@ -18,6 +18,9 @@
   const MAX = 8;
   let navegar = null;
   let reloj = null;
+  // Adentro de una ventana no va nada de esto (la ventana ya tiene su barra de título).
+  const enVentana = () => document.documentElement.classList.contains('dova-modo-ventana') || new URLSearchParams(location.search).get('ventana') === '1';
+  const escritorio = () => !enVentana() && !!window.DovaVentanas;
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const leer = () => { try { const v = JSON.parse(sessionStorage.getItem(CLAVE) || '[]'); return Array.isArray(v) ? v : []; } catch (_e) { return []; } };
@@ -34,7 +37,10 @@
     if (!cont) return;
     const visibles = ACCESOS.filter(([r]) => r === 'dashboard' || r === 'configuracion' || document.querySelector(`#menu-root [data-ruta="${r}"]`));
     cont.innerHTML = visibles.map(([r, t, i]) => `<button type="button" class="mec-icono" data-mec-ir="${r}" title="${esc(t)}" aria-label="${esc(t)}">${window.DovaIcono ? DovaIcono(i, 20) : ''}</button>`).join('');
-    cont.querySelectorAll('[data-mec-ir]').forEach((b) => b.addEventListener('click', () => navegar && navegar(b.dataset.mecIr)));
+    cont.querySelectorAll('[data-mec-ir]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.mecIr === 'dashboard' && escritorio()) { DovaVentanas.mostrarEscritorio(); return; }
+      if (navegar) navegar(b.dataset.mecIr);
+    }));
   }
 
   function marcarIcono(ruta) {
@@ -101,21 +107,32 @@
   }
 
   document.addEventListener('dova:entrar', (e) => {
+    if (enVentana()) return;
     navegar = e.detail && e.detail.navegar;
     dibujarIconos();
     dibujarParametros();
     dibujarEstado();
     dibujarRecientes();
-    const actual = (location.hash.replace('#', '').split('/')[0]) || 'dashboard';
+    const actual = escritorio() ? 'dashboard' : ((location.hash.replace('#', '').split('/')[0]) || 'dashboard');
     marcarIcono(actual);
+    if (escritorio()) { const m = document.getElementById('main-root'); if (m) m.dataset.ventana = 'Inicio'; }
     clearInterval(reloj);
     reloj = setInterval(() => {
       const t = ahoraPy();
       document.querySelectorAll('[data-mec-reloj]').forEach((x) => { x.textContent = t; });
     }, 1000);
   });
+  // Con ventanas: queda marcado el ícono de la ventana que está adelante.
+  document.addEventListener('dova:ventana', (e) => { if (!enVentana()) marcarIcono((e.detail || {}).ruta); });
   document.addEventListener('dova:navegar', (e) => {
+    if (enVentana()) return;
     const { ruta, params } = e.detail || {};
+    if (escritorio()) {
+      // Con ventanas: Inicio queda de fondo; solo se anota la ventana abierta.
+      anotar(ruta, params);
+      if (ruta === 'caja') dibujarParametros();
+      return;
+    }
     marcarIcono(ruta);
     anotar(ruta, params);
     // Título de la "ventana" para las pantallas que no traen uno propio (ej. la ficha).

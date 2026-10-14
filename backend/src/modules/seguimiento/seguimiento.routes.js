@@ -238,6 +238,8 @@ r.post('/mensaje', requirePermiso(...EDITAR, 'whatsapp.send'), h(async (req) => 
 
 // Panel de seguimiento: todos los contadores de un vistazo.
 r.use('/', require('./bandeja').router);
+// Archivar los pendientes viejos (sin borrar).
+r.use('/', require('./archivo').router);
 
 r.get('/panel', requirePermiso(...VER), h(async (req) => {
   const c = req.clinicaId;

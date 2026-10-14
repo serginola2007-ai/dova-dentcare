@@ -98,9 +98,11 @@ const enlaceDe = (m) => m.template.components[0].parameters[3].text;
     const tokR = enlaceDe(mR[0]).split('#c=')[1];
     r = await req('GET', `/web/publico/aviso/${tokR}`);
     P('El enlace identifica al paciente y su control (sin pedir datos)', r.s === 200 && r.j.tipo === 'control' && r.j.nombre === 'Rita' && r.j.control === tipo.nombre && r.j.odontologoId === odo, r.j);
-    const libres = (await req('GET', `/web/publico/disponibilidad?odontologoId=${odo}&fecha=${sumar(h, 4)}`)).j.horarios;
-    r = await req('POST', `/web/publico/aviso/${tokR}/reservar`, { odontologoId: odo, fecha: sumar(h, 4), hora: libres[0] });
-    const tR = await q1("SELECT id, estado, origen FROM turnos WHERE paciente_id=$1 AND fecha=$2", [pR, sumar(h, 4)]);
+    // El primer día (desde dentro de 4) con horarios libres: los domingos la clínica no atiende.
+    let diaR = sumar(h, 4); let libres = [];
+    for (let k = 4; k < 12; k += 1) { diaR = sumar(h, k); libres = (await req('GET', `/web/publico/disponibilidad?odontologoId=${odo}&fecha=${diaR}`)).j.horarios || []; if (libres.length) break; }
+    r = await req('POST', `/web/publico/aviso/${tokR}/reservar`, { odontologoId: odo, fecha: diaR, hora: libres[0] });
+    const tR = await q1("SELECT id, estado, origen FROM turnos WHERE paciente_id=$1 AND fecha=$2", [pR, diaR]);
     if (tR) ids.turnos.push(tR.id);
     P('Reserva el control con un toque: turno en la agenda y el control queda agendado', r.s === 201 && tR && tR.origen === 'web' && (await q1('SELECT turno_id FROM paciente_recalls WHERE id=$1', [rec])).turno_id === tR.id, { r, tR });
     P('Horario inválido: 400', (await req('POST', `/web/publico/aviso/${tokR}/reservar`, { fecha: 'mañana', hora: '10' })).s === 400);

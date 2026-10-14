@@ -6,4 +6,5 @@ async function cambiarEstado(req, res, next) { try { res.json(await service.camb
 async function crearPlanes(req, res, next) {
   try { res.status(201).json(await service.crearPlanes(req.clinicaId, Number(req.params.id), req.usuario)); } catch (e) { next(e); }
 }
-module.exports = { crearPlanes, listarPorPaciente, obtener, crear, cambiarEstado };
+async function listar(req, res, next) { try { res.json(await service.listar(req.clinicaId, req.query || {})); } catch (e) { next(e); } }
+module.exports = { listar, crearPlanes, listarPorPaciente, obtener, crear, cambiarEstado };

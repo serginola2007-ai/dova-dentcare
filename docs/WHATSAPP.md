@@ -148,7 +148,18 @@ Las tres plantillas son de categoría **Utilidad** e idioma **Español**, con `{
   ```
   Ejemplos: `Ana`, `DentCareRC`, `queremos saber cómo te atendimos`, `https://dova.onrender.com/web/encuesta.html#t=ejemplo`
 
-Si en Meta usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_LISTA_ESPERA`, `WHATSAPP_PLANTILLA_CONTROL` y `WHATSAPP_PLANTILLA_ENCUESTA`.
+- `indicaciones_tratamiento`:
+  ```
+  Hola {{1}}, te escribimos de {{2}}: {{3}}. Leelos acá: {{4}}
+  ```
+  Ejemplos: `Ana`, `DentCareRC`, `te dejamos los cuidados para después de tu extracción simple`, `https://dova.onrender.com/web/indicaciones.html#t=ejemplo`
+- `resumen_diario` (al dueño, Configuración → Resumen del día):
+  ```
+  Resumen del día de {{1}} ({{2}}): cobrado {{3}}; atendidos {{4}}; faltaron {{5}}; pacientes nuevos {{6}}; presupuestos aceptados {{7}}; turnos para mañana {{8}}.
+  ```
+  Ejemplos: `DentCareRC`, `Martes, 13 de octubre`, `Gs. 3.420.000`, `18 de 22`, `2`, `3`, `2 por Gs. 5.000.000`, `20`
+
+Si en Meta usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_LISTA_ESPERA`, `WHATSAPP_PLANTILLA_CONTROL`, `WHATSAPP_PLANTILLA_ENCUESTA`, `WHATSAPP_PLANTILLA_INDICACIONES` y `WHATSAPP_PLANTILLA_RESUMEN`.
 
 **Reglas:**
 - **Turno liberado:**

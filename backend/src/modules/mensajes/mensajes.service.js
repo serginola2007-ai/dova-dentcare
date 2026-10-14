@@ -27,9 +27,10 @@ const PLANTILLA = () => ({
   oferta: process.env.WHATSAPP_PLANTILLA_LISTA_ESPERA || 'turno_liberado',
   control: process.env.WHATSAPP_PLANTILLA_CONTROL || 'control_periodico',
   encuesta: process.env.WHATSAPP_PLANTILLA_ENCUESTA || 'encuesta_atencion',
+  indicaciones: process.env.WHATSAPP_PLANTILLA_INDICACIONES || 'indicaciones_tratamiento',
 });
-const PAGINA = { oferta: 'tomar-turno.html', control: 'reservar.html', encuesta: 'encuesta.html' };
-const DIAS_ENLACE = { oferta: 3, control: 30, encuesta: 7 };
+const PAGINA = { oferta: 'tomar-turno.html', control: 'reservar.html', encuesta: 'encuesta.html', indicaciones: 'indicaciones.html' };
+const DIAS_ENLACE = { oferta: 3, control: 30, encuesta: 7, indicaciones: 30 };
 const MAX_OFERTAS = 5; // a cuántos de la lista de espera se ofrece cada horario
 const DIAS_ENTRE_ENCUESTAS = 60;
 
@@ -42,23 +43,25 @@ function validarResena(u) {
   return u.trim();
 }
 async function configuracion(clinicaId) {
-  const c = (await query('SELECT nombre, lista_espera_auto, controles_auto, encuesta_auto, mensajes_hora, resena_url FROM clinicas WHERE id=$1', [clinicaId])).rows[0];
+  const c = (await query('SELECT nombre, lista_espera_auto, controles_auto, encuesta_auto, indicaciones_auto, mensajes_hora, resena_url FROM clinicas WHERE id=$1', [clinicaId])).rows[0];
   if (!c) throw new ApiError(404, 'Clínica no encontrada');
   const ej = `${urlPublica()}/web/…#t=…`;
   return {
     whatsappConectado: whatsapp.configurado(), plantillas: PLANTILLA(),
-    listaEspera: c.lista_espera_auto, controles: c.controles_auto, encuesta: c.encuesta_auto, hora: c.mensajes_hora, resenaUrl: c.resena_url,
+    listaEspera: c.lista_espera_auto, controles: c.controles_auto, encuesta: c.encuesta_auto, indicaciones: c.indicaciones_auto, hora: c.mensajes_hora, resenaUrl: c.resena_url,
+    tratamientosConIndicaciones: Number((await query("SELECT count(*) n FROM tratamientos WHERE clinica_id=$1 AND activo AND indicaciones IS NOT NULL AND btrim(indicaciones) <> ''", [clinicaId])).rows[0].n),
     ejemplos: {
       oferta: textoOferta({ nombre: 'Ana', clinica: c.nombre, fecha: sumarDias(hoyIso(), 2), hora: '10:00', odontologo: 'Dra. Pérez', enlace: ej }),
       control: textoControl({ nombre: 'Ana', clinica: c.nombre, tipo: 'Limpieza y control', enlace: ej }),
       encuesta: textoEncuesta({ nombre: 'Ana', clinica: c.nombre, enlace: ej }),
+      indicaciones: textoIndicaciones({ nombre: 'Ana', clinica: c.nombre, tratamiento: 'Extracción simple', enlace: ej }),
     },
   };
 }
 async function guardarConfiguracion(clinicaId, d, actor) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) throw new ApiError(400, 'Datos inválidos');
   const campos = {};
-  for (const [k, col] of [['listaEspera', 'lista_espera_auto'], ['controles', 'controles_auto'], ['encuesta', 'encuesta_auto']]) {
+  for (const [k, col] of [['listaEspera', 'lista_espera_auto'], ['controles', 'controles_auto'], ['encuesta', 'encuesta_auto'], ['indicaciones', 'indicaciones_auto']]) {
     if (d[k] === undefined) continue;
     if (typeof d[k] !== 'boolean') throw new ApiError(400, `"${k}" tiene que ser sí o no`);
     campos[col] = d[k];
@@ -83,7 +86,13 @@ function textoControl({ nombre, clinica, tipo, enlace }) {
 function textoEncuesta({ nombre, clinica, enlace }) {
   return `Hola ${nombre}, gracias por atenderte en ${clinica}. ¿Nos ayudás con una pregunta? Del 0 al 10, ¿qué tan probable es que nos recomiendes? Respondé acá: ${enlace}`;
 }
+function textoIndicaciones({ nombre, clinica, tratamiento, enlace, indicaciones }) {
+  const base = `Hola ${nombre}, te escribimos de ${clinica}. Te dejamos los cuidados para después de tu ${String(tratamiento).toLowerCase()}`;
+  // A mano (desde el WhatsApp del doctor) va el texto completo; con WhatsApp Business, el enlace.
+  return indicaciones ? `${base}:\n\n${indicaciones}\n\nTambién los podés ver acá: ${enlace}` : `${base}. Leelos acá: ${enlace}`;
+}
 const detalle = {
+  indicaciones: (x) => `te dejamos los cuidados para después de tu ${String(x.tratamiento).toLowerCase()}`,
   oferta: (x) => `se liberó un turno el ${nombreDia(x.fecha)} a las ${hhmm(x.hora)}${x.odontologo ? ` con ${x.odontologo}` : ''}`,
   control: (x) => `ya te toca tu ${String(x.tipo).toLowerCase()}`,
   encuesta: () => 'queremos saber cómo te atendimos',
@@ -118,7 +127,7 @@ async function reservarEnvio({ clinicaId, pacienteId, tipo, referenciaId, clave,
   return up.rowCount ? up.rows[0].id : null;
 }
 async function registrarComunicacion(clinicaId, pacienteId, tipo, referenciaId, contenido, usuarioId) {
-  const motivo = { oferta: 'otro', control: 'recall', encuesta: 'otro' }[tipo];
+  const motivo = { oferta: 'otro', control: 'recall', encuesta: 'otro', indicaciones: 'otro' }[tipo];
   await query(`INSERT INTO comunicaciones (clinica_id, paciente_id, canal, direccion, motivo, resultado, contenido, referencia_tipo, referencia_id, usuario_id)
      VALUES ($1,$2,'whatsapp','saliente',$3,'enviado',$4,$5,$6,$7)`, [clinicaId, pacienteId, motivo, String(contenido).slice(0, 2000), tipo === 'control' ? 'recall' : tipo, referenciaId, usuarioId || null]);
 }
@@ -306,6 +315,45 @@ function datosEncuesta(x) {
   };
 }
 
+/* ============================================================ 4. INDICACIONES DESPUÉS DEL TRATAMIENTO */
+const SELECT_INDIC = `SELECT t.id, t.clinica_id, t.fecha::text AS fecha, t.odontologo_id, o.nombre AS odontologo, tr.nombre AS tratamiento, tr.indicaciones,
+    p.id AS pid, p.nombre, p.apellido, p.telefono, p.whatsapp, p.acepta_whatsapp, c.nombre AS clinica_nombre
+  FROM turnos t JOIN tratamientos tr ON tr.id=t.tratamiento_id AND tr.clinica_id=t.clinica_id
+  JOIN pacientes p ON p.id=t.paciente_id JOIN clinicas c ON c.id=t.clinica_id LEFT JOIN odontologos o ON o.id=t.odontologo_id`;
+function datosIndicaciones(x) {
+  return {
+    clinicaId: x.clinica_id, clinicaNombre: x.clinica_nombre, paciente: pacienteDe(x), tipo: 'indicaciones', referenciaId: x.id, clave: `indicaciones:${x.id}`,
+    detalle: detalle.indicaciones(x), textoCon: (enlace) => textoIndicaciones({ nombre: x.nombre, clinica: x.clinica_nombre, tratamiento: x.tratamiento, enlace }),
+  };
+}
+// Turnos atendidos hoy (o ayer, si terminó tarde) cuyo tratamiento tiene indicaciones y todavía no se mandaron.
+async function indicacionesPendientes(clinicaId) {
+  const hoy = hoyIso();
+  const r = await query(`${SELECT_INDIC}
+     WHERE t.clinica_id=$1 AND t.estado='atendido' AND t.fecha BETWEEN $2 AND $3 AND p.activo
+       AND tr.indicaciones IS NOT NULL AND btrim(tr.indicaciones) <> ''
+       AND NOT EXISTS (SELECT 1 FROM avisos_envios e WHERE e.tipo='indicaciones' AND e.referencia_id=t.id AND e.estado <> 'fallo')
+     ORDER BY t.fecha DESC, t.id LIMIT 300`, [clinicaId, sumarDias(hoy, -1), hoy]);
+  return r.rows;
+}
+// A mano: el texto completo para mandar desde el WhatsApp de quien atendió.
+async function indicacionesManual(clinicaId, turnoId, actor) {
+  const x = (await query(`${SELECT_INDIC} WHERE t.id=$1 AND t.clinica_id=$2 AND p.activo`, [Number(turnoId), clinicaId])).rows[0];
+  if (!x) throw new ApiError(404, 'Turno no encontrado');
+  if (!x.indicaciones || !x.indicaciones.trim()) throw new ApiError(409, `El tratamiento "${x.tratamiento}" no tiene indicaciones cargadas (Tratamientos → editar).`);
+  const d = datosIndicaciones(x);
+  d.clave = `indicaciones:${x.id}:manual:${Date.now()}`; // a mano se puede volver a mandar
+  d.textoCon = (enlace) => textoIndicaciones({ nombre: x.nombre, clinica: x.clinica_nombre, tratamiento: x.tratamiento, enlace, indicaciones: x.indicaciones });
+  return mandar(d, { manual: true, usuario: actor });
+}
+// Lo que se puede mandar de un turno (para mostrar el botón solo cuando corresponde).
+async function indicacionesDeTurno(clinicaId, turnoId) {
+  const x = (await query(`${SELECT_INDIC} WHERE t.id=$1 AND t.clinica_id=$2`, [Number(turnoId), clinicaId])).rows[0];
+  if (!x) return { disponible: false };
+  const env = (await query("SELECT canal, estado, creado_en FROM avisos_envios WHERE tipo='indicaciones' AND referencia_id=$1 AND estado <> 'fallo' ORDER BY creado_en DESC LIMIT 1", [x.id])).rows[0] || null;
+  return { disponible: !!(x.indicaciones && x.indicaciones.trim()), tratamiento: x.tratamiento, indicaciones: x.indicaciones || null, enviado: env };
+}
+
 /* ============================================================ automático */
 let corriendo = false;
 async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
@@ -318,10 +366,15 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
     if (!lock.rows[0].ok) { cliente.release(); return { enviados: 0, fallidos: 0, omitido: 'en_curso' }; }
     try {
       const hora = horaLocal();
-      const clinicas = await query('SELECT id, mensajes_hora, controles_auto, encuesta_auto FROM clinicas WHERE activa AND (controles_auto OR encuesta_auto)');
+      const clinicas = await query('SELECT id, mensajes_hora, controles_auto, encuesta_auto, indicaciones_auto FROM clinicas WHERE activa AND (controles_auto OR encuesta_auto OR indicaciones_auto)');
       for (const c of clinicas.rows) {
-        if (!ignorarHora && (hora < c.mensajes_hora || hora >= 20)) continue;
         const lote = [];
+        // Las indicaciones salen enseguida de la atención (de 8 a 21), no esperan la hora de los mensajes.
+        if (c.indicaciones_auto && (ignorarHora || (hora >= 8 && hora < 21))) for (const x of (await indicacionesPendientes(c.id)).slice(0, 200)) lote.push(datosIndicaciones(x));
+        if (!ignorarHora && (hora < c.mensajes_hora || hora >= 20)) {
+          for (const d of lote) { if (noAcepta(d.paciente)) continue; try { const r = await mandar(d, { automatico: true }); if (r.ok) enviados += 1; else fallidos += 1; } catch (e) { if (e.status !== 409) fallidos += 1; } }
+          continue;
+        }
         if (c.controles_auto) for (const x of (await controlesPendientes(c.id)).slice(0, 200)) lote.push(datosControl(x, x.etapa));
         if (c.encuesta_auto) for (const x of (await encuestasPendientes(c.id)).slice(0, 200)) lote.push(datosEncuesta(x));
         for (const d of lote) {
@@ -355,6 +408,12 @@ async function infoEnlace(token) {
     const tratamientoId = trat && (!cfg.tratamientos_web || cfg.tratamientos_web.includes(trat.id)) ? trat.id : null;
     const odontologoId = x.odontologo_id && (!cfg.odontologos_web || cfg.odontologos_web.includes(x.odontologo_id)) ? x.odontologo_id : null;
     return { tipo: 'control', nombre: e.nombre, clinica: e.clinica_nombre, control: x.tipo, tratamientoId, odontologoId, reservasActivas: cfg.reservas_activas };
+  }
+  if (e.tipo === 'indicaciones') {
+    const x = (await query(`${SELECT_INDIC} WHERE t.id=$1`, [e.referencia_id])).rows[0];
+    if (!x) throw new ApiError(404, 'Estas indicaciones ya no están disponibles');
+    const tel = (await query('SELECT telefono FROM clinicas WHERE id=$1', [e.clinica_id])).rows[0];
+    return { tipo: 'indicaciones', nombre: e.nombre, clinica: e.clinica_nombre, tratamiento: x.tratamiento, fecha: x.fecha, odontologo: x.odontologo, indicaciones: x.indicaciones || '', telefonoClinica: tel ? tel.telefono : null };
   }
   const t = (await query(`${SELECT_ENCUESTA} WHERE t.id=$1`, [e.referencia_id])).rows[0];
   return { tipo: 'encuesta', nombre: e.nombre, clinica: e.clinica_nombre, fecha: t ? t.fecha : null, odontologo: t ? t.odontologo : null, respondida: !!e.usado_en };
@@ -452,12 +511,12 @@ async function registrarRespuesta(env, texto) {
   await query(`INSERT INTO comunicaciones (clinica_id, paciente_id, canal, direccion, motivo, resultado, contenido, referencia_tipo, referencia_id)
       VALUES ($1,$2,'whatsapp','entrante',$3,'respondio',$4,$5,$6)`, [env.clinica_id, env.paciente_id, env.tipo === 'control' ? 'recall' : 'otro', texto, env.tipo === 'control' ? 'recall' : env.tipo, env.referencia_id]);
   const p = (await query('SELECT nombre, apellido FROM pacientes WHERE id=$1', [env.paciente_id])).rows[0] || {};
-  const que = { oferta: 'el turno liberado', control: 'el aviso de su control', encuesta: 'la encuesta' }[env.tipo];
+  const que = { oferta: 'el turno liberado', control: 'el aviso de su control', encuesta: 'la encuesta', indicaciones: 'las indicaciones' }[env.tipo];
   await avisar(env.clinica_id, ['agenda.edit', 'seguimiento.manage'], { titulo: `${p.nombre || ''} ${p.apellido || ''} respondió ${que}`.trim(), mensaje: `«${texto.slice(0, 200)}». Contestale desde el WhatsApp de la clínica.`, entidad: 'paciente', entidadId: env.paciente_id });
 }
 
 module.exports = {
   configuracion, guardarConfiguracion, turnoLiberado, listarOfertas, ofrecerManual, cancelarOferta, controlManual,
-  controlesPendientes, encuestasPendientes, ejecutarAutomaticos,
+  controlesPendientes, encuestasPendientes, indicacionesPendientes, indicacionesManual, indicacionesDeTurno, ejecutarAutomaticos,
   infoEnlace, tomarOferta, reservarControl, responderEncuesta, actualizarEstadoMeta, ultimoAvisoA, registrarRespuesta,
 };

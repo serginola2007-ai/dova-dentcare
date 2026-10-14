@@ -62,9 +62,11 @@ const item = (r, id) => r.j.items.find((i) => i.id === id);
       P(`[${nombre}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
       await p.screenshot({ path: `${DIR}/puesta-${nombre}.png` });
       if (nombre === 'escritorio') {
-        await p.locator('.dova-puesta [data-puesta-ir="datos"]').click(); await p.waitForSelector('#cfg-clinica [data-cfg-clinica]', { timeout: 10000 });
-        P('"Ir" lleva a Configuración → Datos de la clínica', /#configuracion/.test(p.url()));
-        await p.fill('#cc-horario_atencion', 'Lunes a sábado de 8 a 19'); await p.click('#cfg-clinica button.dova-btn-primary'); await p.waitForTimeout(1200);
+        await p.locator('.dova-puesta [data-puesta-ir="datos"]').click();
+        const cfg = p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe');
+        await cfg.locator('#cfg-clinica [data-cfg-clinica]').waitFor({ timeout: 15000 });
+        P('"Ir" abre Configuración → Datos de la clínica en una ventana', await p.locator('.dova-ventana[data-ventana-ruta="configuracion"].activa').count() === 1);
+        await cfg.locator('#cc-horario_atencion').fill('Lunes a sábado de 8 a 19'); await cfg.locator('#cfg-clinica button.dova-btn-primary').click(); await p.waitForTimeout(1200);
         P('Guardar desde la pantalla', (await q1('SELECT horario_atencion FROM clinicas WHERE id=$1', [cb])).horario_atencion === 'Lunes a sábado de 8 a 19');
         await p.screenshot({ path: `${DIR}/cfg-clinica.png` });
         await p.evaluate(() => DovaApp.navegar('dashboard')); await p.waitForTimeout(2000);

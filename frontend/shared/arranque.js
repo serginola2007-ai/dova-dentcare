@@ -17,6 +17,7 @@ DovaApp.iniciar({
     var nuevo = temaActual() === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', nuevo);
     try { localStorage.setItem('dova-tema', nuevo); } catch (e) { /* sin almacenamiento */ }
+    if (window.DovaVentanas) DovaVentanas.aplicarTema(nuevo);
     actualizarIcono();
   });
   actualizarIcono();

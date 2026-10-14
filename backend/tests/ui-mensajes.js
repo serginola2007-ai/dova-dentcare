@@ -5,6 +5,7 @@
 // Usa el WhatsApp falso (puerto 4600). Requiere DATABASE_URL, DOVA_URL, DOVA_TZ, RX_DIR (dos PNG de prueba).
 const http = require('http'); const fs = require('fs'); const path = require('path'); const os = require('os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { enVentana } = require('./ayuda-ventana');
 const { Pool } = require('pg');
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const URL0 = process.env.DOVA_URL || 'http://localhost:4500'; const B = `${URL0}/api`;
@@ -22,7 +23,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
   await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$1 WHERE username=$2', [dis, u]);
   const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
-  await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(800);
+  await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(800); await enVentana(p);
   return { ctx, p, err };
 };
 
@@ -44,7 +45,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
     {
       const { ctx, p, err } = await login(b, { width: 1366, height: 900 }, 'admin', 'admin');
       await p.evaluate(() => DovaApp.navegar('configuracion')); await p.waitForSelector('#cfg-mensajes', { timeout: 10000 });
-      P('Configuración → Mensajes automáticos con los 3 mensajes y su ejemplo', await p.locator('#cfg-mensajes .dova-msg-op').count() === 3 && /Se liberó un turno/.test(await p.textContent('#cfg-mensajes')));
+      P('Configuración → Mensajes automáticos con los 4 mensajes y su ejemplo', await p.locator('#cfg-mensajes .dova-msg-op').count() === 4 && /Se liberó un turno/.test(await p.textContent('#cfg-mensajes')));
       await p.check('#cfg-mensajes [name=listaEspera]'); await p.fill('#msg-resena', 'https://g.page/r/prueba/review');
       await p.click('#cfg-mensajes button.dova-btn-primary'); await p.waitForTimeout(1200);
       const c = await q1('SELECT lista_espera_auto, resena_url FROM clinicas WHERE id=1');

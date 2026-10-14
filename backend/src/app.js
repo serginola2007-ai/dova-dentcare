@@ -191,6 +191,7 @@ app.use('/api/facturacion', facturacionRoutes);
 // Página web pública (sin sesión) y su panel en DOVA.
 const cobranzaRoutes = require('./modules/cobranza/cobranza.routes');
 const mensajesRoutes = require('./modules/mensajes/mensajes.routes');
+const resumenRoutes = require('./modules/resumen/resumen.routes');
 app.use('/api/web/publico/pago', cobranzaRoutes.publico);
 app.use('/api/web/publico/aviso', mensajesRoutes.publico);
 app.use('/api/web/publico', webRoutes.publico);
@@ -206,6 +207,7 @@ app.use('/api/web', webRoutes.interno);
   app.use('/api/cobranza', cobranzaRoutes.interno);
   // Turno liberado, controles periódicos y encuesta.
   app.use('/api/mensajes', mensajesRoutes.interno);
+  app.use('/api/resumen', resumenRoutes);
 }
 
 /* Pantallas de DOVA servidas por este mismo servidor (un solo servicio en

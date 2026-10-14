@@ -586,3 +586,77 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-inicio-marca-logo svg { width: 160px; height: 160px; }
   .dova-inicio-marca-nombre { font-size: 27px; }
 }
+
+/* ===== Escritorio con ventanas (shared/ventanas.js) ===== */
+body.dova-escritorio .dova-topbar { z-index: 901; }
+@media (min-width: 769px) { body.dova-escritorio .dova-topbar { position: relative; } }
+body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
+.dova-ventanas { position: fixed; left: 0; right: 0; top: 0; bottom: 0; z-index: 400; pointer-events: none; }
+.dova-ventanas.arrastrando { cursor: grabbing; }
+.dova-ventanas.arrastrando iframe { pointer-events: none; }
+.dova-ventana { position: absolute; display: flex; flex-direction: column; pointer-events: auto; background: var(--white); color: var(--ink); border: 1px solid var(--border-strong, var(--border)); border-radius: 4px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 20, 10, .20), 0 2px 6px rgba(30, 20, 10, .10); }
+.dova-ventana[hidden] { display: none; }
+.dova-ventana.activa { box-shadow: 0 18px 46px rgba(30, 20, 10, .30), 0 2px 8px rgba(30, 20, 10, .16); }
+.dova-ventana-barra { flex: none; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 6px 0 12px; background: var(--cream); border-bottom: 1px solid var(--border); cursor: grab; user-select: none; touch-action: none; }
+.dova-ventana:not(.activa) .dova-ventana-titulo { color: var(--ink-soft); }
+.dova-ventana-titulo { flex: 1; min-width: 0; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dova-ventana-ctrl { display: flex; align-items: center; gap: 2px; flex: none; }
+.dova-ventana-btn, .dova-ventana-zoom { background: none; border: 1px solid transparent; color: inherit; height: 26px; min-width: 28px; padding: 0 6px; border-radius: 2px; cursor: pointer; font: inherit; font-size: 16px; line-height: 1; }
+.dova-ventana-zoom { font-size: 12px; min-width: 48px; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.dova-ventana-btn:hover, .dova-ventana-zoom:hover { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+.dova-ventana-btn:focus-visible, .dova-ventana-zoom:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 0; }
+.dova-ventana-cerrar:hover { background: var(--rust); color: #FFFFFF; }
+.dova-ventana-btn[data-atras] { font-size: 20px; }
+.dova-ventana-contenido { flex: 1; width: 100%; min-height: 0; border: 0; display: block; background: var(--white); }
+.dova-tareas { position: fixed; left: 0; right: 0; bottom: 0; z-index: 401; display: flex; gap: 6px; align-items: center; padding: 5px 10px; background: var(--white); color: var(--ink); border-top: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
+.dova-tareas[hidden] { display: none; }
+.dova-tarea-item { flex: none; display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 2px; max-width: 230px; }
+.dova-tarea { background: none; border: 0; padding: 6px 10px; font: inherit; font-size: 13px; color: inherit; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 196px; }
+.dova-tarea-inicio { flex: none; border: 1px solid var(--border); border-radius: 2px; font-weight: 600; }
+.dova-tarea-item.activa { background: color-mix(in srgb, var(--terracotta) 14%, transparent); border-color: var(--terracotta); }
+.dova-tarea-item.minimizada .dova-tarea { color: var(--ink-soft); }
+.dova-tarea-cerrar { background: none; border: 0; border-left: 1px solid var(--border); padding: 0 8px; cursor: pointer; color: var(--ink-soft); font-size: 15px; }
+.dova-tarea-cerrar:hover { color: var(--rust); }
+@media (max-width: 768px) {
+  .dova-ventana { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border: 0; border-radius: 0; box-shadow: none; }
+  .dova-ventana:not(.activa) { display: none; }
+  .dova-ventana-barra { cursor: default; }
+  .dova-ventana-zoom { min-width: 42px; }
+}
+/* Adentro de una ventana: solo la pantalla de la sección */
+.dova-modo-ventana .dova-topbar, .dova-modo-ventana .mec-iconos, .dova-modo-ventana .mec-lateral,
+.dova-modo-ventana .mec-estado, .dova-modo-ventana #login-root, .dova-modo-ventana .dova-tareas { display: none !important; }
+.dova-modo-ventana .dova-main { margin: 0 !important; max-width: none !important; border: 0 !important; box-shadow: none !important; min-height: 100vh; }
+.dova-modo-ventana .mec-cuerpo { background: var(--gris-claro); }
+.dova-modo-ventana .dova-main { padding: 14px 20px 24px !important; }
+@media (max-width: 768px) { .dova-modo-ventana .dova-main { padding: 10px 12px 20px !important; } }
+
+/* ===== Informes (Reportes → Informes) ===== */
+.dova-inf-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
+.dova-inf-nav .dova-section-title { margin: 0; min-width: 0; }
+.dova-inf-nav [data-mover] { min-width: 36px; padding: 4px 10px; font-size: 18px; line-height: 1; }
+.dova-inf-acciones { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.dova-inf-var { font-weight: 600; margin-left: 4px; color: var(--ink-soft); white-space: nowrap; }
+.dova-inf-var.sube { color: var(--sage-dark); }
+.dova-inf-var.baja { color: var(--rust); }
+.dova-inf-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin: 14px 0; }
+.dova-inf-tablas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; margin-top: 10px; }
+.dova-inf-tablas h4 { margin: 0 0 6px; font-size: 14px; }
+@media print {
+  .dova-inf-nav button, .dova-inf-acciones, .dova-ext-subtabs { display: none !important; }
+}
+
+/* ===== Presupuestos ===== */
+.dova-pres-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dova-pres-cab .dova-view-title { margin-bottom: 8px; }
+.dova-pres-falta { color: var(--terracotta-dark); font-weight: 600; min-height: 1.2em; }
+.dova-pres-tabla td.num, .dova-op-items td.num { text-align: right; white-space: nowrap; }
+
+/* ===== Resumen del día, indicaciones y archivo de pendientes ===== */
+.dova-res-texto { white-space: pre-wrap; font: inherit; background: var(--cream); padding: 14px; border-radius: 2px; margin: 0 0 12px; max-height: 60vh; overflow: auto; }
+.dova-indic-sugeridas { display: block; margin: 0 0 6px; max-width: 320px; }
+.dova-indic-turno { margin: 10px 0; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.dova-indic-turno p { margin: 0 0 8px; }
+.dova-archivo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; margin: 0 0 12px; background: color-mix(in srgb, var(--cream) 70%, transparent); border-left: 3px solid var(--terracotta); }
+.dova-archivo-meses { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.dova-archivo-meses select { margin: 0; }

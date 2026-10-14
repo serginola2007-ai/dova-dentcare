@@ -6,6 +6,7 @@ const { requirePermiso } = require('../../middlewares/rbac.middleware');
 
 const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
+router.get('/', requirePermiso('presupuestos.view'), controller.listar);
 router.get('/paciente/:pacienteId', requirePermiso('presupuestos.view'), controller.listarPorPaciente);
 router.get('/:id', requirePermiso('presupuestos.view'), controller.obtener);
 router.post('/', requirePermiso('presupuestos.manage'), controller.crear);

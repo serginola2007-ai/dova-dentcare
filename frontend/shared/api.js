@@ -17,6 +17,16 @@ const DOVA = (() => {
   let apiBase = window.DOVA_API_BASE || (/^https?:$/.test(location.protocol) ? '/api' : 'http://localhost:4000/api');
   let accessToken = null;
   let renovando = null;
+  /* Modo ventana (escritorio con ventanas, ver ventanas.js): cada ventana es un
+     iframe de la misma app. La sesión es UNA sola, la de la página principal:
+     la ventana le pide el token a ella (no renueva por su cuenta) y comparte
+     su estado de bloqueo. */
+  const PADRE = (() => {
+    try {
+      if (window.parent !== window && new URLSearchParams(location.search).get('ventana') === '1') return window.parent.DovaCompartido || null;
+    } catch (_e) { /* otro origen: nunca */ }
+    return null;
+  })();
 
   /* Al abrir DOVA siempre se pide la contraseña: la sesión vale solo en la
      pestaña donde se inició (sobrevive a recargar la página o cambiar de
@@ -37,6 +47,8 @@ const DOVA = (() => {
     return p ? { ...p, accessToken } : null;
   }
   function clearSession() {
+    // En una ventana, cerrar la sesión es cosa de la página principal.
+    if (PADRE) { accessToken = null; try { window.top.location.reload(); } catch (_e) { /* */ } return; }
     accessToken = null;
     marcarPestana(false);
     try { localStorage.removeItem(STORAGE_KEY); } catch (_e) { /* no crítico */ }
@@ -47,6 +59,11 @@ const DOVA = (() => {
   // Una sola renovación a la vez por pestaña (varios pedidos pueden vencer juntos).
   function refrescarToken() {
     if (renovando) return renovando;
+    if (PADRE) {
+      renovando = Promise.resolve(PADRE.renovar(accessToken)).then((t) => { accessToken = t; return t; });
+      renovando.finally(() => { renovando = null; }).catch(() => {});
+      return renovando;
+    }
     renovando = (async () => {
       const perfil = getPerfil();
       if (!perfil) throw new Error('Sin sesión');
@@ -78,6 +95,7 @@ const DOVA = (() => {
   let bloqueada = false;
   function avisarBloqueo() {
     accessToken = null;
+    if (PADRE) { try { PADRE.avisarBloqueo(); } catch (_e) { /* */ } return; }
     if (!bloqueada) { bloqueada = true; try { window.dispatchEvent(new CustomEvent('dova:bloqueada')); } catch (_e) { /* sin DOM */ } }
   }
   function errorBloqueo() { const e = new Error('La pantalla está bloqueada'); e.status = 423; return e; }
@@ -90,7 +108,7 @@ const DOVA = (() => {
   }
 
   async function pedir(path, { method = 'GET', body, isForm = false, reintentar = true, raw = false } = {}) {
-    if (bloqueada && !path.startsWith('/auth/')) throw errorBloqueo();
+    if ((PADRE ? PADRE.estaBloqueada() : bloqueada) && !path.startsWith('/auth/')) throw errorBloqueo();
     if (!accessToken && getPerfil() && reintentar) {
       try { await refrescarToken(); } catch (e) { if (e && e.status === 423) throw errorBloqueo(); /* si no, el pedido sigue y responderá 401 */ }
     }
@@ -247,7 +265,17 @@ const DOVA = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
+  // La página principal comparte su sesión con las ventanas (mismo sitio).
+  if (window.parent === window) {
+    window.DovaCompartido = {
+      renovar: (viejo) => (accessToken && accessToken !== viejo ? Promise.resolve(accessToken) : refrescarToken()),
+      estaBloqueada: () => bloqueada,
+      avisarBloqueo: () => avisarBloqueo(),
+    };
+  }
+
   return {
+    enVentana: !!PADRE,
     setApiBase: (b) => { apiBase = b; },
     // Al abrir DOVA: trae los permisos vigentes (módulos nuevos o cambios de rol) sin cerrar sesión.
     actualizarSesion: () => refrescarToken().then(() => true).catch(() => false),
@@ -255,7 +283,7 @@ const DOVA = (() => {
     tokenActual: () => accessToken,
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
-    request, login, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, estaBloqueada: () => bloqueada, limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
+    request, login, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, estaBloqueada: () => (PADRE ? PADRE.estaBloqueada() : bloqueada), limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
     actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),

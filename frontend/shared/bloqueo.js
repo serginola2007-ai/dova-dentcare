@@ -132,6 +132,11 @@ const DovaBloqueo = (() => {
     void timer;
   }
 
-  return { iniciar, bloquear, activo: () => visible, minutos: () => minutos };
+  // En una ventana: solo se anota la actividad (compartida), el candado lo maneja la página principal.
+  function soloActividad() {
+    ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach((ev) => document.addEventListener(ev, actividad, { passive: true, capture: true }));
+  }
+
+  return { iniciar, soloActividad, bloquear, activo: () => visible, minutos: () => minutos };
 })();
 window.DovaBloqueo = DovaBloqueo;

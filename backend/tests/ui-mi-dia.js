@@ -1,4 +1,4 @@
-/* global document, window, location */
+/* global document, window, getComputedStyle */
 // Pantallas (Playwright): Mi día del odontólogo con lo que hay que tener en
 // cuenta de cada paciente (hoy y mañana). Requiere DATABASE_URL, DOVA_URL, DOVA_TZ.
 const os = require('os');
@@ -74,7 +74,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       P(`${tag} Sin desborde horizontal (mañana)`, await sinDesborde(p));
       await p.click('[data-midia-dia="0"]'); await p.waitForSelector(`.dova-midia-tabla tbody tr >> text=Ana Midia${suf}`, { timeout: 10000 });
       await filaAna.locator('[data-ir-paciente]').click(); await p.waitForTimeout(1200);
-      P(`${tag} Tocar el nombre abre la ficha`, (await p.evaluate(() => location.hash)).startsWith(`#paciente/${ana}`));
+      P(`${tag} Tocar el nombre abre la ficha en una ventana`, await p.locator(`.dova-ventana[data-ventana-ruta="paciente"].activa`).count() === 1);
       P(`${tag} Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }
@@ -89,7 +89,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       P(`[${u}] La marca no tapa los botones`, await p.$eval('[data-para-atender] .dova-atender-fila', (e) => { const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!x && !!x.closest('.dova-atender-fila'); }));
       P(`[${u}] Sin recuadros de números`, await p.locator('.dova-ext-kpi, .dova-cards-grid').count() === 0);
       await p.locator('[data-para-atender] .dova-atender-fila').first().click(); await p.waitForTimeout(1500);
-      P(`[${u}] Tocar una fila lleva a esa sección`, !(await p.evaluate(() => location.hash)).startsWith('#dashboard'), await p.evaluate(() => location.hash));
+      P(`[${u}] Tocar una fila abre esa sección en una ventana`, await p.locator('.dova-ventana.activa').count() === 1);
       P(`[${u}] Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }

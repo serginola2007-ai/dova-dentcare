@@ -185,6 +185,7 @@ const DovaSecciones = (() => {
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
     c.querySelector('[data-csv]').addEventListener('click', () => X.descargarCsv(`controles-periodicos-${X.hoy()}.csv`, filas, cols));
     await cargar();
+    if (window.DovaAvisos) DovaAvisos.bannerArchivo(c, 'recalls', cargar);
   }
 
   function subControles(c) {
@@ -201,6 +202,7 @@ const DovaSecciones = (() => {
       vacio: 'No hay controles pendientes hasta esa fecha.',
     });
     f.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
+    if (window.DovaAvisos) DovaAvisos.bannerArchivo(c, 'controles', cargar);
     return cargar();
   }
 
@@ -927,7 +929,7 @@ const DovaSecciones = (() => {
       }));
       await cargar();
     };
-    const elegir = (clave) => { actual = lista.find((r) => r.clave === clave) || actual; try { history.replaceState(null, '', `#reportes/${actual.clave}`); } catch (_e) { /* */ } pintar(); };
+    const elegir = (clave) => { actual = lista.find((r) => r.clave === clave) || actual; if (location.hash.startsWith('#reportes')) { try { history.replaceState(null, '', `${location.pathname}${location.search}#reportes/${actual.clave}`); } catch (_e) { /* */ } } pintar(); };
     root.querySelectorAll('[data-rep]').forEach((b) => b.addEventListener('click', () => elegir(b.dataset.rep)));
     sel.addEventListener('change', () => elegir(sel.value));
     await pintar();
@@ -1080,7 +1082,10 @@ const DovaSecciones = (() => {
       const i = e.items.find((x) => x.id === b.dataset.puestaIr);
       if (i.sub) window.DovaSubPendiente = i.sub;
       try { await nav(i.ruta); } finally { window.DovaSubPendiente = null; }
-      if (i.ancla) setTimeout(() => { const a = document.getElementById(i.ancla); if (a) a.scrollIntoView({ behavior: 'smooth' }); }, 900);
+      if (i.ancla) {
+        if (window.DovaVentanas && DovaApp.escritorio && DovaApp.escritorio()) DovaVentanas.desplazarA(i.ruta, i.ancla);
+        else setTimeout(() => { const a = document.getElementById(i.ancla); if (a) a.scrollIntoView({ behavior: 'smooth' }); }, 900);
+      }
     }));
     cont.querySelector('[data-ocultar-puesta]').addEventListener('click', async () => {
       try { await DOVA.put('/clinica/puesta-en-marcha', { oculta: true }); cont.remove(); X.toast('Listo. La podés volver a ver en Configuración → Datos de la clínica.', 'ok'); } catch (ex) { X.toast(ex.message, 'error'); }
@@ -1090,7 +1095,7 @@ const DovaSecciones = (() => {
   }
 
   // Configuración: Mi WhatsApp, datos de la clínica, tipos de recall y qué tratamiento dispara cada uno.
-  // Mensajes automáticos: turno liberado, controles periódicos y encuesta.
+  // Mensajes automáticos: turno liberado, controles periódicos, encuesta e indicaciones después del tratamiento.
   async function tarjetaMensajes(elMain) {
     if (!puede('clinica.config.manage')) return;
     let m; try { m = await DOVA.get('/mensajes/config'); } catch (_e) { return; }
@@ -1104,6 +1109,7 @@ const DovaSecciones = (() => {
         ${op('listaEspera', 'Ofrecer los turnos liberados a la lista de espera', 'Cuando alguien cancela, el horario se ofrece a los primeros de la lista de espera. El primero que lo toma desde su enlace queda agendado y confirmado.', m.ejemplos.oferta)}
         ${op('controles', 'Avisar los controles periódicos', 'Una semana antes del control (y un recordatorio 3 semanas después si no reservó), con un enlace para elegir día y hora sin cargar datos.', m.ejemplos.control)}
         ${op('encuesta', 'Encuesta después de la atención', 'Al día siguiente: "del 0 al 10, ¿nos recomendarías?". Con 9 o 10 se le pide una reseña en Google; con 6 o menos te avisa para llamarlo. Una vez cada 60 días como máximo.', m.ejemplos.encuesta)}
+        ${op('indicaciones', 'Indicaciones después del tratamiento', `Al marcar el turno como atendido, el paciente recibe los cuidados para después (con un enlace para leerlos completos). Se cargan en Tratamientos → editar → "Indicaciones para después"${m.tratamientosConIndicaciones ? ` (hoy ${m.tratamientosConIndicaciones} tratamiento(s) las tienen).` : '. Todavía ningún tratamiento las tiene.'}`, m.ejemplos.indicaciones)}
         <div class="dova-ext-filtros"><div><label for="msg-hora">Hora de envío (controles y encuestas)</label><select id="msg-hora" name="hora">${Array.from({ length: 13 }, (_, i) => i + 8).map((h) => `<option value="${h}" ${m.hora === h ? 'selected' : ''}>${h}:00</option>`).join('')}</select></div>
           <div style="flex:1;min-width:240px"><label for="msg-resena">Enlace para dejar una reseña en Google</label><input id="msg-resena" name="resenaUrl" type="url" maxlength="500" placeholder="https://g.page/r/…/review" value="${esc(m.resenaUrl || '')}"/></div></div>
         <p class="dova-nota">El enlace de reseña está en tu Perfil de Empresa de Google → "Pedir reseñas".</p>
@@ -1112,7 +1118,7 @@ const DovaSecciones = (() => {
     cont.querySelector('[data-cfg-mensajes]').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = e.target;
       try {
-        m = await DOVA.put('/mensajes/config', { listaEspera: f.listaEspera.checked, controles: f.controles.checked, encuesta: f.encuesta.checked, hora: Number(f.hora.value), resenaUrl: f.resenaUrl.value.trim() || null });
+        m = await DOVA.put('/mensajes/config', { listaEspera: f.listaEspera.checked, controles: f.controles.checked, encuesta: f.encuesta.checked, indicaciones: f.indicaciones.checked, hora: Number(f.hora.value), resenaUrl: f.resenaUrl.value.trim() || null });
         X.toast('Mensajes automáticos guardados', 'ok');
       } catch (ex) { X.toast(ex.message, 'error'); }
     });
@@ -1138,6 +1144,7 @@ const DovaSecciones = (() => {
     await tarjetaMiWhatsapp(elMain);
     await tarjetaDatosClinica(elMain);
     await tarjetaMensajes(elMain);
+    if (window.DovaAvisos) await DovaAvisos.tarjetaResumen(elMain);
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
     cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';

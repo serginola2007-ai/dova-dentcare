@@ -92,6 +92,10 @@ services:
         value: control_periodico
       - key: WHATSAPP_PLANTILLA_ENCUESTA
         value: encuesta_atencion
+      - key: WHATSAPP_PLANTILLA_INDICACIONES
+        value: indicaciones_tratamiento
+      - key: WHATSAPP_PLANTILLA_RESUMEN
+        value: resumen_diario
       - key: WHATSAPP_IDIOMA
         value: es
       # Clave del disparo programado (GitHub la usa como DOVA_CRON_SECRET).

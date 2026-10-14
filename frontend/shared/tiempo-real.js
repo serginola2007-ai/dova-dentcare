@@ -18,11 +18,28 @@ const DovaVivo = (() => {
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ---------- conexión ----------
+  // En una ventana (ver ventanas.js) no se abre otra conexión: se escuchan
+  // los avisos que recibe la página principal.
+  let quitarPadre = null;
+  function padreVivo() {
+    try { return (DOVA.enVentana && window.parent.DovaVivo) || null; } catch (_e) { return null; }
+  }
   function iniciar() {
     if (activo) return;
-    activo = true; bucle();
+    activo = true;
+    const p = padreVivo();
+    if (p) {
+      quitarPadre = p.alCambiar((tablas) => {
+        repartir(tablas);
+        oyentes.forEach((fn) => { try { fn(tablas); } catch (e) { console.error('[vivo]', e); } });
+      });
+      window.addEventListener('pagehide', () => { if (quitarPadre) quitarPadre(); quitarPadre = null; });
+      conectado = true;
+      return;
+    }
+    bucle();
   }
-  function detener() { activo = false; if (ctrl) ctrl.abort(); marcar(false); }
+  function detener() { activo = false; if (quitarPadre) { quitarPadre(); quitarPadre = null; } if (ctrl) ctrl.abort(); marcar(false); }
 
   async function bucle() {
     while (activo) {

@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
 
 router.use('/', require('./centro').router);
+router.use('/', require('./informes').router);
 router.get('/dashboard/alertas', requirePermiso('reportes.view'), controller.alertasDashboard);
 router.get('/financiero', requirePermiso('reportes.view'), controller.financiero);
 router.get('/agenda', requirePermiso('reportes.view'), controller.agenda);

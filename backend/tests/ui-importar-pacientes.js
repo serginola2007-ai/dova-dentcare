@@ -1,6 +1,7 @@
 /* global document, window, DovaApp */
 // Pantallas (Playwright): Pacientes → Importar desde Excel (escritorio y celular).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { enVentana } = require('./ayuda-ventana');
 const ExcelJS = require('exceljs');
 const path = require('path'); const fs = require('fs'); const os = require('os');
 const { Pool } = require('pg');
@@ -25,7 +26,7 @@ const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, o
     const ctx = await b.newContext({ viewport: vp, acceptDownloads: true }); const p = await ctx.newPage(); const err = [];
     p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
     await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', 'recep1'); await p.fill('#login-password', 'clave123'); await p.click('#form-login button[type=submit]');
-    await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800);
+    await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800); await enVentana(p);
     await p.evaluate(() => DovaApp.navegar('pacientes')); await p.waitForSelector('#btn-importar-pacientes');
     await p.click('#btn-importar-pacientes'); await p.waitForSelector('.dova-imp');
     const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-plantilla]')]);

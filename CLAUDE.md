@@ -28,13 +28,13 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0052 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0053 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
 frontend/           JavaScript puro, sin build
   moderno/ minimalista/ tecnico/ mecanico/   4 diseños: cada uno es index.html + skin.css (mecanico: colores de la clínica, para todos, más shared/mecanico.js)
-  shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
+  shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, ventanas.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
   web/              página pública + portal del paciente
   sw.js             service worker (precache con VERSION)
 ```
@@ -113,6 +113,23 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Visor de radiografías: `shared/ext/ext-visor.js` (`DovaVisor.abrir`). Presupuesto desde el odontograma: `presupuestoDesdeOdontograma` en `ext-operativo.js`.
 - Guías por rol: `docs/generar-guias.py` → `frontend/docs/guias/*.pdf`.
 - Mi día del odontólogo: `GET /api/pendientes/mi-dia` (`modules/pendientes/pendientes.midia.js`) + `shared/ext/ext-midia.js`. Pruebas: `tests/mi-dia.test.js`, `tests/ui-mi-dia.js`.
+
+## Escritorio con ventanas
+- `shared/ventanas.js` (`DovaVentanas`): Inicio queda siempre de fondo y cada sección se abre en una ventana (un `<iframe>` con la misma app en `?ventana=1`). Tamaño fijo, se mueven, zoom, minimizar, cerrar, barra de tareas; en celular a pantalla completa. Se restauran al recargar (`sessionStorage dova-ventanas`).
+- En `app.js`: `ESCRITORIO` (página principal: `navegar()` abre ventanas) y `MODO_VENTANA` (adentro: renderiza la sección y avisa título/historial con `DovaVentanas.alNavegar`).
+- La sesión es una sola: la ventana pide el token a la página principal (`window.DovaCompartido` en `api.js`), comparte el bloqueo y escucha el tiempo real de la principal (`tiempo-real.js`).
+- Pruebas: `tests/ui-ventanas.js`. Para probar el contenido de una sección sin ventanas, una prueba puede abrir `/<diseño>/index.html?ventana=1#<ruta>` en la misma pestaña después de entrar.
+
+## Presupuestos e Informes
+- Sección Presupuestos (`shared/ext/ext-presupuestos.js`, `GET /api/presupuestos`). El servidor exige la C.I. del paciente (o `pacienteCi` para cargarla) y al menos un ítem; valida odontólogo y tratamientos contra la clínica.
+- Informes (`shared/ext/ext-informes.js`, `GET /api/reportes/informes/periodo?tipo=dia|semana|mes|anio`): resumen comparado con el período anterior (si está en curso, con el mismo tramo). Los reportes detallados quedaron como pestaña de Informes.
+- Pruebas: `tests/informes-presupuestos.test.js`.
+
+## Resumen del día, indicaciones y archivo de pendientes (0053)
+- Resumen del día al dueño: `modules/resumen/` (`/api/resumen/config|vista|enviar`), uno por clínica y día en `resumenes_diarios`; corre con el cron de recordatorios. Correo con `utils/correo.js`, WhatsApp con la plantilla `resumen_diario`.
+- Indicaciones después del tratamiento: `tratamientos.indicaciones`, `clinicas.indicaciones_auto`; envío en `mensajes.service` (tipo `indicaciones`, página `web/indicaciones.html#t=`), a mano con `POST /api/mensajes/indicaciones/:turnoId/enviar`.
+- Archivar pendientes viejos: `modules/seguimiento/archivo.js`; estado `archivado` en `paciente_recalls` y `controles_programados` (no se borra nada, se restaura).
+- Pantallas: `shared/ext/ext-avisos.js`. Pruebas: `tests/resumen-indicaciones.test.js`, `tests/ui-avisos.js`.
 
 ## Consentimientos
 - Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.

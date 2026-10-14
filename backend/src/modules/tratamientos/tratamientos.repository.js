@@ -1,5 +1,5 @@
 const { query } = require('../../config/db');
-const COLS = 'id, clinica_id, nombre, categoria, descripcion, precio, duracion_minutos, activo, creado_en, recall_tipo_id';
+const COLS = 'id, clinica_id, nombre, categoria, descripcion, precio, duracion_minutos, activo, creado_en, recall_tipo_id, indicaciones';
 
 async function listar(clinicaId, { incluirInactivos = false } = {}) {
   const cond = incluirInactivos ? 'clinica_id = $1' : 'clinica_id = $1 AND activo = true';
@@ -12,16 +12,16 @@ async function obtenerPorId(clinicaId, id) {
 }
 async function crear(clinicaId, d) {
   const res = await query(
-    `INSERT INTO tratamientos (clinica_id, nombre, categoria, descripcion, precio, duracion_minutos, recall_tipo_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING ${COLS}`,
-    [clinicaId, d.nombre, d.categoria || null, d.descripcion || null, d.precio || 0, d.duracionMinutos || null, d.recallTipoId || null]
+    `INSERT INTO tratamientos (clinica_id, nombre, categoria, descripcion, precio, duracion_minutos, recall_tipo_id, indicaciones)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${COLS}`,
+    [clinicaId, d.nombre, d.categoria || null, d.descripcion || null, d.precio || 0, d.duracionMinutos || null, d.recallTipoId || null, d.indicaciones || null]
   );
   return res.rows[0];
 }
 async function actualizar(clinicaId, id, d) {
-  const mapa = { nombre: 'nombre', categoria: 'categoria', descripcion: 'descripcion', precio: 'precio', duracionMinutos: 'duracion_minutos', activo: 'activo', recallTipoId: 'recall_tipo_id' };
+  const mapa = { nombre: 'nombre', categoria: 'categoria', descripcion: 'descripcion', precio: 'precio', duracionMinutos: 'duracion_minutos', activo: 'activo', recallTipoId: 'recall_tipo_id', indicaciones: 'indicaciones' };
   const sets = []; const params = [clinicaId, id];
-  for (const [k, c] of Object.entries(mapa)) if (d[k] !== undefined) { params.push(k === 'recallTipoId' ? (d[k] || null) : d[k]); sets.push(`${c}=$${params.length}`); }
+  for (const [k, c] of Object.entries(mapa)) if (d[k] !== undefined) { params.push(k === 'recallTipoId' || k === 'indicaciones' ? (d[k] || null) : d[k]); sets.push(`${c}=$${params.length}`); }
   if (!sets.length) return obtenerPorId(clinicaId, id);
   const res = await query(`UPDATE tratamientos SET ${sets.join(', ')} WHERE clinica_id=$1 AND id=$2 RETURNING ${COLS}`, params);
   return res.rows[0] || null;

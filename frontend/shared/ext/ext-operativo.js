@@ -341,6 +341,7 @@ const DovaOperativo = (() => {
         <p>${esc(t.tratamiento_nombre || t.motivo || 'Sin tratamiento indicado')}</p>
         ${t.paciente_telefono ? `<p class="dova-nota">Tel. ${esc(t.paciente_telefono)}</p>` : ''}
         ${t.observaciones ? `<p class="dova-nota">${esc(t.observaciones)}</p>` : ''}
+        ${t.estado === 'atendido' && t.tratamiento_id ? '<div data-indicaciones></div>' : ''}
         <div data-ctx-detalle></div>
       </div>
       <div class="dova-modal-actions dova-cal-acciones">
@@ -357,6 +358,7 @@ const DovaOperativo = (() => {
     const box = document.querySelector('.dova-modal-box');
     const ctx = box.querySelector('[data-ctx-detalle]');
     DOVA.get(`/agenda/${t.id}/contexto-clinico`).then((r) => { ctx.innerHTML = Vistas.renderContextoClinicoTurno(r); }).catch(() => { ctx.innerHTML = ''; });
+    if (window.DovaAvisos) DovaAvisos.botonIndicaciones(box.querySelector('[data-indicaciones]'), t.id);
     box.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.d;
       X.cerrarModal();
@@ -735,8 +737,12 @@ const DovaOperativo = (() => {
   async function modalPresupuesto(pid, alGuardar, { items: iniciales = [] } = {}) {
     const trats = await X.catalogo('tratamientos', '/tratamientos').catch(() => []);
     const odos = await X.opcionesOdontologos();
+    // La C.I. es obligatoria para presupuestar: si el paciente no la tiene, se pide acá.
+    const pac = await DOVA.get(`/pacientes/${pid}`).catch(() => null);
+    const sinCi = !pac || !pac.ci || !String(pac.ci).trim();
     X.modal('Nuevo presupuesto', `
       <form data-pres>
+        ${sinCi ? '<div class="dova-ext-campo"><label for="mp-ci">C.I. del paciente *</label><input id="mp-ci" name="pacienteCi" maxlength="20" required autocomplete="off"/><p class="dova-ext-ayuda">El paciente no tiene la C.I. cargada: es obligatoria para guardar el presupuesto.</p></div>' : ''}
         <div class="dova-ext-form-grid">
           <div class="dova-ext-campo"><label>Odontólogo</label><select name="odontologoId"><option value="">—</option>${odos.map(([id, n]) => `<option value="${id}" ${String(id) === String((DOVA.usuarioActual() || {}).odontologoId) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
           <div class="dova-ext-campo"><label>Válido hasta</label><input type="date" name="vencimiento" value="${sumarDias(hoy(), 30)}"/></div>
@@ -793,9 +799,10 @@ const DovaOperativo = (() => {
       const err = form.querySelector('[data-error]'); err.style.display = 'none';
       const items = leerItems().filter((i) => i.descripcion || i.tratamientoId);
       try {
-        if (!items.length) throw new Error('Agregá al menos un ítem');
+        if (!items.length) throw new Error('Agregá al menos un tratamiento');
+        if (sinCi && !form.pacienteCi.value.trim()) throw new Error('Cargá la C.I. del paciente para poder guardar el presupuesto');
         await DOVA.post('/presupuestos', {
-          pacienteId: pid, items, descuento: Number(form.descuento.value || 0), vencimiento: form.vencimiento.value || undefined,
+          pacienteId: pid, pacienteCi: sinCi ? form.pacienteCi.value.trim() : undefined, items, descuento: Number(form.descuento.value || 0), vencimiento: form.vencimiento.value || undefined,
           odontologoId: form.odontologoId.value ? Number(form.odontologoId.value) : undefined, observaciones: form.observaciones.value.trim() || undefined,
         });
         X.cerrarModal(); toast('Presupuesto guardado', 'ok'); if (alGuardar) alGuardar();
@@ -1296,6 +1303,7 @@ const DovaOperativo = (() => {
         { t: 'Tratamiento', v: (r) => esc(r.nombre) }, { t: 'Categoría', v: (r) => esc(r.categoria || '-') }, { t: 'Precio', v: (r) => fmtGs(r.precio) },
         { t: 'Duración', v: (r) => (r.duracion_minutos ? `${r.duracion_minutos} min` : '-') },
         { t: 'Control periódico', v: (r) => esc((tipos.find((x) => x.id === r.recall_tipo_id) || {}).nombre || '-') },
+        { t: 'Indicaciones', v: (r) => (r.indicaciones ? badge('Cargadas', 'ok') : '<span class="dova-nota">—</span>') },
         { t: 'Estado', v: (r) => (r.activo === false ? badge('Inactivo', 'critica') : badge('Activo', 'ok')) },
       ],
       campos: [
@@ -1303,10 +1311,11 @@ const DovaOperativo = (() => {
         { k: 'precio', label: 'Precio (Gs.)', tipo: 'numero', req: true, min: 0 }, { k: 'duracionMinutos', label: 'Duración (min)', tipo: 'numero', min: 5, max: 480 },
         { k: 'recallTipoId', label: 'Control periódico al terminar', tipo: 'select', opciones: tipos.map((x) => [x.id, `${x.nombre} (cada ${x.intervalo_meses} meses)`]) },
         { k: 'descripcion', label: 'Descripción', tipo: 'textarea' },
+        { k: 'indicaciones', label: 'Indicaciones para después (las recibe el paciente por WhatsApp)', tipo: 'textarea' },
         { k: 'activo', label: 'Activo', tipo: 'bool', soloEditar: true },
       ],
-      valoresEditar: (r) => ({ nombre: r.nombre, categoria: r.categoria, precio: num(r.precio), duracionMinutos: r.duracion_minutos, recallTipoId: r.recall_tipo_id, descripcion: r.descripcion, activo: r.activo !== false }),
-      preparar: (d) => { if (d.recallTipoId !== undefined) d.recallTipoId = d.recallTipoId ? Number(d.recallTipoId) : null; },
+      valoresEditar: (r) => ({ nombre: r.nombre, categoria: r.categoria, precio: num(r.precio), duracionMinutos: r.duracion_minutos, recallTipoId: r.recall_tipo_id, descripcion: r.descripcion, indicaciones: r.indicaciones || '', activo: r.activo !== false }),
+      preparar: (d) => { if (d.recallTipoId !== undefined) d.recallTipoId = d.recallTipoId ? Number(d.recallTipoId) : null; if (typeof d.indicaciones === 'string') d.indicaciones = d.indicaciones.trim() || null; },
       alGuardar: () => { X.olvidarCatalogo('tratamientos'); tratamientos(c); },
     });
   }

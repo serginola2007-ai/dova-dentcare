@@ -14,7 +14,13 @@ const DovaComandos = (() => {
   const toast = (m, t) => { if (typeof Vistas !== 'undefined' && Vistas.toast) Vistas.toast(m, t); };
 
   // Espera a que aparezca un elemento (para acciones que abren una pantalla y luego un botón).
-  const cuando = (sel, fn, ms = 6000) => { const t0 = Date.now(); const it = setInterval(() => { const el = document.querySelector(sel); if (el) { clearInterval(it); fn(el); } else if (Date.now() - t0 > ms) clearInterval(it); }, 120); };
+  // Con ventanas, la pantalla abierta está dentro de la ventana de adelante: se busca ahí también.
+  const buscarEl = (sel) => {
+    const v = document.querySelector('.dova-ventana.activa iframe');
+    if (v) { try { const el = v.contentDocument && v.contentDocument.querySelector(sel); if (el) return el; } catch (_e) { /* cargando */ } }
+    return document.querySelector(sel);
+  };
+  const cuando = (sel, fn, ms = 8000) => { const t0 = Date.now(); const it = setInterval(() => { const el = buscarEl(sel); if (el) { clearInterval(it); fn(el); } else if (Date.now() - t0 > ms) clearInterval(it); }, 120); };
 
   function acciones() {
     const nav = cfg.navegar;

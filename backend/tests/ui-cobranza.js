@@ -4,6 +4,7 @@
 const http = require('http');
 const path = require('path'); const fs = require('fs'); const os = require('os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { enVentana } = require('./ayuda-ventana');
 const { Pool } = require('pg');
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const URL0 = process.env.DOVA_URL || 'http://localhost:4500';
@@ -19,7 +20,7 @@ const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message
 const login = async (b, dis, vp, u, c) => {
   const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
-  await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(800);
+  await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(800); await enVentana(p);
   return { ctx, p, err };
 };
 

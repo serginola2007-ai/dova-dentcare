@@ -121,3 +121,21 @@ label { font-size: 11px; color: var(--ink); }
   background: linear-gradient(90deg, var(--bordo-osc), var(--bordo) 70%, #C1673F); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
 }
 @media (max-width: 768px) { .mec-shell .dova-main[data-ventana]::before { margin: 0 -8px 10px; } }
+
+/* ---- Ventanas (escritorio con ventanas): marco clásico con los colores de la clínica ---- */
+.mec-shell ~ .dova-ventanas .dova-ventana, .dova-ventana { border-radius: 0; }
+body .dova-ventana { border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); background: var(--gris-claro); }
+body .dova-ventana.activa { box-shadow: 4px 4px 0 rgba(60,30,15,0.45); }
+body .dova-ventana-barra { height: 26px; padding: 0 3px 0 8px; background: linear-gradient(90deg, #8a7a6e, #b5a698); color: #FFFFFF; border-bottom: 1px solid var(--bordo-osc); }
+body .dova-ventana.activa .dova-ventana-barra { background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
+body .dova-ventana:not(.activa) .dova-ventana-titulo { color: #F3ECE3; }
+body .dova-ventana-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+body .dova-ventana-btn, body .dova-ventana-zoom { height: 18px; min-width: 20px; padding: 0 4px; font-size: 12px; color: var(--ink); background: var(--gris); border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; border-radius: 0; }
+body .dova-ventana-zoom { min-width: 40px; font-size: 10px; }
+body .dova-ventana-btn:active, body .dova-ventana-zoom:active { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; }
+body .dova-ventana-btn:hover, body .dova-ventana-zoom:hover { background: var(--gris-claro); }
+body .dova-ventana-cerrar:hover { background: var(--rust); color: #FFFFFF; }
+body .dova-tareas { background: var(--gris); border-top: 1px solid #FFFFFF; box-shadow: 0 -1px 0 #B49C82; padding: 3px 6px; gap: 3px; }
+body .dova-tarea-item, body .dova-tarea-inicio { border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; border-radius: 0; background: var(--gris); }
+body .dova-tarea { font-size: 11px; padding: 3px 8px; }
+body .dova-tarea-item.activa { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; background: #E6D3BA; font-weight: 700; }

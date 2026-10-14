@@ -6,6 +6,15 @@
 
 const DovaApp = (() => {
   let elMain, elMenu, elMarca;
+  /* Escritorio con ventanas (ver ventanas.js):
+     - ESCRITORIO: la página principal. Inicio queda siempre de fondo y cada
+       función del menú se abre en una ventana.
+     - MODO_VENTANA: lo que corre ADENTRO de una ventana (?ventana=1): solo la
+       pantalla de la sección, sin barra de menú. */
+  const MODO_VENTANA = new URLSearchParams(location.search).get('ventana') === '1';
+  const EN_IFRAME = (() => { try { return window.parent !== window; } catch (_e) { return true; } })();
+  const ESCRITORIO = !MODO_VENTANA && !!window.DovaVentanas;
+  const padreVentanas = () => { try { return EN_IFRAME ? window.parent.DovaVentanas : null; } catch (_e) { return null; } };
 
   /* Menú agrupado: arriba solo se ven Movimientos, Reportes y Administración;
      cada uno despliega sus opciones (solo las que el usuario tiene permitidas).
@@ -16,10 +25,9 @@ const DovaApp = (() => {
      sección en X.subPestanas (lo verifica la prueba ui-submenu). */
   const GRUPOS = [['movimientos', 'Movimientos'], ['reportes', 'Reportes'], ['administracion', 'Administración']];
   const MENU = [
-    // Movimientos: el trabajo del día
-    // Inicio va suelto en la barra, a la izquierda de Movimientos (sin desplegable).
-    { grupo: null, ruta: 'dashboard', label: 'Inicio', permiso: null },
+    // Movimientos: el trabajo del día. (Inicio no va en el menú: queda siempre de fondo.)
     { grupo: 'movimientos', ruta: 'agenda', label: 'Agenda', permiso: 'agenda.view', subs: [['dia', 'Turnos'], ['espera', 'Lista de espera', 'lista_espera.manage']] },
+    { grupo: 'movimientos', ruta: 'presupuestos', label: 'Presupuestos', permiso: 'presupuestos.view' },
     { grupo: 'movimientos', ruta: 'caja', label: 'Caja', permiso: ['caja.view', 'caja.manage'], subs: [['hoy', 'Caja del día'], ['hist', 'Cierres anteriores']] },
     { grupo: 'movimientos', ruta: 'facturacion', label: 'Facturación', permiso: ['facturacion.ver', 'facturacion.ver_propias', 'facturacion.crear', 'facturacion.configurar', 'facturacion.ver_reportes'],
       subs: [['tablero', 'Resumen', ['facturacion.ver', 'facturacion.ver_propias']], ['facturas', 'Facturas', ['facturacion.ver', 'facturacion.ver_propias']], ['nueva', 'Nueva factura', 'facturacion.crear'], ['reportes', 'Reportes', 'facturacion.ver_reportes'], ['config', 'Configuración', 'facturacion.configurar']] },
@@ -40,7 +48,8 @@ const DovaApp = (() => {
     { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage'],
       subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
         ['seguros', 'Seguros y convenios', 'aseguradoras.manage'], ['listas', 'Listas de precios', 'listas_precios.manage'], ['cierre', 'Cerrar meses', 'clinica.config.manage']] },
-    { grupo: 'reportes', ruta: 'reportes', label: 'Reportes generales', permiso: 'reportes.view' },
+    { grupo: 'reportes', ruta: 'informes', label: 'Informes', permiso: 'reportes.view',
+      subs: [['dia', 'Del día'], ['semana', 'De la semana'], ['mes', 'Del mes'], ['anio', 'Del año'], ['detalle', 'Reportes detallados']] },
     // Administración. "Configuración" no pide permiso: cada uno cambia su propio diseño.
     { grupo: 'administracion', ruta: 'configuracion', label: 'Configuración', permiso: null },
     { grupo: 'administracion', ruta: 'usuarios', label: 'Usuarios', permiso: 'usuarios.manage' },
@@ -72,6 +81,8 @@ const DovaApp = (() => {
   // Navega a la carpeta del tema pedido, conservando la ruta (#hash) actual
   // para que el cambio de diseño no te devuelva siempre al dashboard.
   function irATema(tema) {
+    // Desde una ventana: cambia el diseño de toda la página.
+    if (MODO_VENTANA && EN_IFRAME) { try { window.top.DovaApp.irATema(tema); return; } catch (_e) { /* sigue acá */ } }
     const destino = normalizarTema(tema);
     if (!destino) return;
     const actual = temaActual();
@@ -229,7 +240,10 @@ const DovaApp = (() => {
     // Tocar "DOVA" lleva al inicio.
     const logo = elMarca.querySelector('.dova-marca-producto');
     logo.setAttribute('role', 'link'); logo.setAttribute('tabindex', '0'); logo.title = 'Ir al inicio';
-    const alInicio = () => { navegar('dashboard'); document.body.classList.remove('dova-menu-abierto'); };
+    const alInicio = () => {
+      document.body.classList.remove('dova-menu-abierto');
+      if (ESCRITORIO) DovaVentanas.mostrarEscritorio(); else navegar('dashboard');
+    };
     logo.addEventListener('click', alInicio);
     logo.addEventListener('keydown', (e) => { if (e.key === 'Enter') alInicio(); });
   }
@@ -239,7 +253,16 @@ const DovaApp = (() => {
   // alguien la teclee directo en el hash sin tener el permiso).
   const PERMISO_RUTA_EXTRA = {
     consulta: 'historia_clinica.edit',
+    // Los reportes detallados ahora están dentro de Informes; la dirección vieja sigue andando.
+    reportes: 'reportes.view',
   };
+
+  // Título de una ventana: el nombre de la sección en el menú.
+  const TITULOS_EXTRA = { paciente: 'Ficha del paciente', consulta: 'Consulta', dashboard: 'Inicio', reportes: 'Reportes detallados' };
+  function etiquetaRuta(ruta) {
+    const m = MENU.find((x) => x.ruta === ruta);
+    return m ? m.label : (TITULOS_EXTRA[ruta] || ruta);
+  }
 
   function tieneAcceso(permiso) {
     if (!permiso) return true;
@@ -268,10 +291,30 @@ const DovaApp = (() => {
     aplicarDataThATablas();
   }
 
-  async function navegar(ruta, params) {
+  // Inicio de fondo (escritorio), en vivo: turnos del día, cobros y lo que llega de la web.
+  async function mostrarInicio() {
+    if (window.DovaVivo) DovaVivo.olvidar(elMain);
+    try { await dibujarInicio(); } catch (e) { elMain.innerHTML = `<p class="dova-error-text">No se pudo cargar el inicio: ${Vistas.esc(e.message)}</p>`; }
+    if (window.DovaVivo) DovaVivo.vivo(elMain, ['turnos', 'pagos', 'caja_movimientos', 'caja_aperturas', 'web_solicitudes', 'web_pagos', 'pacientes', 'cuotas'], () => dibujarInicio());
+  }
+
+  async function navegar(ruta, params, opciones = {}) {
+    // Escritorio: cada función se abre en su ventana; Inicio queda de fondo.
+    if (ESCRITORIO) {
+      if (!ruta || ruta === 'dashboard') { await mostrarInicio(); return; }
+      const permisoE = permisoRequerido(ruta);
+      if (permisoE && !tieneAcceso(permisoE)) { Vistas.toast('No tenés permiso para acceder a esa sección', 'error'); return; }
+      document.body.classList.remove('dova-menu-abierto');
+      DovaVentanas.abrir(ruta, params, window.DovaSubPendiente || null);
+      document.dispatchEvent(new CustomEvent('dova:navegar', { detail: { ruta, params } }));
+      return;
+    }
+    // Dentro de una ventana, "volver al inicio" la cierra.
+    if (MODO_VENTANA && (!ruta || ruta === 'dashboard') && padreVentanas()) { padreVentanas().cerrarDesde(window); return; }
     if (window.DovaVivo) DovaVivo.olvidar(elMain);
     const permiso = permisoRequerido(ruta);
     if (permiso && !tieneAcceso(permiso)) {
+      if (MODO_VENTANA) { elMain.innerHTML = '<p class="dova-error-text">No tenés permiso para acceder a esta sección.</p>'; return; }
       Vistas.toast('No tenés permiso para acceder a esa sección', 'error');
       ruta = 'dashboard';
       params = undefined;
@@ -279,7 +322,9 @@ const DovaApp = (() => {
     marcarMenuActivo(ruta);
     // Un modal abierto no debe quedar flotando sobre la sección nueva.
     document.querySelectorAll('.dova-modal-overlay').forEach((o) => o.remove());
-    window.location.hash = params ? `${ruta}/${params}` : ruta;
+    const hash = params ? `${ruta}/${params}` : ruta;
+    // En una ventana la dirección se reemplaza (no se suma al "atrás" del navegador).
+    if (MODO_VENTANA) { try { history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`); } catch (_e) { /* */ } } else window.location.hash = hash;
     document.dispatchEvent(new CustomEvent('dova:navegar', { detail: { ruta, params } }));
     elMain.innerHTML = '<div class="dova-cargando">Cargando…</div>';
     try {
@@ -342,6 +387,14 @@ const DovaApp = (() => {
           elMain.innerHTML = await Vistas.vistaUsuariosAdmin();
           Vistas.initUsuariosAdmin(() => navegar('usuarios'));
           break;
+        case 'informes':
+          elMain.innerHTML = '<div></div>';
+          await DovaInformes.seccion(elMain.firstElementChild, navegar, params);
+          break;
+        case 'presupuestos':
+          elMain.innerHTML = '<div></div>';
+          await DovaPresupuestos.seccion(elMain.firstElementChild, navegar);
+          break;
         case 'reportes':
           elMain.innerHTML = '<div></div>';
           await DovaSecciones.reportes(elMain.firstElementChild, navegar, params);
@@ -377,6 +430,12 @@ const DovaApp = (() => {
       aplicarDataThATablas();
     } catch (e) {
       elMain.innerHTML = `<p class="dova-error-text">No se pudo cargar esta sección: ${Vistas.esc(e.message)}</p>`;
+    }
+    // Avisa a la ventana qué se abrió (título y botón Volver).
+    if (MODO_VENTANA && padreVentanas()) {
+      let extra = null;
+      if (ruta === 'paciente' || ruta === 'consulta') { const h = elMain.querySelector('h2, h1'); extra = h ? h.textContent.trim().slice(0, 60) : null; }
+      try { padreVentanas().alNavegar(window, ruta, params, extra, !!opciones.sinHistorial); } catch (_e) { /* */ }
     }
   }
 
@@ -420,6 +479,11 @@ const DovaApp = (() => {
     if (!DOVA.estaAutenticado()) { location.reload(); return; }
     elLogin.style.display = 'none';
     elShell.style.display = '';
+    if (ESCRITORIO) {
+      document.body.classList.add('dova-escritorio');
+      // El menú resalta la sección de la ventana que está adelante.
+      document.addEventListener('dova:ventana', (e) => marcarMenuActivo((e.detail || {}).ruta || 'dashboard'));
+    }
     renderMenu();
     renderMarca();
     // Tiempo real: campanita de avisos y pantallas que se actualizan solas.
@@ -434,7 +498,19 @@ const DovaApp = (() => {
     {
       const hashActual = location.hash.replace('#', '');
       const [rutaInicial, ...restoInicial] = hashActual.split('/');
-      navegar(rutaInicial || 'dashboard', restoInicial.length ? restoInicial.join('/') : undefined);
+      if (ESCRITORIO) {
+        await mostrarInicio();
+        DovaVentanas.iniciar({
+          titulo: (r) => etiquetaRuta(r),
+          aviso: (m) => Vistas.toast(m, 'error'),
+          permitida: (r) => tieneAcceso(permisoRequerido(r)),
+        });
+        // Un enlace directo (#agenda, #paciente/12…) abre esa ventana.
+        if (rutaInicial && rutaInicial !== 'dashboard') navegar(rutaInicial, restoInicial.length ? restoInicial.join('/') : undefined);
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (_e) { /* */ }
+      } else {
+        navegar(rutaInicial || 'dashboard', restoInicial.length ? restoInicial.join('/') : undefined);
+      }
     }
     // Si venimos de cambiar de diseño (irATema hizo una navegación completa
     // de página, sea desde el login o desde Configuración), mostrar acá la
@@ -442,6 +518,25 @@ const DovaApp = (() => {
     const flash = DOVA.consumeFlash();
     if (flash) Vistas.toast(flash, 'ok');
     document.dispatchEvent(new CustomEvent('dova:entrar', { detail: { navegar } }));
+  }
+
+  // Adentro de una ventana: solo la pantalla de la sección (la sesión es la de la página principal).
+  async function entrarVentana(elLogin, elShell) {
+    document.documentElement.classList.add('dova-modo-ventana');
+    elLogin.style.display = 'none';
+    elShell.style.display = '';
+    if (window.DovaVivo) DovaVivo.iniciar();
+    if (window.DovaBloqueo && DovaBloqueo.soloActividad) DovaBloqueo.soloActividad();
+    // Ctrl+K (buscar) abre el buscador de la página principal.
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && EN_IFRAME) {
+        try { const c = window.parent.DovaComandos; if (c) { e.preventDefault(); c.abrir(); } } catch (_e) { /* */ }
+      }
+    });
+    const sub = new URLSearchParams(location.search).get('sub');
+    const [r, ...resto] = location.hash.replace('#', '').split('/');
+    window.DovaSubPendiente = sub || null;
+    try { await navegar(r || 'dashboard', resto.length ? resto.join('/') : undefined); } finally { window.DovaSubPendiente = null; }
   }
 
   // Después de un login recién hecho: el diseño elegido en el propio
@@ -565,6 +660,12 @@ const DovaApp = (() => {
       });
     }
 
+    if (MODO_VENTANA) {
+      if (DOVA.estaAutenticado()) entrarVentana(elLogin, elShell);
+      else if (EN_IFRAME) { try { window.top.location.reload(); } catch (_e) { /* */ } }
+      else location.replace(location.pathname + location.hash);
+      return;
+    }
     if (DOVA.estaAutenticado()) {
       decidirDestinoTrasSesionExistente(elLogin, elShell);
     } else {
@@ -574,5 +675,6 @@ const DovaApp = (() => {
     }
   }
 
-  return { iniciar, navegar, irATema };
+  return { iniciar, navegar, irATema, enVentana: () => MODO_VENTANA, escritorio: () => ESCRITORIO };
 })();
+window.DovaApp = DovaApp;

@@ -796,3 +796,20 @@ Se probó todo DOVA como un QA:
 - La marca ya no desaparece: con novedades queda **de fondo, difuminada**; sin nada pendiente se ve entera (con una transición suave). No tapa ningún botón.
 - Logo más grande que el nombre (240 px en escritorio, 160 px en celular) y más a la izquierda.
 - Pruebas: `ui-mi-dia` 133/133, mecánico en verde.
+
+## Tanda: ventanas, Presupuestos, Informes, resumen del día, indicaciones y archivo (14/10/2026)
+
+- **Escritorio con ventanas** (los 4 diseños):
+  - Inicio queda siempre de fondo; se sacó el botón "Inicio" del menú (el logo DOVA y el botón "Inicio" de la barra de abajo minimizan todo);
+  - cada función del menú se abre en una ventana de tamaño fijo (no se agranda ni se achica), que se mueve por la barra de título, con zoom (− 100 % +, Ctrl + rueda, Ctrl +/−/0), minimizar y cerrar;
+  - varias abiertas a la vez, con barra de tareas abajo; una ventana por sección (la ficha y la consulta, una por paciente); botón Volver adentro de la ventana;
+  - al recargar vuelven las ventanas abiertas; el candado de inactividad tapa todo y la sesión es una sola (la ventana pide el token a la página principal);
+  - en celular cada ventana ocupa la pantalla y se cambia con la barra de abajo.
+- **Movimientos → Presupuestos**: lista de todos los presupuestos (buscar por nombre, C.I. o N.º; estado, fechas, odontólogo), detalle con PDF y cambios de estado, y "Nuevo presupuesto" que **no deja guardar sin la C.I. del paciente ni sin tratamientos**. El servidor lo exige en todos los presupuestos (también desde la ficha y el odontograma); la C.I. se puede cargar en el mismo paso y no puede ser la de otro paciente. También valida odontólogo y tratamientos contra la clínica.
+- **Reportes → Informes**: del día, de la semana, del mes y del año, comparados con el período anterior (si está en curso, con el mismo tramo); gráficos, cobros por método, tratamientos más hechos y por odontólogo; imprimible. "Reportes detallados" quedó como pestaña de Informes.
+- **Resumen del día al dueño** (Configuración → Resumen del día): a la hora elegida, por correo y/o WhatsApp; "Ver el de hoy" y "Mandar ahora". Uno por día. Migración 0053.
+- **Indicaciones después del tratamiento**: se cargan por tratamiento (con textos sugeridos para extracción, implante, endodoncia, blanqueamiento, limpieza y ortodoncia); salen solas al marcar el turno como atendido (Mensajes automáticos) o a mano desde el turno; página del paciente `web/indicaciones.html`.
+- **Archivar pendientes viejos** (Seguimiento → Controles periódicos / Controles después de un tratamiento): los atrasados hace más de 3, 6, 12 o 24 meses se archivan sin borrar; dejan de contar en Inicio, listas y mensajes; "Ver archivados" para restaurarlos.
+- Plantillas nuevas de Meta: `indicaciones_tratamiento` y `resumen_diario` (docs/WHATSAPP.md).
+- Arreglos encontrados al probar: en el celular el menú quedaba debajo del fondo oscuro; la ventana se reubica si cambia el alto de la barra de arriba; tocar adentro de una ventana cierra los desplegables del menú; el buscador (Ctrl+K) encuentra los botones dentro de la ventana de adelante.
+- **Pruebas:** nuevas `ui-ventanas` 53/53, `ui-presupuestos-informes` 28/28, `ui-avisos` 18/18, `informes-presupuestos.test` 28/28, `resumen-indicaciones.test` 42/42. Regresión (adaptada a ventanas): mi-día 133, cobranza 21, importar 16, mecánico 27, mensajes 33+35, recordatorios 29+64, consentimientos 8+22, puesta en marcha 24, menú 75, submenús 53, fase6 78, tablet 12, web 60, portal 52, xss 4, APIs web/portal/facturación. Seguridad: 572 rutas sin anomalías, permisos 65/65, intrusión 20/20.

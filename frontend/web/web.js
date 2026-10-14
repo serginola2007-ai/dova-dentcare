@@ -125,6 +125,7 @@
     if (hay('[data-vista-pago]')) paginaPago();
     if (hay('[data-vista-oferta]')) paginaOferta();
     if (hay('[data-vista-encuesta]')) paginaEncuesta();
+    if (hay('[data-vista-indicaciones]')) paginaIndicaciones();
     const ses = sesion();
     $$('[data-nav-cuenta]').forEach((a) => { a.textContent = ses ? `Hola, ${ses.nombre}` : 'Ingresar'; });
     if (hay('[data-acceso]')) paginaIngresar();
@@ -813,6 +814,26 @@
         location.href = `mi-turno.html#t=${r.token}`;
       } catch (e) { aviso(e.message); paginaOferta(); }
     });
+  }
+
+  // Indicaciones después del tratamiento (enlace del mensaje).
+  async function paginaIndicaciones() {
+    const v = $('[data-vista-indicaciones]'); const token = tokenDe('t');
+    if (!token) { tarjetaError(v, 'Falta el enlace', 'Abrí esta página desde el enlace que te mandamos por WhatsApp.'); return; }
+    let a;
+    try { a = await apiAviso(encodeURIComponent(token)); } catch (e) { tarjetaError(v, 'No pudimos abrir el enlace', e.message); return; }
+    if (a.tipo !== 'indicaciones') { tarjetaError(v, 'Enlace equivocado', 'Este enlace no es de indicaciones.'); return; }
+    const parrafos = String(a.indicaciones || '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    const tel = a.telefonoClinica || (info && info.telefono) || '';
+    v.innerHTML = `<div class="tarjeta-turno">
+      <p class="saludo-pago">Hola, ${esc(a.nombre)}</p>
+      <h2 style="margin-top:8px">Cuidados después de tu ${esc(String(a.tratamiento || 'tratamiento').toLowerCase())}</h2>
+      ${a.odontologo ? `<p class="ayuda">Atención${a.fecha ? ` del ${esc(fechaCorta(a.fecha))}` : ''} con ${esc(a.odontologo)}.</p>` : ''}
+      <ul class="lista-indicaciones">${parrafos.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      <p class="ayuda" style="margin-top:16px">Si tenés dudas o algo no anda bien, comunicate con ${esc(a.clinica)}${tel ? ` al <a href="tel:${esc(String(tel).replace(/[^\d+]/g, ''))}">${esc(tel)}</a>` : ''}.</p>
+      <div class="acciones-turno"><button type="button" class="boton-texto" data-imprimir-ind>Imprimir</button><a href="index.html" class="boton-texto">Ir a la página</a></div>
+    </div>`;
+    $('[data-imprimir-ind]', v).addEventListener('click', () => window.print());
   }
 
   async function paginaEncuesta() {

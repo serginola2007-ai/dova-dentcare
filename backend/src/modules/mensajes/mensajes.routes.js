@@ -16,6 +16,8 @@ interno.put('/config', requirePermiso('clinica.config.manage'), h((req) => s.gua
 interno.get('/ofertas', requirePermiso('lista_espera.manage', 'agenda.edit'), h((req) => s.listarOfertas(req.clinicaId)));
 interno.post('/ofertas/:id/ofrecer/:pacienteId', requirePermiso('lista_espera.manage', 'agenda.edit'), h((req) => s.ofrecerManual(req.clinicaId, req.params.id, req.params.pacienteId, req.usuario)));
 interno.post('/ofertas/:id/cancelar', requirePermiso('lista_espera.manage', 'agenda.edit'), h((req) => s.cancelarOferta(req.clinicaId, req.params.id, req.usuario)));
+interno.get('/indicaciones/:turnoId', requirePermiso('whatsapp.send', 'historia_clinica.edit', 'agenda.edit'), h((req) => s.indicacionesDeTurno(req.clinicaId, req.params.turnoId)));
+interno.post('/indicaciones/:turnoId/enviar', requirePermiso('whatsapp.send', 'historia_clinica.edit', 'agenda.edit'), h((req) => s.indicacionesManual(req.clinicaId, req.params.turnoId, req.usuario)));
 interno.post('/controles/:id/enlace', requirePermiso('recalls.manage', 'seguimiento.manage'), h((req) => s.controlManual(req.clinicaId, req.params.id, req.usuario)));
 
 const publico = express.Router();

@@ -5,6 +5,7 @@
 // DOVA_TZ, PLAYWRIGHT_MODULE / CHROMIUM_PATH y CAPTURAS (opcional).
 const http = require('http');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { enVentana } = require('./ayuda-ventana');
 const { Pool } = require('pg');
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const URL0 = process.env.DOVA_URL || 'http://localhost:4500';
@@ -38,7 +39,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
       p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
       await p.goto(`${URL0}/${dis}/index.html`); await p.waitForSelector('#login-username');
       await p.fill('#login-username', 'recep1'); await p.fill('#login-password', 'clave123'); await p.click('#form-login button[type=submit]');
-      await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 10000 }); await p.waitForTimeout(800);
+      await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 10000 }); await p.waitForTimeout(800); await enVentana(p);
       await p.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); });
       await p.waitForSelector('.dova-rec-estado', { timeout: 10000 }); await p.waitForTimeout(1200);
       // El navegador calcula "mañana" con la hora de Paraguay; el servidor de prueba usa otro huso: se elige el día a mano.
@@ -67,7 +68,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='admin'");
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage();
     await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
-    await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800);
+    await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800); await enVentana(p);
     await p.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); });
     await p.waitForSelector('.dova-rec-config summary'); await p.click('.dova-rec-config summary');
     P('Configurar: muestra cómo le llega el mensaje al paciente, con el enlace', /mi-turno\.html#t=/.test(await p.textContent('.dova-rec-ejemplo')));
@@ -93,7 +94,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     const cd = await b.newContext({ viewport: { width: 390, height: 844 } }); const pd = await cd.newPage(); const errD = [];
     pd.on('pageerror', (e) => errD.push(e.message)); pd.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) errD.push(m.text()); });
     await pd.goto(`${URL0}/minimalista/index.html`); await pd.fill('#login-username', 'odo1'); await pd.fill('#login-password', 'clave123'); await pd.click('#form-login button[type=submit]');
-    await pd.waitForSelector('#shell-root:not([style*="display: none"])'); await pd.waitForTimeout(800);
+    await pd.waitForSelector('#shell-root:not([style*="display: none"])'); await pd.waitForTimeout(800); await enVentana(pd);
     await pd.evaluate(() => DovaApp.navegar('configuracion')); await pd.waitForSelector('.dova-mi-whatsapp', { timeout: 10000 });
     P('Doctor: Configuración muestra "Mi WhatsApp para recordatorios"', /Todavía no registraste/.test(await pd.textContent('.dova-mi-whatsapp')));
     await pd.fill('#mi-wa-numero', '0981 777 888'); await pd.click('.dova-mi-whatsapp button'); await pd.waitForTimeout(1200);
