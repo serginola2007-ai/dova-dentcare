@@ -32,4 +32,9 @@ async function contextoClinico(req, res, next) {
   catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, cambiarEstado, contextoClinico };
+async function disponibles(req, res, next) {
+  try { res.json(await require('./agenda.disponibles').disponibles(req.clinicaId, req.query)); }
+  catch (err) { next(err); }
+}
+
+module.exports = { disponibles, listar, obtener, crear, actualizar, cambiarEstado, contextoClinico };

@@ -1,18 +1,25 @@
 /* Diseño MECÁNICO (para todos, con los colores de la clínica): estilo de sistema de escritorio
    clásico. Este archivo arma lo que es propio de este diseño:
-   - la tira de íconos de la izquierda (accesos rápidos a las secciones que el usuario puede ver);
+   - la tira de íconos de la izquierda: Nuevo turno, Pacientes (ficha o alta), Nueva factura y
+     Nuevo presupuesto directos, más Informes, Usuarios, Historial y Configuración (según permisos);
    - el recuadro "Parámetros activos" (usuario, clínica, caja, fecha y reloj);
    - la lista "Ventanas abiertas recientemente";
    - la barra de estado de abajo.
    El contenido de cada pantalla es el mismo de siempre (shared/). */
 (function () {
   'use strict';
+  // Accesos directos: [id, título, ícono, permiso, acción]. Los de acción abren directo
+  // el formulario (sin pasar por la sección); el resto abre la sección.
   const ACCESOS = [
-    ['dashboard', 'Inicio', 'grafico'], ['agenda', 'Agenda', 'calendario'], ['pacientes', 'Pacientes', 'pacientes'],
-    ['caja', 'Caja', 'efectivo'], ['facturacion', 'Facturación', 'comprobante'], ['seguimiento', 'Seguimiento', 'telefono'],
-    ['inventario', 'Inventario', 'caja'], ['finanzas', 'Finanzas', 'tarjeta'], ['presupuestos', 'Presupuestos', 'lista'], ['informes', 'Informes', 'documento'],
-    ['usuarios', 'Usuarios', 'persona'], ['auditoria', 'Historial de cambios', 'historial'], ['configuracion', 'Configuración', 'herramienta'],
+    ['nuevo-turno', 'Nuevo turno', 'calendario', 'agenda.create', () => DovaRapido.turno()],
+    ['pacientes', 'Pacientes: ver ficha o dar de alta', 'pacientes', 'pacientes.view', () => DovaRapido.paciente(navegar)],
+    ['nueva-factura', 'Nueva factura', 'efectivo', 'facturacion.crear', () => navegar('facturacion', 'nueva')],
+    ['nuevo-presupuesto', 'Nuevo presupuesto', 'tarjeta', 'presupuestos.manage', () => navegar('presupuestos', 'nuevo')],
+    ['informes', 'Informes', 'documento'], ['usuarios', 'Usuarios', 'persona'],
+    ['auditoria', 'Historial de cambios', 'historial'], ['configuracion', 'Configuración', 'herramienta'],
   ];
+  // Ventana abierta → ícono que queda marcado.
+  const ICONO_DE_RUTA = { facturacion: 'nueva-factura', presupuestos: 'nuevo-presupuesto', paciente: 'pacientes' };
   const NOMBRES = { paciente: 'Ficha del paciente', consulta: 'Consulta' };
   const CLAVE = 'dova-mec-recientes';
   const MAX = 8;
@@ -35,16 +42,21 @@
   function dibujarIconos() {
     const cont = document.getElementById('mec-iconos');
     if (!cont) return;
-    const visibles = ACCESOS.filter(([r]) => r === 'dashboard' || r === 'configuracion' || document.querySelector(`#menu-root [data-ruta="${r}"]`));
+    const puede = (p) => DOVA.tienePermiso && DOVA.tienePermiso(p);
+    const visibles = ACCESOS.filter(([r, , , permiso, accion]) => (accion ? puede(permiso) && (r !== 'pacientes' || document.querySelector('#menu-root [data-ruta="pacientes"]'))
+      : (r === 'configuracion' || document.querySelector(`#menu-root [data-ruta="${r}"]`))));
     cont.innerHTML = visibles.map(([r, t, i]) => `<button type="button" class="mec-icono" data-mec-ir="${r}" title="${esc(t)}" aria-label="${esc(t)}">${window.DovaIcono ? DovaIcono(i, 20) : ''}</button>`).join('');
     cont.querySelectorAll('[data-mec-ir]').forEach((b) => b.addEventListener('click', () => {
-      if (b.dataset.mecIr === 'dashboard' && escritorio()) { DovaVentanas.mostrarEscritorio(); return; }
-      if (navegar) navegar(b.dataset.mecIr);
+      const a = ACCESOS.find(([r]) => r === b.dataset.mecIr);
+      if (!a || !navegar) return;
+      if (a[4]) { Promise.resolve(a[4]()).catch((e) => { if (window.DovaExt) DovaExt.toast(e.message || 'No se pudo abrir', 'error'); }); return; }
+      navegar(a[0]);
     }));
   }
 
   function marcarIcono(ruta) {
-    document.querySelectorAll('#mec-iconos [data-mec-ir]').forEach((b) => b.classList.toggle('activo', b.dataset.mecIr === ruta));
+    const id = ICONO_DE_RUTA[ruta] || ruta;
+    document.querySelectorAll('#mec-iconos [data-mec-ir]').forEach((b) => b.classList.toggle('activo', b.dataset.mecIr === id));
   }
 
   async function dibujarParametros() {

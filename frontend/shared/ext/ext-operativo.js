@@ -100,8 +100,17 @@ const DovaOperativo = (() => {
 
   /* Formulario de turno. turno = existente (reprogramar) o null (nuevo).
      fijo = { pacienteId, pacienteNombre, fecha, hora, odontologoId } para precargar. */
-  async function modalTurno({ turno = null, fijo = {}, alGuardar } = {}) {
+  /* soloDisponibles: acceso rápido "Nuevo turno". El odontólogo se elige solo entre
+     los que están libres a esa fecha y hora (horario de atención, sin otro turno ni
+     bloqueo, con algún sillón libre). Si no hay ninguno, no deja reservar. */
+  async function modalTurno({ turno = null, fijo = {}, alGuardar, soloDisponibles = false } = {}) {
     const { odos, trats, sillones } = await catalogosTurno();
+    if (soloDisponibles && !fijo.hora) {
+      // Propone el próximo horario en punto o y media.
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+      const m = Math.ceil((Number(p.hour) * 60 + Number(p.minute) + 1) / 30) * 30;
+      if (m < 24 * 60) fijo = { ...fijo, hora: `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` };
+    }
     const v = turno ? {
       odontologoId: turno.odontologo_id, fecha: String(turno.fecha).slice(0, 10), horaInicio: hora5(turno.hora_inicio),
       duracionMinutos: turno.duracion_minutos, tratamientoId: turno.tratamiento_id, sillonId: turno.sillon_id, motivo: turno.motivo, observaciones: turno.observaciones,
@@ -121,9 +130,16 @@ const DovaOperativo = (() => {
       if (!pacienteId) throw new Error('Elegí el paciente de la lista');
       const datos = { ...d, pacienteId, odontologoId: Number(d.odontologoId), duracionMinutos: Number(d.duracionMinutos) };
       ['tratamientoId', 'sillonId'].forEach((k) => { datos[k] = d[k] ? Number(d[k]) : (turno ? null : undefined); });
+      if (soloDisponibles) {
+        if (!datos.odontologoId) throw new Error('No hay odontólogos disponibles en ese horario');
+        datos.soloDisponible = true;
+      }
       try {
         await guardarTurno(turno && turno.id, datos);
-      } catch (e) { if (e.silencioso) return; throw e; }
+      } catch (e) {
+        if (soloDisponibles) setTimeout(revisarDisponibles, 0);
+        if (e.silencioso) return; throw e;
+      }
       toast(turno ? 'Turno reprogramado' : 'Turno reservado', 'ok');
       if (alGuardar) alGuardar();
     }, { editando: !!turno, textoBoton: turno ? 'Guardar cambios' : 'Reservar turno', ancho: 'ancho' });
@@ -132,6 +148,8 @@ const DovaOperativo = (() => {
       activarBuscadorPaciente(form);
       if (fijo.pacienteId) fijarPaciente(form, fijo.pacienteId, fijo.pacienteNombre);
     }
+    let revisarDisponibles = () => {};
+    if (soloDisponibles) revisarDisponibles = activarDisponibles(form, v.odontologoId);
     // Al elegir tratamiento, propone su duración.
     const selT = form.querySelector('[name="tratamientoId"]');
     if (selT) selT.addEventListener('change', () => {
@@ -139,6 +157,56 @@ const DovaOperativo = (() => {
       if (t && t.duracion_minutos) form.querySelector('[name="duracionMinutos"]').value = t.duracion_minutos;
     });
     return form;
+  }
+
+  // Limita el selector de odontólogo a los libres en la fecha/hora/duración elegidas.
+  function activarDisponibles(form, preferido) {
+    form.classList.add('dova-turno-rapido');
+    const sel = form.querySelector('[name="odontologoId"]');
+    const btn = form.querySelector('button[type=submit]');
+    const dur = form.querySelector('[name="duracionMinutos"]');
+    const campo = (dur && dur.closest('.dova-ext-campo')) || sel.closest('.dova-ext-campo') || sel.parentElement;
+    campo.insertAdjacentHTML('afterend', '<p class="dova-disp" data-disp aria-live="polite"></p>');
+    const aviso = form.querySelector('[data-disp]');
+    const val = (k) => (form.querySelector(`[name="${k}"]`) || {}).value || '';
+    let pedido = 0; let t = null;
+    const revisar = async () => {
+      const fecha = val('fecha'); const hora = val('horaInicio').slice(0, 5); const dur = Number(val('duracionMinutos')) || 30;
+      const n = ++pedido;
+      btn.disabled = true;
+      if (!fecha || !hora) { aviso.className = 'dova-disp'; aviso.dataset.estado = 'falta'; aviso.textContent = 'Elegí la fecha y la hora para ver qué odontólogos están libres.'; return; }
+      aviso.className = 'dova-disp'; aviso.dataset.estado = 'buscando'; aviso.textContent = 'Buscando odontólogos libres…';
+      let r;
+      try { r = await DOVA.get(`/agenda/disponibles?fecha=${encodeURIComponent(fecha)}&hora=${encodeURIComponent(hora)}&duracion=${dur}`); } catch (e) {
+        if (n !== pedido) return;
+        aviso.className = 'dova-disp mal'; aviso.dataset.estado = 'error'; aviso.textContent = e.message || 'No se pudo consultar la disponibilidad.'; return;
+      }
+      if (n !== pedido) return;
+      const antes = sel.value || String(preferido || '');
+      sel.innerHTML = r.odontologos.length ? r.odontologos.map((o) => `<option value="${esc(o.id)}">${esc(o.nombre)}</option>`).join('') : '<option value="">Ninguno disponible</option>';
+      sel.disabled = !r.odontologos.length;
+      if (r.odontologos.some((o) => String(o.id) === antes)) sel.value = antes;
+      // Solo se nombran los que atienden a esa hora pero están ocupados o bloqueados (máximo 5).
+      const ocupados = (r.ocupados || []).filter((o) => !/No atiende/.test(o.motivo || ''));
+      const ocup = ocupados.slice(0, 5).map((o) => `${esc(o.nombre)}: ${esc(String(o.motivo || '').toLowerCase())}`).join(' · ') + (ocupados.length > 5 ? ` · y ${ocupados.length - 5} más` : '');
+      if (!r.odontologos.length) {
+        aviso.className = 'dova-disp mal'; aviso.dataset.estado = 'ninguno';
+        aviso.innerHTML = `<strong>${esc(r.motivo || 'No hay odontólogos disponibles en ese horario.')}</strong> No se puede reservar: probá con otra hora o día.${ocup ? `<br><small>${ocup}</small>` : ''}`;
+        btn.disabled = true;
+      } else {
+        aviso.className = 'dova-disp ok'; aviso.dataset.estado = 'libres';
+        aviso.innerHTML = `${r.odontologos.length === 1 ? '1 odontólogo libre' : `${r.odontologos.length} odontólogos libres`} a esa hora.${ocup ? `<br><small>No disponibles — ${ocup}</small>` : ''}`;
+        btn.disabled = false;
+      }
+    };
+    ['fecha', 'horaInicio', 'duracionMinutos'].forEach((k) => {
+      const i = form.querySelector(`[name="${k}"]`);
+      if (i) ['change', 'input'].forEach((ev) => i.addEventListener(ev, () => { clearTimeout(t); aviso.dataset.estado = 'buscando'; btn.disabled = true; t = setTimeout(revisar, 350); }));
+    });
+    const selT = form.querySelector('[name="tratamientoId"]');
+    if (selT) selT.addEventListener('change', () => { clearTimeout(t); t = setTimeout(revisar, 50); });
+    revisar();
+    return revisar;
   }
 
   const ESTADO_NIVEL = { reservado: 'info', confirmado: 'ok', atendido: 'ok', cancelado: 'critica', no_asistio: 'critica', reprogramado: 'atencion' };

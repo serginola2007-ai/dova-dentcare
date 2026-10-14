@@ -4,7 +4,7 @@
    - Nuevo presupuesto: NO se puede guardar sin la C.I. del paciente (si no la
      tiene cargada, se carga acá) ni sin al menos un tratamiento del catálogo.
      El servidor hace la misma verificación (no depende de esta pantalla).
-   Uso: DovaPresupuestos.seccion(root, navegar) */
+   Uso: DovaPresupuestos.seccion(root, navegar, params) — params 'nuevo' abre el formulario. */
 const DovaPresupuestos = (() => {
   const X = DovaExt;
   const { esc, fmtFecha, fmtGs, puede, badge, etiqueta, hoy, sumarDias, toast } = X;
@@ -16,9 +16,11 @@ const DovaPresupuestos = (() => {
   let navegar = () => {};
   const filtros = { q: '', estado: '', desde: '', hasta: '', odontologoId: '' };
 
-  async function seccion(root, nav) {
+  // params 'nuevo': abre directo el formulario (acceso rápido del diseño mecánico).
+  async function seccion(root, nav, params) {
     navegar = nav || navegar;
     root.innerHTML = '<div data-pres-vista></div>';
+    if (params === 'nuevo' && puede('presupuestos.manage')) return nuevo(root.firstElementChild);
     await lista(root.firstElementChild);
   }
 

@@ -660,3 +660,20 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-archivo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; margin: 0 0 12px; background: color-mix(in srgb, var(--cream) 70%, transparent); border-left: 3px solid var(--terracotta); }
 .dova-archivo-meses { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
 .dova-archivo-meses select { margin: 0; }
+
+/* Acceso rápido "Nuevo turno": aviso de odontólogos libres */
+.dova-disp { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border-left: 3px solid var(--dova-borde, #ccc); background: var(--dova-fondo-suave, rgba(0,0,0,.03)); font-size: .9rem; }
+.dova-disp.ok { border-left-color: #2E7D32; }
+.dova-disp.mal { border-left-color: #C62828; }
+.dova-disp small { opacity: .8; }
+
+/* Acceso rápido "Pacientes" (diseño mecánico) */
+.dova-rap-pestanas { display: flex; gap: 16px; border-bottom: 1px solid var(--dova-borde, #ddd); margin-bottom: 12px; }
+.dova-rap-pestanas button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 2px; cursor: pointer; color: inherit; font: inherit; }
+.dova-rap-pestanas button.activa { border-bottom-color: currentColor; font-weight: 600; }
+.dova-rap-pac label { display: block; margin-bottom: 4px; }
+.dova-rap-pac #rap-q { width: 100%; box-sizing: border-box; }
+.dova-rap-lista { list-style: none; margin: 10px 0 0; padding: 0; }
+.dova-rap-lista li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--dova-borde, #e5e5e5); }
+.dova-rap-lista li > span { min-width: 0; overflow-wrap: anywhere; }
+.dova-rap-res .dova-vacio { margin-top: 10px; }

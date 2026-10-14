@@ -144,10 +144,11 @@ const menu = async (p, grupo, ruta, sub) => {
       P(`[${dis}] Adentro de la ventana no se repite el menú`, await marco(p, 'pacientes').locator('.dova-topbar').isHidden());
       if (dis === 'mecanico') {
         P('[mecanico] Adentro no aparecen los paneles laterales', await marco(p, 'pacientes').locator('.mec-lateral').isHidden() && await marco(p, 'pacientes').locator('.mec-iconos').isHidden());
-        await p.click('#mec-iconos [data-mec-ir="dashboard"]');
-        P('[mecanico] El ícono de Inicio minimiza todo', await p.locator('.dova-ventana:visible').count() === 0);
-        await p.click('#mec-iconos [data-mec-ir="agenda"]'); await p.waitForTimeout(400);
-        P('[mecanico] Un ícono abre (o trae) su ventana', await ventana(p, 'agenda').isVisible());
+        P('[mecanico] Ya no hay ícono de Inicio', await p.locator('#mec-iconos [data-mec-ir="dashboard"]').count() === 0);
+        await p.click('#dova-tareas [data-escritorio]');
+        P('[mecanico] "Inicio" de la barra de tareas minimiza todo', await p.locator('.dova-ventana:visible').count() === 0);
+        await p.click('#mec-iconos [data-mec-ir="informes"]'); await p.waitForTimeout(400);
+        P('[mecanico] Un ícono abre su ventana', await ventana(p, 'informes').isVisible());
         P('[mecanico] La barra de tareas no tapa la barra de estado', (await caja(p.locator('#dova-tareas'))).y + 1 < (await caja(p.locator('#mec-estado'))).y + 1);
       }
       await p.screenshot({ path: `${DIR}/ventanas-${dis}.png` });

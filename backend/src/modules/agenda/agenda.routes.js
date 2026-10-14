@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authMiddleware, resolverClinicaMiddleware);
 
 router.get('/', requirePermiso('agenda.view'), controller.listar);
+router.get('/disponibles', requirePermiso('agenda.create'), controller.disponibles);
 router.get('/:id', requirePermiso('agenda.view'), controller.obtener);
 router.get('/:id/contexto-clinico', requirePermiso('agenda.view'), controller.contextoClinico);
 router.post('/', requirePermiso('agenda.create'), controller.crear);

@@ -393,7 +393,7 @@ const DovaApp = (() => {
           break;
         case 'presupuestos':
           elMain.innerHTML = '<div></div>';
-          await DovaPresupuestos.seccion(elMain.firstElementChild, navegar);
+          await DovaPresupuestos.seccion(elMain.firstElementChild, navegar, params);
           break;
         case 'reportes':
           elMain.innerHTML = '<div></div>';

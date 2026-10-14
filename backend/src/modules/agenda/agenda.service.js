@@ -90,6 +90,8 @@ async function crear(clinicaId, datos, usuario) {
       throw new ApiError(409, 'El odontólogo ya tiene un turno en ese horario. Elegí otro horario o revisá la agenda.');
     }
     await verificarBloqueo(clinicaId, { ...datos, duracionMinutos: datos.duracionMinutos || 30 });
+    // Acceso rápido "Nuevo turno": además tiene que estar en su horario de atención.
+    if (datos.soloDisponible === true) await require('./agenda.disponibles').exigirDisponible(clinicaId, datos);
     return repo.crear(clinicaId, datos, usuario.id);
   });
   await auditoria.registrar({

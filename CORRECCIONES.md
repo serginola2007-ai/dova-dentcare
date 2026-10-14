@@ -813,3 +813,12 @@ Se probó todo DOVA como un QA:
 - Plantillas nuevas de Meta: `indicaciones_tratamiento` y `resumen_diario` (docs/WHATSAPP.md).
 - Arreglos encontrados al probar: en el celular el menú quedaba debajo del fondo oscuro; la ventana se reubica si cambia el alto de la barra de arriba; tocar adentro de una ventana cierra los desplegables del menú; el buscador (Ctrl+K) encuentra los botones dentro de la ventana de adelante.
 - **Pruebas:** nuevas `ui-ventanas` 53/53, `ui-presupuestos-informes` 28/28, `ui-avisos` 18/18, `informes-presupuestos.test` 28/28, `resumen-indicaciones.test` 42/42. Regresión (adaptada a ventanas): mi-día 133, cobranza 21, importar 16, mecánico 27, mensajes 33+35, recordatorios 29+64, consentimientos 8+22, puesta en marcha 24, menú 75, submenús 53, fase6 78, tablet 12, web 60, portal 52, xss 4, APIs web/portal/facturación. Seguridad: 572 rutas sin anomalías, permisos 65/65, intrusión 20/20.
+
+## Tanda: accesos directos del diseño mecánico (14/10/2026)
+
+- Tira de íconos de la izquierda: se sacaron Inicio, Facturación, Seguimiento, Inventario y Presupuestos. Quedan:
+  - **Nuevo turno** (calendario): abre el formulario directo, sin abrir la agenda. El selector de odontólogo muestra **solo los libres** a esa fecha, hora y duración (en su horario de atención, o el de la clínica si no tiene uno propio, sin otro turno ni bloqueo y con algún sillón libre). Si no hay ninguno dice "No hay odontólogos disponibles" y **no deja reservar**. El servidor lo vuelve a verificar (`GET /api/agenda/disponibles`, `soloDisponible` al crear; "forzar" no lo saltea). La agenda normal sigue igual.
+  - **Pacientes**: buscador por nombre, apellido o C.I. (no lista a todos) con "Ver ficha", y pestaña "+ Nuevo paciente" (después ofrece "Ver la ficha" o "Reservarle un turno"). Si no lo encuentra, "Darlo de alta" pasa lo escrito al formulario.
+  - **Nueva factura** (efectivo) y **Nuevo presupuesto** (tarjeta): abren directo el formulario en su ventana.
+  - Informes, Usuarios, Historial de cambios y Configuración, como antes. Cada ícono aparece solo si el usuario tiene el permiso.
+- Pruebas: nueva `ui-accesos-mecanico` 32/32; `ui-mecanico` 27/27, `ui-ventanas` 54/54, `ui-presupuestos-informes` 28/28.

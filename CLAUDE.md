@@ -118,6 +118,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - `shared/ventanas.js` (`DovaVentanas`): Inicio queda siempre de fondo y cada sección se abre en una ventana (un `<iframe>` con la misma app en `?ventana=1`). Tamaño fijo, se mueven, zoom, minimizar, cerrar, barra de tareas; en celular a pantalla completa. Se restauran al recargar (`sessionStorage dova-ventanas`).
 - En `app.js`: `ESCRITORIO` (página principal: `navegar()` abre ventanas) y `MODO_VENTANA` (adentro: renderiza la sección y avisa título/historial con `DovaVentanas.alNavegar`).
 - La sesión es una sola: la ventana pide el token a la página principal (`window.DovaCompartido` en `api.js`), comparte el bloqueo y escucha el tiempo real de la principal (`tiempo-real.js`).
+- Diseño mecánico: la tira de íconos (`shared/mecanico.js`, `ACCESOS`) tiene accesos directos: Nuevo turno y Pacientes (`shared/ext/ext-rapido.js`, `DovaRapido`), Nueva factura (`facturacion/nueva`) y Nuevo presupuesto (`presupuestos/nuevo`). El turno rápido usa `modalTurno({ soloDisponibles: true })` + `GET /api/agenda/disponibles` (`agenda/agenda.disponibles.js`); al crear con `soloDisponible: true` el servidor exige que el odontólogo esté en horario y libre. Pruebas: `tests/ui-accesos-mecanico.js`.
 - Pruebas: `tests/ui-ventanas.js`. Para probar el contenido de una sección sin ventanas, una prueba puede abrir `/<diseño>/index.html?ventana=1#<ruta>` en la misma pestaña después de entrar.
 
 ## Presupuestos e Informes
