@@ -856,3 +856,11 @@ Se probó todo DOVA como un QA:
 - El comparador deslizable ya existía en la ficha (Fotos y estudios). Ahora también: **Lado a lado**, y **Descargar imagen** (las dos fotos con su fecha y el nombre de la clínica, sin datos del paciente) para mandársela al paciente.
 - El tablero de **Ortodoncia** tiene el botón **Comparar fotos** de cada caso.
 - **Pruebas:** `ui-fotos-comparar` 7/7.
+
+## Tanda: app instalable con avisos push (15/10/2026)
+
+- DOVA ya se instalaba como app; ahora además **avisa en el celular o la compu** (turnos, cobros, mensajes, solicitudes de la web) aunque esté cerrada. Se activa por dispositivo desde **Configuración → Avisos en este dispositivo**, con botón de aviso de prueba.
+- **Privacidad:** el aviso solo dice "Tenés un aviso nuevo en DOVA"; los nombres y montos se ven al abrir DOVA, no en la pantalla bloqueada. Al tocarlo, abre la pantalla correspondiente.
+- Un dispositivo compartido pasa al último usuario que lo activa; los dispositivos dados de baja por el navegador se limpian solos.
+- Hay que cargar una vez `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (ver README). En iPhone funciona con la app instalada en la pantalla de inicio.
+- Migración `0057`. **Pruebas:** `push.test` 18/18 y `ui-push` 8/8.

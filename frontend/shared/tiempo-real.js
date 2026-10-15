@@ -145,6 +145,14 @@ const DovaVivo = (() => {
   let campana = null; let noLeidas = null; let tituloBase = document.title;
 
   function montarCampana(antesDe, navegar) {
+    // Al tocar un aviso push con la app abierta, el service worker pide ir a esa pantalla.
+    if ('serviceWorker' in navigator && !montarCampana.escuchando) {
+      montarCampana.escuchando = true;
+      navigator.serviceWorker.addEventListener('message', (ev) => {
+        const ruta = ev.data && ev.data.tipo === 'dova-ir' && typeof ev.data.ruta === 'string' ? ev.data.ruta : '';
+        if (/^[a-z0-9_\-/]{1,80}$/i.test(ruta)) { const [r, ...resto] = ruta.split('/'); navegar(r, resto.length ? resto.join('/') : undefined); }
+      });
+    }
     if (campana && campana.isConnected) return;
     tituloBase = document.title.replace(/^\(\d+\)\s*/, '');
     campana = document.createElement('div');

@@ -698,3 +698,4 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-cli-comparar.lado > img { order: 2; } .dova-cli-comparar.lado .dova-cli-comparar-antes { position: static; clip-path: none; order: 1; }
 .dova-cli-comparar.lado .dova-cli-cmp-linea { display: none; }
 .dova-cli-comparar.lado .dova-cli-cmp-et.izq { left: 10px; } .dova-cli-comparar.lado .dova-cli-cmp-et.der { right: 10px; }
+[data-avisos-box] [hidden] { display: none !important; }

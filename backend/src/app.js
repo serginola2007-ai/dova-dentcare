@@ -22,6 +22,7 @@ const pagosRoutes = require('./modules/pagos/pagos.routes');
 const inventarioRoutes = require('./modules/inventario/inventario.routes');
 const helpdeskRoutes = require('./modules/helpdesk/helpdesk.routes');
 const notificacionesRoutes = require('./modules/notificaciones/notificaciones.routes');
+const pushRoutes = require('./modules/push/push.routes');
 const usuariosRoutes = require('./modules/usuarios/usuarios.routes');
 const extrasRoutes = require('./modules/clinico-extras/extras.routes');
 const reportesRoutes = require('./modules/reportes/reportes.routes');
@@ -167,6 +168,7 @@ app.use('/api/pagos', pagosRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/helpdesk', helpdeskRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/push', pushRoutes);
 {
   const tiempoReal = require('./utils/tiempoReal');
   const { authMiddleware } = require('./middlewares/auth.middleware');

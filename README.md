@@ -118,6 +118,7 @@ funcione de una.
 
 - `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
 - `DOVA_CLINICA_POR_DEFECTO` (opcional): código de la clínica a la que entra el login cuando no se indica otra (por defecto `dentcarerc`).
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (opcionales): activan los avisos push en celulares y compus (la app instalada avisa de turnos, cobros y mensajes aunque esté cerrada). Generalas una sola vez con `npx web-push generate-vapid-keys` y no las cambies después (cada cambio desactiva los dispositivos ya suscritos). `VAPID_SUBJECT` es un `mailto:` de contacto. Sin las claves, la tarjeta "Avisos en este dispositivo" no aparece.
 - `PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY` (opcionales): conectan el cobro online (Pagopar). En Pagopar, la URL de respuesta es `<PUBLIC_URL>/api/cobro-online/aviso/pagopar`. Sin estas claves, el cobro online no se ofrece.
 - `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
 - **Tiempo real**: no necesita configuración. DOVA escucha la base (LISTEN/NOTIFY) y avisa a las pantallas abiertas por `GET /api/eventos` (Server-Sent Events). Ver CORRECCIONES.md → Tiempo real.

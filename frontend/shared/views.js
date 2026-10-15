@@ -270,7 +270,7 @@ const Vistas = (() => {
         <button type="button" class="dova-btn-secundario" id="btn-logout-todas">Cerrar sesión en todos los dispositivos</button>
       </div>
       ${window.DovaSeguridad ? DovaSeguridad.seccionHtml() : ''}
-      ${window.DovaPWA ? DovaPWA.tarjetaHtml() : ''}
+      ${window.DovaPWA ? DovaPWA.tarjetaHtml() + DovaPWA.avisosHtml() : ''}
     `;
   }
 
@@ -284,7 +284,7 @@ const Vistas = (() => {
       try { await DOVA.logoutTodas(); } catch (_e) { /* igual se cierra acá */ }
       location.reload();
     });
-    if (window.DovaPWA) DovaPWA.activarTarjeta();
+    if (window.DovaPWA) { DovaPWA.activarTarjeta(); DovaPWA.activarAvisosUI(); }
     if (window.DovaSeguridad) DovaSeguridad.activar();
     document.querySelectorAll('[data-elegir-diseno-config]').forEach((btn) => {
       btn.addEventListener('click', async () => {

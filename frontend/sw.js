@@ -7,7 +7,7 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v57';
+const VERSION = 'dova-v58';
 const PRECARGA = [
   '/moderno/', '/minimalista/', '/tecnico/', '/mecanico/',
   '/shared/base.css', '/shared/ext/ext.css', '/shared/sobrio.css', '/shared/config.js', '/shared/api.js', '/shared/tiempo-real.js', '/shared/iconos.js', '/shared/comandos.js', '/shared/pre-diseno.js', '/shared/arranque.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js', '/shared/seguridad.js', '/shared/bloqueo.js',
@@ -52,5 +52,25 @@ self.addEventListener('fetch', (e) => {
       }
       return Response.error();
     }
+  })());
+});
+
+// Avisos push: el servidor manda solo un título genérico y la ruta (sin datos de pacientes).
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_err) { d = {}; }
+  e.waitUntil(self.registration.showNotification(d.titulo || 'DOVA', {
+    body: d.cuerpo || 'Abrí DOVA para ver el detalle.',
+    icon: '/iconos/icono-192.png', badge: '/iconos/icono-192.png',
+    tag: 'dova-aviso', renotify: true, data: { ruta: d.ruta || '' },
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const ruta = (e.notification.data && e.notification.data.ruta) || '';
+  e.waitUntil((async () => {
+    const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (abiertas.length) { const c = abiertas[0]; await c.focus(); c.postMessage({ tipo: 'dova-ir', ruta }); return; }
+    await self.clients.openWindow('/?app=1');
   })());
 });

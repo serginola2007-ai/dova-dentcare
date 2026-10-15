@@ -5,7 +5,7 @@ const CIERRAN = /^\/api\/auth\/(logout|logout-todas|bloquear)$/;
 const rutas = require('./rutas.json').slice().sort((a, b) => Number(CIERRAN.test(a.ruta)) - Number(CIERRAN.test(b.ruta)));
 const B = (process.env.DOVA_URL || 'http://localhost:4500');
 const PUBLICAS = [/^\/api\/auth\/(login|refresh|logout|desbloquear)$/, /^\/api\/whatsapp\/webhook$/, /^\/api\/recordatorios\/cron$/, /^\/api\/web\/publico\//, /^\/api\/web\/cuenta\/(registro|pedir-codigo|activar|ingresar)$/, /^\/api\/clinica\/branding-publico$/, /^\/api\/cobro-online\/aviso\/pagopar$/, /^\/api\/health$/];
-const SOLO_SESION = [/^\/api\/auth\//, /^\/api\/notificaciones/, /^\/api\/usuarios\/me\//, /^\/api\/busqueda$/, /^\/api\/odontologos/, /^\/api\/clinica$/, /^\/api\/clinica\/plan$/, /^\/api\/eventos$/];
+const SOLO_SESION = [/^\/api\/auth\//, /^\/api\/notificaciones/, /^\/api\/push/, /^\/api\/usuarios\/me\//, /^\/api\/busqueda$/, /^\/api\/odontologos/, /^\/api\/clinica$/, /^\/api\/clinica\/plan$/, /^\/api\/eventos$/];
 const esPortal = (r) => r.startsWith('/api/web/cuenta/');
 (async () => {
   const login = async (u, p) => (await (await fetch(`${B}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) })).json()).accessToken;

@@ -178,3 +178,11 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 ## Pendiente
 
 - SIFEN (factura electrónica) y cobro online: necesitan contratos externos.
+
+
+## Avisos push (app instalable)
+- `modules/push` (migración 0057 `push_suscripciones`, endpoint único: un dispositivo compartido pasa al último usuario que lo activa). Rutas `/api/push` (solo sesión): `GET /` estado + clave pública, `POST /suscripcion`, `POST /baja`, `POST /prueba`.
+- `notificaciones.service.notificar` dispara además el push (fire-and-forget, nunca tumba el flujo). **Privacidad:** el push lleva título genérico ("Tenés un aviso nuevo en DOVA") + ruta, nunca nombres ni montos (pantalla bloqueada).
+- Suscripciones caídas (404/410) se borran solas. Solo endpoints https. `setEnviador()` permite simular el envío en pruebas.
+- Env: `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`; sin claves no se ofrece. Front: `DovaPWA.avisosHtml/activarAvisosUI` (Configuración), `sw.js` (`push` y `notificationclick` → `postMessage dova-ir` → `tiempo-real.js` navega). En iPhone requiere la app instalada en inicio.
+- Pruebas: `tests/push.test.js` (18), `tests/ui-push.js` (8).
