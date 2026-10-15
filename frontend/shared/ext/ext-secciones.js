@@ -1030,12 +1030,12 @@ const DovaSecciones = (() => {
     const lista = elMain.querySelector('[data-para-atender] .dova-atender-lista');
     if (!lista) return;
     let p; try { p = await DOVA.get('/seguimiento/panel'); } catch (_e) { return; }
-    const fila = (n, label, sub) => (n ? `<li><button type="button" class="dova-atender-fila" data-ir-ruta="seguimiento" data-ir-sub-ruta="${sub}"><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>` : '');
+    const fila = (n, label, sub, nivel) => (n ? `<li><button type="button" class="dova-atender-fila" data-ir-ruta="seguimiento" data-ir-sub-ruta="${sub}"${nivel ? ` data-nivel="${nivel}"` : ''}><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>` : '');
     lista.insertAdjacentHTML('afterbegin', [
-      fila(p.turnosSinConfirmar, 'Turnos sin confirmar', 'recordatorios'),
-      fila(p.recallsVencidos, 'Controles periódicos atrasados', 'recalls'),
-      fila(p.controlesVencidos + p.controlesSemana, 'Controles después de un tratamiento', 'controles'),
-      fila(p.tratamientosSinTurno, 'Tratamientos sin turno', 'sinturno'),
+      fila(p.turnosSinConfirmar, 'Turnos sin confirmar', 'recordatorios', 'urgente'),
+      fila(p.recallsVencidos, 'Controles periódicos atrasados', 'recalls', 'aviso'),
+      fila(p.controlesVencidos + p.controlesSemana, 'Controles después de un tratamiento', 'controles', 'aviso'),
+      fila(p.tratamientosSinTurno, 'Tratamientos sin turno', 'sinturno', 'aviso'),
       fila(p.cumpleanosHoy, 'Cumpleaños hoy', 'cumpleanos'),
     ].join(''));
   }

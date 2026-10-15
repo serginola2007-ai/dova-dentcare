@@ -3,7 +3,7 @@ const { query } = require('../../config/db');
 async function findUsuarioByUsername(clinicaId, username) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.password_hash,
-            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.tema_preferido, u.debe_cambiar_clave, u.token_version, u.proveedor,
+            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.tema_preferido, u.letra_preferida, u.debe_cambiar_clave, u.token_version, u.proveedor,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
@@ -16,7 +16,7 @@ async function findUsuarioByUsername(clinicaId, username) {
 async function findUsuarioById(id) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.activo,
-            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.tema_preferido, u.debe_cambiar_clave, u.token_version, u.proveedor,
+            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.tema_preferido, u.letra_preferida, u.debe_cambiar_clave, u.token_version, u.proveedor,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id

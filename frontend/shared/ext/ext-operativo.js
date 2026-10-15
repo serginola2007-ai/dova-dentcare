@@ -259,7 +259,7 @@ const DovaOperativo = (() => {
   }
 
   // Estado del paciente en la clínica (llegó / en consulta / terminó).
-  const horaIso = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
+  const horaIso = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
   function flujoTurno(t) {
     if (['cancelado', 'reprogramado', 'no_asistio'].includes(t.estado)) return null;
     if (t.finalizado_en) return ['fin', `Finalizado ${horaIso(t.finalizado_en)}`];
@@ -610,7 +610,7 @@ const DovaOperativo = (() => {
         <button class="dova-btn-secundario" data-mov="devolucion">↩ Devolución</button>
         <button class="dova-btn-primary" data-cerrar-caja>Cerrar caja</button></div></div>` : ''}
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Usuario</th><th>Factura</th></tr></thead><tbody>
-      ${e.movimientos.map((m) => `<tr><td>${new Date(m.creado_en).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td><td>${m.tipo === 'egreso' ? (String(m.concepto || '').startsWith('Devolución') ? badge('Devolución', 'atencion') : badge('Egreso', 'critica')) : badge('Ingreso', 'ok')}</td><td>${esc(m.concepto || '-')}</td><td>${esc(nomMet[m.metodo] || etiqueta(m.metodo || 'efectivo'))}</td><td>${m.tipo === 'egreso' ? '−' : ''}${fmtGs(m.monto)}</td><td>${esc(m.usuario_nombre || '-')}</td>
+      ${e.movimientos.map((m) => `<tr><td>${new Date(m.creado_en).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false })}</td><td>${m.tipo === 'egreso' ? (String(m.concepto || '').startsWith('Devolución') ? badge('Devolución', 'atencion') : badge('Egreso', 'critica')) : badge('Ingreso', 'ok')}</td><td>${esc(m.concepto || '-')}</td><td>${esc(nomMet[m.metodo] || etiqueta(m.metodo || 'efectivo'))}</td><td>${m.tipo === 'egreso' ? '−' : ''}${fmtGs(m.monto)}</td><td>${esc(m.usuario_nombre || '-')}</td>
         <td class="dova-ext-acciones">${colFacturaMov(m)}</td></tr>`).join('') || '<tr><td colspan="7">Sin movimientos todavía.</td></tr>'}
       </tbody></table></div>`;
     c.querySelectorAll('[data-ir-factura]').forEach((x) => x.addEventListener('click', () => navegarCaja && navegarCaja('facturacion', `factura/${x.dataset.irFactura}`)));

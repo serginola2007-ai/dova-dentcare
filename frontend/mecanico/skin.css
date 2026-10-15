@@ -156,3 +156,44 @@ body .dova-tareas { background: var(--gris); border-top: 1px solid var(--mec-luz
 body .dova-tarea-item, body .dova-tarea-inicio { border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); border-radius: 0; background: var(--gris); }
 body .dova-tarea { font-size: 11px; padding: 3px 8px; }
 body .dova-tarea-item.activa { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); background: var(--mec-activo); font-weight: 700; }
+
+/* Adentro de una ventana el título ya está en la barra de la ventana: no se repite. */
+html.dova-modo-ventana .mec-shell .dova-main > .dova-view-title:first-child,
+html.dova-modo-ventana .mec-shell .dova-main > :first-child > .dova-view-title:first-child,
+html.dova-modo-ventana .mec-shell .dova-main > div:first-child > h2.dova-view-title:first-child { display: none; }
+html.dova-modo-ventana .mec-shell .dova-main[data-ventana]::before { display: none; }
+html.dova-modo-ventana .mec-shell .dova-main { padding-top: 10px !important; }
+
+/* Ingreso: marca arriba del recuadro, título con la letra del sistema y botón a lo ancho. */
+.dova-login-wrap { flex-direction: column; gap: 16px; }
+.dova-login-marca { display: flex; align-items: center; gap: 12px; color: #FFFFFF; width: 100%; max-width: 380px; }
+.dova-login-marca img { border: 1px solid rgba(255,255,255,.35); flex: none; }
+.dova-login-producto { font: 700 22px/1 Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; letter-spacing: 4px; }
+.dova-login-sub { font-size: 12px; opacity: .9; margin-top: 4px; }
+.mec-shell ~ * .dova-login-title, .dova-login-title { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; letter-spacing: .5px; }
+.dova-login-ingresar { width: 100%; margin-top: 10px; padding: 7px 12px; font-size: 13px; }
+.dova-login-clinica { margin-top: 10px; }
+.dova-login-clinica summary { cursor: pointer; font-size: 11px; color: var(--ink-soft); }
+
+/* Barra de estado: caja y próximo turno a la vista. */
+.mec-estado span[data-mec-est-turno] { overflow: hidden; text-overflow: ellipsis; }
+
+/* Celular: arriba solo lo justo (sin el campo de búsqueda: queda la lupa) y abajo una barra fija de accesos. */
+.mec-movil { display: none; }
+@media (max-width: 768px) {
+  .dova-topbar .dova-buscador-global { display: none; }
+  .dova-marca-clinica { display: none; }
+  .mec-estado { display: none; }
+  .mec-shell { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  .mec-movil { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 950; background: var(--gris); border-top: 1px solid var(--mec-hundido); box-shadow: 0 -1px 0 var(--mec-luz) inset; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mec-movil button { flex: 1; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: 0; color: var(--mec-enlace); font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
+  .mec-movil button:active, .mec-movil button:focus-visible { background: var(--mec-activo); outline: none; }
+  body .dova-tareas { bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important; }
+  .dova-ventanas { bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+/* Letra grande (Configuración → Apariencia): agranda el contenido, no las barras ni las ventanas. */
+html[data-letra="grande"] .dova-main > *, html[data-letra="grande"] .mec-lateral > *,
+html[data-letra="grande"] .dova-modal-box > * { zoom: 1.15; }
+@media (max-width: 768px) { .dova-topbar .dova-campana { margin-right: 10px; } }
+.mec-estado { position: sticky; bottom: 0; z-index: 5; }

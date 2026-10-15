@@ -63,6 +63,15 @@ const DovaApp = (() => {
   // DOVA tiene un único diseño. El modo claro u oscuro es una preferencia de cada usuario que
   // solo se cambia en Configuración > Apariencia: se guarda en el servidor (lo sigue a donde entre)
   // y en este navegador (para pintar bien la pantalla de ingreso y evitar parpadeos).
+  // Tamaño de letra (normal / grande): agranda el contenido de las pantallas, no las barras.
+  function aplicarLetra(letra) {
+    if (MODO_VENTANA && EN_IFRAME) { try { window.top.DovaApp.aplicarLetra(letra); return; } catch (_e) { /* sigue acá */ } }
+    const v = letra === 'grande' ? 'grande' : 'normal';
+    document.documentElement.setAttribute('data-letra', v);
+    try { localStorage.setItem('dova-letra', v); } catch (_e) { /* sin almacenamiento */ }
+    document.querySelectorAll('.dova-ventana iframe').forEach((f) => { try { f.contentDocument.documentElement.setAttribute('data-letra', v); } catch (_e) { /* */ } });
+  }
+
   function aplicarModo(tema) {
     if (MODO_VENTANA && EN_IFRAME) { try { window.top.DovaApp.aplicarModo(tema); return; } catch (_e) { /* sigue acá */ } }
     const modo = tema === 'oscuro' ? 'dark' : 'light';
@@ -260,13 +269,13 @@ const DovaApp = (() => {
     if (DOVA.usuarioActual() && DOVA.usuarioActual().odontologoId) {
       Vistas.initDashboardOdontologo((pacienteId) => navegar('consulta', pacienteId), (pacienteId) => navegar('paciente', pacienteId));
     } else {
-      Vistas.initInicio((rutaDestino) => navegar(rutaDestino));
+      Vistas.initInicio((rutaDestino, params) => navegar(rutaDestino, params));
     }
     // Cuando la extensión terminó de sumar sus filas, se decide si Inicio está vacío (muestra la marca).
     const atender = elMain.querySelector('[data-para-atender]');
     Promise.resolve().then(() => DovaSecciones.extenderDashboard(elMain, navegar))
       .catch((e) => console.error('[DOVA ext]', e))
-      .finally(() => { if (atender) atender.dataset.listo = '1'; Vistas.revisarInicioVacio(elMain); });
+      .finally(() => { if (atender) atender.dataset.listo = '1'; Vistas.ordenarAtender(elMain); Vistas.revisarInicioVacio(elMain); });
     aplicarDataThATablas();
   }
 
@@ -528,6 +537,7 @@ const DovaApp = (() => {
   function decidirDestinoTrasLogin(elLogin, elShell) {
     const usuario = DOVA.usuarioActual();
     aplicarModo(usuario && usuario.temaPreferido);
+    aplicarLetra(usuario && usuario.letraPreferida);
     entrarADova(elLogin, elShell);
   }
 
@@ -540,6 +550,7 @@ const DovaApp = (() => {
       return;
     }
     aplicarModo(usuario && usuario.temaPreferido);
+    aplicarLetra(usuario && usuario.letraPreferida);
     entrarADova(elLogin, elShell);
   }
 
@@ -634,6 +645,6 @@ const DovaApp = (() => {
     }
   }
 
-  return { iniciar, navegar, aplicarModo, enVentana: () => MODO_VENTANA, escritorio: () => ESCRITORIO };
+  return { iniciar, navegar, aplicarModo, aplicarLetra, enVentana: () => MODO_VENTANA, escritorio: () => ESCRITORIO };
 })();
 window.DovaApp = DovaApp;

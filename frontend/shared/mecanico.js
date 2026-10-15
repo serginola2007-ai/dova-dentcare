@@ -32,8 +32,8 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const leer = () => { try { const v = JSON.parse(sessionStorage.getItem(CLAVE) || '[]'); return Array.isArray(v) ? v : []; } catch (_e) { return []; } };
   const guardar = (l) => { try { sessionStorage.setItem(CLAVE, JSON.stringify(l)); } catch (_e) { /* sin almacenamiento */ } };
-  const ahoraPy = () => new Date().toLocaleString('es-PY', { timeZone: 'America/Asuncion', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`;
+  const ahoraPy = () => new Date().toLocaleString('es-PY', { timeZone: 'America/Asuncion', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const fmtGs = (n) => `Gs.\u00a0${Math.round(Number(n) || 0).toLocaleString('es-PY')}`;
   const etiquetaMenu = (ruta) => {
     const b = document.querySelector(`#menu-root [data-ruta="${ruta}"]:not([data-sub])`);
     return b ? b.textContent.replace(/[^\p{L}\p{N} .,()/-]+/gu, '').trim() : (NOMBRES[ruta] || null);
@@ -77,11 +77,45 @@
       <dt>Fecha y hora</dt><dd data-mec-reloj>${esc(ahoraPy())}</dd>`;
   }
 
-  function dibujarEstado() {
+  // Barra de estado: lo que sirve tener a la vista (caja y próximo turno) y el reloj.
+  async function dibujarEstado() {
     const f = document.getElementById('mec-estado');
     if (!f) return;
-    const u = DOVA.usuarioActual() || {}; const c = DOVA.clinicaActual() || {};
-    f.innerHTML = `<span>DOVA</span><span>${esc(c.nombre || '')}</span><span>${esc((u.username || '').toUpperCase())}</span><span data-mec-reloj>${esc(ahoraPy())}</span>`;
+    const puede = (p) => DOVA.tienePermiso && DOVA.tienePermiso(p);
+    let caja = ''; let proximo = '';
+    if (puede('caja.view')) {
+      try { const e = await DOVA.get('/caja/estado'); caja = e.abierta ? `Caja abierta · efectivo ${fmtGs(e.efectivoEsperado)}` : 'Caja cerrada'; } catch (_e) { /* sin dato */ }
+    }
+    if (puede('agenda.view')) {
+      try {
+        const ahora = new Date();
+        const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora);
+        const hhmm = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit', hour12: false }).format(ahora);
+        const l = await DOVA.get(`/agenda?desde=${hoy}&hasta=${hoy}`);
+        const t = (Array.isArray(l) ? l : (l.items || [])).find((x) => String(x.hora_inicio).slice(0, 5) >= hhmm && !['cancelado', 'reprogramado', 'atendido', 'finalizado', 'no_asistio'].includes(x.estado));
+        proximo = t ? `Próximo turno ${String(t.hora_inicio).slice(0, 5)} · ${t.paciente_nombre} ${t.paciente_apellido}` : 'Sin más turnos hoy';
+      } catch (_e) { /* sin dato */ }
+    }
+    f.innerHTML = `${caja ? `<span data-mec-est-caja>${esc(caja)}</span>` : ''}${proximo ? `<span data-mec-est-turno>${esc(proximo)}</span>` : ''}<span data-mec-reloj>${esc(ahoraPy())}</span>`;
+  }
+
+  // Celular: barra fija abajo con los accesos de todos los días (según permisos) y el menú.
+  function dibujarBarraMovil() {
+    const shell = document.getElementById('shell-root');
+    if (!shell || document.getElementById('mec-movil')) return;
+    const enMenu = (r) => !!document.querySelector(`#menu-root [data-ruta="${r}"]`);
+    const items = [['dashboard', 'Inicio', 'inicio'], ['agenda', 'Agenda', 'calendario'], ['pacientes', 'Pacientes', 'pacientes'], ['caja', 'Caja', 'efectivo']]
+      .filter(([r]) => r === 'dashboard' || enMenu(r));
+    const nav = document.createElement('nav');
+    nav.id = 'mec-movil'; nav.className = 'mec-movil'; nav.setAttribute('aria-label', 'Accesos rápidos');
+    nav.innerHTML = items.map(([r, t, i]) => `<button type="button" data-mov-ir="${r}">${window.DovaIcono ? DovaIcono(i, 20) : ''}<span>${esc(t)}</span></button>`).join('')
+      + `<button type="button" data-mov-menu>${window.DovaIcono ? DovaIcono('menu', 20) : ''}<span>Menú</span></button>`;
+    shell.appendChild(nav);
+    nav.querySelectorAll('[data-mov-ir]').forEach((b) => b.addEventListener('click', () => {
+      document.body.classList.remove('dova-menu-abierto');
+      if (navegar) navegar(b.dataset.movIr);
+    }));
+    nav.querySelector('[data-mov-menu]').addEventListener('click', () => { const t = document.getElementById('dova-menu-toggle'); if (t) t.click(); });
   }
 
   function dibujarRecientes() {
@@ -99,7 +133,7 @@
   function anotar(ruta, params) {
     const base = etiquetaMenu(ruta);
     if (!base) return;
-    const hora = new Date().toLocaleTimeString('es-PY', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit' });
+    const hora = new Date().toLocaleTimeString('es-PY', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit', hour12: false });
     const clave = `${ruta}/${params || ''}`;
     const poner = (titulo) => {
       const l = leer().filter((v) => `${v.ruta}/${v.params || ''}` !== clave);
@@ -124,12 +158,16 @@
     dibujarIconos();
     dibujarParametros();
     dibujarEstado();
+    dibujarBarraMovil();
     dibujarRecientes();
     const actual = escritorio() ? 'dashboard' : ((location.hash.replace('#', '').split('/')[0]) || 'dashboard');
     marcarIcono(actual);
     if (escritorio()) { const m = document.getElementById('main-root'); if (m) m.dataset.ventana = 'Inicio'; }
     clearInterval(reloj);
+    let vueltas = 0;
     reloj = setInterval(() => {
+      vueltas += 1;
+      if (vueltas % 120 === 0) dibujarEstado(); // caja y próximo turno al día (cada 2 minutos)
       const t = ahoraPy();
       document.querySelectorAll('[data-mec-reloj]').forEach((x) => { x.textContent = t; });
     }, 1000);

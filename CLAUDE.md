@@ -202,3 +202,11 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - `tratamiento_kits` (insumo + cantidad por sesión) y `sesiones_tratamiento.kit_aplicado`. `modules/inventario/kits.service.js`; rutas `GET /api/inventario/kits`, `GET|PUT /api/inventario/kits/:tratamientoId` (ver: `inventario.view`; guardar: `inventario.manage`; valida insumo y tratamiento contra la clínica).
 - `planes.service.registrarSesion` valida fecha y odontólogo, y llama a `kits.aplicarASesion` (salvo `descontarKit: false`): descuenta con `registrarConsumoProcedimiento` (movimiento + auditoría), nunca dos veces la misma sesión, nunca deja stock negativo; si falta stock registra la sesión igual y devuelve `kit.faltantes`; avisa a los admins (`alertas.alertarAdmins`, tipo `inventario`) cuando algo llega al mínimo o faltó.
 - Pantallas: Inventario → Kits por tratamiento (`ext-operativo.js`) y bloque de sesiones del plan (`ext-clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).
+
+## Inicio, celular y apariencia
+- Inicio (recepción/admin): `seccionHoy`/`cargarHoy` en `views.js` (`GET /api/agenda?desde=hoy&hasta=hoy`) y `filaAtender(..., nivel)` con `data-nivel` urgente/aviso; `Vistas.ordenarAtender` ordena después de que la extensión suma sus filas.
+- `shared/mecanico.js`: barra de estado con caja y próximo turno (se refresca cada 2 min) y barra de accesos del celular (`#mec-movil`, ≤768px).
+- Letra: `usuarios.letra_preferida` (0060), `DOVA.actualizarLetra`, `DovaApp.aplicarLetra` (`data-letra` en `<html>` y ventanas; `zoom` sobre el contenido de `.dova-main`). Igual que el modo, solo en Configuración → Apariencia.
+- Dentro de una ventana (`html.dova-modo-ventana`) el título de la sección se oculta: ya está en la barra de la ventana.
+- Formatos: montos con espacio duro (`Gs.\u00a0`), horas con `hour12: false`.
+- Pruebas: `tests/ui-visual.js`.

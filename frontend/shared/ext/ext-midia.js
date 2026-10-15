@@ -11,7 +11,7 @@
   const fechaLocal = (dias) => { const d = new Date(); d.setDate(d.getDate() + dias); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
   const fmtFecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
   const fechaTexto = (iso) => { const t = new Date(`${iso}T12:00:00`).toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long' }); return t.charAt(0).toUpperCase() + t.slice(1); };
-  const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
+  const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
   const DIAS = [{ id: 0, label: 'Hoy' }, { id: 1, label: 'Mañana' }];
   let diaElegido = 0;
   const MAX_CHIPS = 2;

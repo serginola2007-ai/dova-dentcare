@@ -149,6 +149,11 @@ async function obtenerDisenoPreferido(id) {
   return res.rows[0]?.diseno_preferido || null;
 }
 
+async function actualizarLetraPreferida(id, letra) {
+  const res = await query('UPDATE usuarios SET letra_preferida = $1, actualizado_en = now() WHERE id = $2 RETURNING id, letra_preferida', [letra, id]);
+  return res.rows[0] || null;
+}
+
 async function actualizarTemaPreferido(id, tema) {
   const res = await query('UPDATE usuarios SET tema_preferido = $1, actualizado_en = now() WHERE id = $2 RETURNING id, tema_preferido', [tema, id]);
   return res.rows[0] || null;
@@ -198,5 +203,5 @@ module.exports = {
   listar, obtener, existeUsername, contarAdminsProtegidosActivos, contarAdminsActivos, crear, actualizar,
   cambiarPassword, obtenerPasswordHash,
   overridesDeUsuario, setOverride, quitarOverride,
-  obtenerDisenoPreferido, actualizarDisenoPreferido, actualizarTemaPreferido,
+  obtenerDisenoPreferido, actualizarDisenoPreferido, actualizarTemaPreferido, actualizarLetraPreferida,
 };

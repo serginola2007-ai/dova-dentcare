@@ -171,7 +171,11 @@ const DovaVivo = (() => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const abrir = panel.hidden; panel.hidden = !abrir; btn.setAttribute('aria-expanded', String(abrir));
-      if (abrir) cargarLista(navegar, cerrar);
+      if (abrir) {
+        cargarLista(navegar, cerrar);
+        try { localStorage.setItem('dova-campana-vista', String(noLeidas || 0)); } catch (_e) { /* */ }
+        const num = campana.querySelector('.dova-campana-num'); if (num) num.classList.add('vista');
+      }
     });
     document.addEventListener('click', (e) => { if (!campana.contains(e.target)) cerrar(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrar(); });
@@ -194,7 +198,10 @@ const DovaVivo = (() => {
     try { n = (await DOVA.get('/notificaciones/contador')).noLeidas || 0; } catch (_e) { return; }
     const antes = noLeidas; noLeidas = n;
     const num = campana && campana.querySelector('.dova-campana-num');
-    if (num) { num.hidden = !n; num.textContent = n > 99 ? '99+' : String(n); }
+    // La campanita solo "grita" (en rojo) con lo nuevo desde la última vez que se abrió; lo ya visto queda en gris.
+    let visto = 0; try { visto = Number(localStorage.getItem('dova-campana-vista') || 0); } catch (_e) { /* */ }
+    if (visto > n) visto = n;
+    if (num) { num.hidden = !n; num.textContent = n > 99 ? '99+' : String(n); num.classList.toggle('vista', n <= visto); }
     document.title = n ? `(${n}) ${tituloBase}` : tituloBase;
     if (avisarNuevas && antes !== null && n > antes) {
       try {

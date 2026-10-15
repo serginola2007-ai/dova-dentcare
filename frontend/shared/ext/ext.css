@@ -713,3 +713,28 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-cli-form label.dova-cli-check input { width: auto; flex: none; }
 .dova-cli-form label.dova-cli-check > span { color: var(--ink); }
 .dova-cli-sesiones h5 { font-size: 13px; margin: 0 0 4px; }
+
+/* Inicio: turnos de hoy al lado de "Para atender" (una columna en pantallas chicas). */
+.dova-inicio-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; align-items: start; position: relative; z-index: 1; }
+.dova-inicio-cols > .dova-atender:only-child { grid-column: 1 / -1; }
+@media (max-width: 900px) { .dova-inicio-cols { grid-template-columns: 1fr; } }
+.dova-inicio-hoy { margin: 0 0 26px; }
+.dova-hoy-lista { list-style: none; margin: 0 0 8px; padding: 0; border-top: 1px solid var(--border); }
+.dova-hoy-lista > li { border-bottom: 1px solid var(--border); }
+.dova-hoy-fila { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 8px 2px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.dova-hoy-fila:hover { background: color-mix(in srgb, var(--cream) 70%, transparent); }
+.dova-hoy-fila:focus-visible { outline: 2px solid var(--terracotta); outline-offset: -2px; }
+.dova-hoy-hora { font-variant-numeric: tabular-nums; font-weight: 700; }
+.dova-hoy-quien { display: flex; flex-direction: column; min-width: 0; }
+.dova-hoy-quien > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dova-hoy-estado { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+.dova-hoy-fila.pasado { opacity: .55; }
+.dova-hoy-fila.proximo { box-shadow: inset 3px 0 0 var(--terracotta); padding-left: 8px; }
+.dova-hoy-fila.proximo .dova-hoy-estado { color: var(--terracotta); font-weight: 700; }
+
+/* "Para atender": lo urgente se marca y queda arriba. */
+.dova-atender-fila[data-nivel="urgente"] { box-shadow: inset 3px 0 0 var(--rust); padding-left: 10px; }
+.dova-atender-fila[data-nivel="urgente"] .dova-atender-n { color: var(--rust); }
+.dova-atender-fila[data-nivel="aviso"] { box-shadow: inset 3px 0 0 var(--terracotta); padding-left: 10px; }
+.dova-campana-num.vista { background: var(--mec-hundido, #B49C82); color: var(--ink); font-weight: 600; }
+.dova-apariencia-sub { margin: 14px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-soft); }

@@ -879,3 +879,15 @@ Se probó todo DOVA como un QA:
 - **Kits por tratamiento** (Inventario → Kits por tratamiento): qué insumos se usan en cada sesión. Al registrar una sesión se descuentan solos (se puede desmarcar), nunca dos veces ni dejando stock negativo; si falta algo la sesión se registra igual y avisa qué faltó; aviso a los admins cuando un insumo llega al mínimo.
 - La sesión ahora valida la fecha y que el odontólogo sea de la clínica.
 - Migración `0059`. **Pruebas:** `kits.test` 22/22, `ui-kits` 7/7.
+
+## Tanda: mejoras visuales (15/10/2026)
+
+- **Ventanas:** el título ya no se repite adentro (queda solo en la barra de la ventana).
+- **Tablas:** los montos nunca se parten en dos líneas y las horas van en formato de 24 horas.
+- **Ingreso:** marca de DOVA con el nombre de la clínica, título con la letra del sistema y botón Ingresar a lo ancho.
+- **Inicio:** "Turnos de hoy" al lado de "Para atender" (hora, paciente, profesional, estado; el próximo resaltado). En "Para atender" lo urgente (cuotas vencidas, insumos por acabarse, turnos sin confirmar) va marcado y arriba.
+- **Barra de abajo:** ahora muestra la caja (abierta y efectivo) y el próximo turno, en vez de repetir el usuario y la clínica.
+- **Celular:** barra fija abajo con Inicio, Agenda, Pacientes, Caja y Menú; arriba queda solo la lupa para buscar; las ventanas no quedan tapadas.
+- **Campanita:** el número está en rojo solo con avisos nuevos desde la última vez que se abrió; lo ya visto queda en gris.
+- **Letra grande:** en Configuración → Apariencia (guardada en la cuenta, migración `0060`). Agranda el contenido de las pantallas, no las barras.
+- **Pruebas:** `ui-visual` 20/20, más la regresión de pantallas.

@@ -39,7 +39,7 @@ const menu = async (p, grupo, ruta, sub) => {
       P('Inicio queda de fondo', await p.locator('#main-root .dova-inicio').isVisible());
       await menu(p, 'movimientos', 'agenda', 'dia');
       await ventana(p, 'agenda').waitFor({ timeout: 10000 });
-      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ timeout: 15000 });
+      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ state: 'attached', timeout: 15000 });
       P('Agenda se abre en una ventana', await ventana(p, 'agenda').isVisible() && /Agenda/.test(await ventana(p, 'agenda').locator('.dova-ventana-titulo').textContent()));
       P('…y el Inicio sigue en la página', await p.locator('#main-root .dova-inicio').count() === 1);
       const v1 = await caja(ventana(p, 'agenda'));
@@ -137,7 +137,7 @@ const menu = async (p, grupo, ruta, sub) => {
     for (const dis of ['mecanico']) {
       const { ctx, p, err } = await login(b, { width: 1366, height: 860 }, 'admin', 'admin', dis);
       await p.evaluate(() => { window.DovaSubPendiente = null; return DovaApp.navegar('agenda'); });
-      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ timeout: 15000 });
+      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ state: 'attached', timeout: 15000 });
       await p.evaluate(() => DovaApp.navegar('pacientes'));
       await marco(p, 'pacientes').locator('#pacientes-tbody tr').first().waitFor({ timeout: 15000 });
       P(`[${dis}] Dos ventanas abiertas con su contenido`, await p.locator('.dova-ventana').count() === 2);
@@ -161,7 +161,7 @@ const menu = async (p, grupo, ruta, sub) => {
       const tag = `[${vp.width}]`;
       const { ctx, p, err } = await login(b, vp, 'recep1', 'clave123');
       await p.evaluate(() => DovaApp.navegar('agenda'));
-      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ timeout: 15000 });
+      await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ state: 'attached', timeout: 15000 });
       await p.evaluate(() => DovaApp.navegar('pacientes'));
       await marco(p, 'pacientes').locator('#pacientes-tbody tr').first().waitFor({ timeout: 15000 });
       const v = await caja(ventana(p, 'pacientes'));

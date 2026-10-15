@@ -4,7 +4,7 @@
    skin en su propio index.html / css; esto solo genera el contenido. */
 
 const Vistas = (() => {
-  function fmtGs(n) { const v = Number(n || 0); return Number.isFinite(v) ? 'Gs. ' + Math.round(v).toLocaleString('es-PY') : '-'; } // el guaraní no usa decimales
+  function fmtGs(n) { const v = Number(n || 0); return Number.isFinite(v) ? 'Gs.\u00a0' + Math.round(v).toLocaleString('es-PY') : '-'; } // el guaraní no usa decimales
   // Un día calendario ('AAAA-MM-DD') se arma en hora LOCAL: new Date('2026-01-05')
   // lo toma como medianoche UTC y en Paraguay (UTC-3) mostraba el 4/1.
   function fmtFecha(f) {
@@ -49,6 +49,10 @@ const Vistas = (() => {
   function vistaLogin() {
     return `
       <div class="dova-login-wrap">
+        <div class="dova-login-marca">
+          <img src="/iconos/icono-192.png" alt="" width="56" height="56" />
+          <div><div class="dova-login-producto">DOVA</div><div class="dova-login-sub">Gestión odontológica<span data-login-clinica></span></div></div>
+        </div>
         <div class="dova-login-card">
           <h1 class="dova-login-title">Iniciar sesión</h1>
           <form id="form-login">
@@ -62,7 +66,7 @@ const Vistas = (() => {
               <input type="text" id="login-clinica" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(codigoClinicaGuardado())}" placeholder="Te lo da el proveedor de DOVA" />
             </details>
 
-            <button type="submit" class="dova-btn-primary">Ingresar</button>
+            <button type="submit" class="dova-btn-primary dova-login-ingresar">Ingresar</button>
             <p id="login-error" class="dova-error-text" style="display:none;"></p>
           </form>
         </div>
@@ -70,6 +74,8 @@ const Vistas = (() => {
   }
   function initLogin(onSuccess) {
     const form = document.getElementById('form-login');
+    // Nombre de la clínica debajo de la marca (público; si no está disponible, no se muestra).
+    DOVA.get('/web/publico/info').then((i) => { const el = document.querySelector('[data-login-clinica]'); if (el && i && i.nombre) el.textContent = ` · ${i.nombre}`; }).catch(() => {});
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -143,6 +149,7 @@ const Vistas = (() => {
   // ---------------- CONFIGURACIÓN ----------------
   function vistaConfiguracion() {
     const modo = (DOVA.usuarioActual() || {}).temaPreferido === 'oscuro' ? 'oscuro' : 'claro';
+    const letra = (DOVA.usuarioActual() || {}).letraPreferida === 'grande' ? 'grande' : 'normal';
     return `
       <h2 class="dova-view-title">Configuración</h2>
       <p class="dova-subtitulo">Preferencias de tu cuenta en DOVA.</p>
@@ -150,9 +157,15 @@ const Vistas = (() => {
       <h3 class="dova-section-title">Apariencia</h3>
       <div class="dova-card dova-card-clave" data-apariencia>
         <p class="dova-nota">Elegí cómo ver DOVA: con fondo claro o con fondo oscuro. El cambio se guarda en tu cuenta y te acompaña en cualquier dispositivo donde inicies sesión. Esta es la única parte de DOVA donde se cambia.</p>
+        <h4 class="dova-apariencia-sub">Colores</h4>
         <div class="dova-modo-opciones" role="radiogroup" aria-label="Modo de color">
           <label class="dova-modo-opcion${modo === 'claro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="claro" ${modo === 'claro' ? 'checked' : ''} /> <span><strong>Claro</strong><br><span class="dova-nota">Fondo crema, ideal con buena luz.</span></span></label>
           <label class="dova-modo-opcion${modo === 'oscuro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="oscuro" ${modo === 'oscuro' ? 'checked' : ''} /> <span><strong>Oscuro</strong><br><span class="dova-nota">Fondo oscuro, descansa la vista en ambientes con poca luz.</span></span></label>
+        </div>
+        <h4 class="dova-apariencia-sub">Tamaño de letra</h4>
+        <div class="dova-modo-opciones" role="radiogroup" aria-label="Tamaño de letra">
+          <label class="dova-modo-opcion${letra === 'normal' ? ' seleccionado' : ''}"><input type="radio" name="tam-letra" value="normal" ${letra === 'normal' ? 'checked' : ''} /> <span><strong>Letra normal</strong><br><span class="dova-nota">Entra más información en pantalla.</span></span></label>
+          <label class="dova-modo-opcion${letra === 'grande' ? ' seleccionado' : ''}"><input type="radio" name="tam-letra" value="grande" ${letra === 'grande' ? 'checked' : ''} /> <span><strong>Letra grande</strong><br><span class="dova-nota">Se lee más cómodo, sobre todo de lejos.</span></span></label>
         </div>
       </div>
 
@@ -181,6 +194,22 @@ const Vistas = (() => {
     });
     if (window.DovaPWA) { DovaPWA.activarTarjeta(); DovaPWA.activarAvisosUI(); }
     if (window.DovaSeguridad) DovaSeguridad.activar();
+    document.querySelectorAll('[name="tam-letra"]').forEach((radio) => {
+      radio.addEventListener('change', async () => {
+        const v = radio.value;
+        const radios = document.querySelectorAll('[name="tam-letra"]');
+        radios.forEach((r) => { r.disabled = true; });
+        try {
+          await DOVA.actualizarLetra(v);
+          DovaApp.aplicarLetra(v);
+          radios.forEach((r) => r.closest('.dova-modo-opcion').classList.toggle('seleccionado', r.value === v));
+          toast(v === 'grande' ? 'Letra grande activada' : 'Letra normal activada', 'ok');
+        } catch (e) {
+          toast(e.message || 'No se pudo cambiar la letra', 'error');
+          radios.forEach((r) => { r.checked = r.value !== v; });
+        } finally { radios.forEach((r) => { r.disabled = false; }); }
+      });
+    });
     document.querySelectorAll('[name="modo-color"]').forEach((radio) => {
       radio.addEventListener('change', async () => {
         const tema = radio.value;
@@ -216,9 +245,45 @@ const Vistas = (() => {
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
   // Una fila de "Para atender". Solo se dibuja si n > 0.
-  function filaAtender(n, label, ruta, sub) {
+  // nivel: 'urgente' (plata o pacientes en juego), 'aviso' (conviene mirarlo) o nada.
+  function filaAtender(n, label, ruta, sub, nivel) {
     if (!n) return '';
-    return `<li><button type="button" class="dova-atender-fila" data-ir-ruta="${esc(ruta)}"${sub ? ` data-ir-sub-ruta="${esc(sub)}"` : ''}><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>`;
+    return `<li><button type="button" class="dova-atender-fila" data-ir-ruta="${esc(ruta)}"${sub ? ` data-ir-sub-ruta="${esc(sub)}"` : ''}${nivel ? ` data-nivel="${esc(nivel)}"` : ''}><span class="dova-atender-txt">${esc(label)}</span><span class="dova-atender-n">${Number(n).toLocaleString('es-PY')}</span></button></li>`;
+  }
+  // Lo urgente arriba, después los avisos y al final lo informativo (las filas pueden venir de varias partes).
+  function ordenarAtender(root) {
+    const ul = root && root.querySelector('[data-para-atender] .dova-atender-lista');
+    if (!ul) return;
+    const peso = (li) => { const n = (li.querySelector('[data-nivel]') || {}).dataset; return n && n.nivel === 'urgente' ? 0 : n && n.nivel === 'aviso' ? 1 : 2; };
+    Array.from(ul.children).map((li, i) => [li, i]).sort((a, b) => peso(a[0]) - peso(b[0]) || a[1] - b[1]).forEach(([li]) => ul.appendChild(li));
+  }
+  // Turnos de hoy en Inicio (recepción y administración): hora, paciente, profesional y estado.
+  const ESTADO_TURNO = { reservado: 'Reservado', pendiente: 'Pendiente', confirmado: 'Confirmado', en_sala: 'En sala', en_atencion: 'En atención', en_consulta: 'En consulta', atendido: 'Atendido', finalizado: 'Atendido', no_asistio: 'No vino' };
+  function seccionHoy() {
+    return DOVA.tienePermiso('agenda.view') ? '<section class="dova-inicio-hoy" data-inicio-hoy><h3 class="dova-section-title">Turnos de hoy</h3><div data-hoy-lista><p class="dova-nota">Cargando…</p></div></section>' : '';
+  }
+  async function cargarHoy(root, irA) {
+    const box = root && root.querySelector('[data-inicio-hoy] [data-hoy-lista]');
+    if (!box) return;
+    const ahora = new Date();
+    const hoyIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora);
+    const hhmm = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Asuncion', hour: '2-digit', minute: '2-digit', hour12: false }).format(ahora);
+    let lista;
+    try { lista = await DOVA.get(`/agenda?desde=${hoyIso}&hasta=${hoyIso}`); } catch (_e) { box.innerHTML = '<p class="dova-nota">No se pudo cargar la agenda de hoy.</p>'; return; }
+    const turnos = (Array.isArray(lista) ? lista : (lista.items || [])).filter((t) => !['cancelado', 'reprogramado'].includes(t.estado));
+    if (!turnos.length) { box.innerHTML = '<p class="dova-nota">No hay turnos para hoy.</p>'; return; }
+    const proximo = turnos.find((t) => String(t.hora_inicio).slice(0, 5) >= hhmm && !['atendido', 'finalizado', 'no_asistio'].includes(t.estado));
+    const MAX = 10;
+    box.innerHTML = `<ul class="dova-hoy-lista">${turnos.slice(0, MAX).map((t) => {
+      const pasado = String(t.hora_inicio).slice(0, 5) < hhmm || ['atendido', 'finalizado', 'no_asistio'].includes(t.estado);
+      return `<li><button type="button" class="dova-hoy-fila${t === proximo ? ' proximo' : ''}${pasado ? ' pasado' : ''}" data-hoy-paciente="${esc(t.paciente_id)}">
+        <span class="dova-hoy-hora">${esc(String(t.hora_inicio).slice(0, 5))}</span>
+        <span class="dova-hoy-quien"><strong>${esc(t.paciente_nombre)} ${esc(t.paciente_apellido)}</strong><span class="dova-nota">${esc(t.odontologo_nombre || '')}${t.motivo ? ` · ${esc(t.motivo)}` : ''}</span></span>
+        <span class="dova-hoy-estado">${t === proximo ? 'Próximo' : esc(ESTADO_TURNO[t.estado] || t.estado || '')}</span></button></li>`;
+    }).join('')}</ul>
+    <button type="button" class="dova-btn-link" data-hoy-agenda>${turnos.length > MAX ? `Ver los ${turnos.length} en la agenda` : 'Abrir la agenda'}</button>`;
+    box.querySelectorAll('[data-hoy-paciente]').forEach((b) => b.addEventListener('click', () => irA('paciente', b.dataset.hoyPaciente)));
+    box.querySelector('[data-hoy-agenda]').addEventListener('click', () => irA('agenda'));
   }
   function seccionAtender(filas) {
     return `<section class="dova-atender" data-para-atender>
@@ -276,13 +341,16 @@ const Vistas = (() => {
       <div class="dova-inicio">
       <h2 class="dova-view-title dova-inicio-titulo">${saludo(usuario)}</h2>
       <p class="dova-inicio-sub">${linea.join(' · ')}</p>
+      <div class="dova-inicio-cols">
+      ${seccionHoy()}
       ${seccionAtender([
-        filaAtender(a.cuotasVencidas, 'Cuotas vencidas', 'finanzas', 'deuda'),
-        filaAtender(a.stockBajo, 'Insumos por acabarse', 'inventario', 'insumos'),
-        filaAtender(a.insumosPorVencer, 'Insumos que vencen en 30 días', 'inventario', 'vencen'),
+        filaAtender(a.cuotasVencidas, 'Cuotas vencidas', 'finanzas', 'deuda', 'urgente'),
+        filaAtender(a.stockBajo, 'Insumos por acabarse', 'inventario', 'insumos', 'urgente'),
+        filaAtender(a.insumosPorVencer, 'Insumos que vencen en 30 días', 'inventario', 'vencen', 'aviso'),
         filaAtender(a.listaEsperaPendiente, 'Pacientes en lista de espera', 'agenda', 'espera'),
-        filaAtender(a.ticketsHelpdeskAbiertos, 'Pedidos de ayuda técnica sin resolver', 'helpdesk'),
+        filaAtender(a.ticketsHelpdeskAbiertos, 'Pedidos de ayuda técnica sin resolver', 'helpdesk', 'aviso'),
       ].join(''))}
+      </div>
       ${marcaClinica()}
       </div>
     `;
@@ -305,7 +373,10 @@ const Vistas = (() => {
       ${accesos.length ? `<div class="dova-inicio-accesos">${accesos.map((x) => `
           <button type="button" class="dova-btn-secundario" data-ir-a="${esc(x.ruta)}">${DovaIcono(x.icono, 16)} ${esc(x.label)}</button>`).join('')}
       </div>` : ''}
+      <div class="dova-inicio-cols">
+      ${seccionHoy()}
       ${seccionAtender('')}
+      </div>
       ${marcaClinica()}
       </div>
     `;
@@ -313,6 +384,7 @@ const Vistas = (() => {
 
   // Botones de "Para atender" y accesos: se enlazan una sola vez por pantalla.
   function initInicio(irA) {
+    cargarHoy(document, irA);
     const atender = document.querySelector('[data-para-atender]');
     if (atender) atender.addEventListener('click', (e) => {
       const f = e.target.closest('[data-ir-ruta]');
@@ -2043,7 +2115,7 @@ const Vistas = (() => {
     vistaDashboard,
     initDashboardOdontologo,
     initDashboardSinReportes,
-    initInicio,
+    initInicio, ordenarAtender,
     revisarInicioVacio,
     vistaPacientes, initPacientes,
     vistaFichaPaciente, initFichaPaciente,

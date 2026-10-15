@@ -3,6 +3,8 @@
    aspecto sobrio. Uso: DovaIcono('calendario') o DovaIcono('buscar', 20). */
 (function () {
   const P = {
+    inicio: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     calendario: '<rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     buscar: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20.5 20.5"/>',
     persona: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>',

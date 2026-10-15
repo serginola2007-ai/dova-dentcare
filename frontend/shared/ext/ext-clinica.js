@@ -28,7 +28,7 @@ const DovaClinica = (() => {
     if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) a -= 1;
     return a >= 0 ? a : null;
   };
-  const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '');
+  const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
   const piezasTexto = (p) => (Array.isArray(p) ? p.join(', ') : (p || ''));
 
   // Imágenes/archivos protegidos: se piden con el token y se muestran como blob.
@@ -194,7 +194,7 @@ const DovaClinica = (() => {
       try {
         if (!hc) hc = await DOVA.post('/historia-clinica', { pacienteId: pid, turnoId: ctx.turno ? ctx.turno.id : undefined, ...d, piezas: d.piezas || undefined });
         else hc = await DOVA.put(`/historia-clinica/${hc.id}`, { ...d, piezas: d.piezas || null });
-        estado.textContent = `Guardado ${new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`;
+        estado.textContent = `Guardado ${new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
       } catch (e) {
         sucio = true; estado.textContent = `No se pudo guardar: ${e.message}`; estado.className = 'dova-cli-guardado error';
       }

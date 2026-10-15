@@ -230,6 +230,13 @@ const DOVA = (() => {
 
   /* Modo claro / oscuro: preferencia propia de cada usuario, guardada en el servidor
      (sigue al usuario entre dispositivos). Acá solo se actualiza la sesión en caché. */
+  async function actualizarLetra(letra) {
+    const data = await request('/usuarios/me/preferencias', { method: 'PATCH', body: { letra } });
+    const perfil = getPerfil();
+    if (perfil && perfil.usuario) { perfil.usuario.letraPreferida = data.letraPreferida; setPerfil(perfil); }
+    return data;
+  }
+
   async function actualizarTema(tema) {
     const data = await request('/usuarios/me/preferencias', { method: 'PATCH', body: { tema } });
     const perfil = getPerfil();
@@ -284,7 +291,7 @@ const DOVA = (() => {
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
     request, login, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, estaBloqueada: () => (PADRE ? PADRE.estaBloqueada() : bloqueada), limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
-    actualizarTema, cambiarClave, setFlash, consumeFlash,
+    actualizarTema, actualizarLetra, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),
     put: (p, body) => request(p, { method: 'PUT', body }),

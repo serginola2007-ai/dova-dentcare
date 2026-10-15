@@ -337,7 +337,14 @@ async function cerrarSesiones(clinicaId, id, actor) {
 // ---- Preferencias propias (self-service, cualquier usuario logueado) ----
 // DOVA tiene un solo diseño; lo único que se elige es el modo claro u oscuro (solo desde Configuración).
 const TEMAS_VALIDOS = ['claro', 'oscuro'];
-async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido, actor, tema) {
+const LETRAS_VALIDAS = ['normal', 'grande'];
+async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido, actor, tema, letra) {
+  if (letra !== undefined) {
+    if (typeof letra !== 'string' || !LETRAS_VALIDAS.includes(letra)) throw new ApiError(400, `letra debe ser una de: ${LETRAS_VALIDAS.join(', ')}`);
+    const l = await repo.actualizarLetraPreferida(usuarioId, letra);
+    if (!l) throw new ApiError(404, 'Usuario no encontrado');
+    return { letraPreferida: l.letra_preferida };
+  }
   if (tema !== undefined) {
     if (typeof tema !== 'string' || !TEMAS_VALIDOS.includes(tema)) throw new ApiError(400, `tema debe ser uno de: ${TEMAS_VALIDOS.join(', ')}`);
     const t = await repo.actualizarTemaPreferido(usuarioId, tema);

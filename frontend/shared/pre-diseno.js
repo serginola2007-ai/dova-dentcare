@@ -6,5 +6,6 @@
   try {
     var guardado = localStorage.getItem('dova-tema');
     document.documentElement.setAttribute('data-theme', guardado === 'dark' ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-letra', localStorage.getItem('dova-letra') === 'grande' ? 'grande' : 'normal');
   } catch (e) { /* sin almacenamiento: queda el modo claro */ }
 })();
