@@ -43,7 +43,7 @@ const DovaApp = (() => {
         ['equipos', 'Equipos', 'equipos.manage'], ['agendacfg', 'Sillones y días bloqueados', 'agenda.config'], ['alertas', 'Alertas', ['equipos.manage', 'esterilizacion.manage', 'inventario.view', 'laboratorio.manage']]] },
     // Reportes: consultar y analizar
     { grupo: 'reportes', ruta: 'pacientes', label: 'Pacientes', permiso: 'pacientes.view' },
-    { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores']] },
+    { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores'], ['kits', 'Kits por tratamiento']] },
     { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'], subs: [['trat', 'Tratamientos y precios', 'tratamientos.manage'], ['odo', 'Odontólogos', 'usuarios.manage']] },
     { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
     { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'rentabilidad.view', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage', 'cobro_online.manage'],

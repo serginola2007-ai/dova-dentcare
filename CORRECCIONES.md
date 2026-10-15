@@ -871,3 +871,11 @@ Se probó todo DOVA como un QA:
 - **Modo claro / oscuro:** se elige solo en **Configuración → Apariencia** (se quitó el botón de la barra). Se guarda en la cuenta, así acompaña al usuario en cualquier dispositivo, y llega al instante a las ventanas abiertas. Sin elección, claro.
 - El diseño mecánico tiene ahora paleta clara y oscura con los colores de la marca.
 - Migración `0058`. **Pruebas:** `ui-mecanico` 33/33 (incluye cambio de modo, otro dispositivo y recarga).
+
+## Tanda: rentabilidad y kits de insumos (15/10/2026)
+
+- **Finanzas → Rentabilidad** (solo el dueño): lo realizado menos insumos, laboratorio y comisión, por tratamiento y por odontólogo, con aviso si hay insumos sin precio de compra. Pruebas: `rentabilidad.test` 15/15, `ui-rentabilidad` 5/5.
+- **Arreglo de fondo:** las sesiones de un tratamiento no se podían registrar desde la pantalla (solo por la API), así que comisiones, producción y rentabilidad quedaban vacías en el uso real. Ahora el plan del paciente tiene **Registrar sesión** (fecha, profesional, qué se hizo).
+- **Kits por tratamiento** (Inventario → Kits por tratamiento): qué insumos se usan en cada sesión. Al registrar una sesión se descuentan solos (se puede desmarcar), nunca dos veces ni dejando stock negativo; si falta algo la sesión se registra igual y avisa qué faltó; aviso a los admins cuando un insumo llega al mínimo.
+- La sesión ahora valida la fecha y que el odontólogo sea de la clínica.
+- Migración `0059`. **Pruebas:** `kits.test` 22/22, `ui-kits` 7/7.

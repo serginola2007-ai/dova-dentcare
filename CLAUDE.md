@@ -84,7 +84,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
   - tablas sin caja alrededor;
   - pestañas subrayadas;
   - no anidar bordes.
-- Un cambio visual va en `shared/` en `shared/`; lo del diseño va en `mecanico/skin.css`, siempre con variables para que funcionen el modo claro y el oscuro.
+- Un cambio visual común va en `shared/`; lo del diseño va en `mecanico/skin.css`, siempre con variables para que funcionen el modo claro y el oscuro.
 - Pestañas de una sección: `X.subPestanas(...)` en `shared/ext/*.js`. Si una sección del menú tiene pestañas, el menú de `shared/app.js` las lista en `subs` con los **mismos id y permisos**.
 - Al cambiar archivos del frontend, subir `VERSION` en `frontend/sw.js` (`dova-vNN`) y agregar al precache los archivos nuevos.
 - Textos en español rioplatense, claros para personal no técnico ("Guardar", "No se pudo…", sin jerga).
@@ -192,3 +192,13 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Solo existe el diseño `mecanico` (carpeta `frontend/mecanico`). `/moderno/`, `/minimalista/` y `/tecnico/` redirigen (301) ahí; el selector de diseño y su pantalla se eliminaron.
 - Modo claro/oscuro: `usuarios.tema_preferido` (migración 0058), en la sesión como `temaPreferido`; `DOVA.actualizarTema(tema)` → `PATCH /usuarios/me/preferencias {tema}`; `DovaApp.aplicarModo(tema)` pone `data-theme` (light/dark), lo guarda en `localStorage('dova-tema')` y lo propaga a las ventanas (`DovaVentanas.aplicarTema`). **Solo se cambia en Configuración → Apariencia**: no agregar toggles en otras partes.
 - Colores nuevos en el CSS: usar variables (`--white`, `--ink`, `--mec-*`), nunca hex fijos, o se rompe el modo oscuro. Pruebas: `tests/ui-mecanico.js`.
+
+
+## Rentabilidad (Finanzas)
+- `GET /api/finanzas/rentabilidad?desde&hasta&odontologoId` (permiso `rentabilidad.view`, módulo `comisiones` del plan; solo admin por defecto). `cuentas.service.rentabilidad`: producción por sesión realizada (como comisiones) − insumos de la sesión (`sesion_materiales` × `precio_compra`) − laboratorio (por odontólogo) − comisión. Por tratamiento no incluye laboratorio. Pantalla: Finanzas → Rentabilidad (`ext-secciones.js`). Pruebas: `tests/rentabilidad.test.js`, `tests/ui-rentabilidad.js`.
+- Producción, comisiones y rentabilidad se basan en **sesiones** (`sesiones_tratamiento`), que ahora se registran desde el plan (ficha → plan → "Registrar sesión"); completar etapas no cuenta como sesión.
+
+## Kits de insumos por tratamiento (0059)
+- `tratamiento_kits` (insumo + cantidad por sesión) y `sesiones_tratamiento.kit_aplicado`. `modules/inventario/kits.service.js`; rutas `GET /api/inventario/kits`, `GET|PUT /api/inventario/kits/:tratamientoId` (ver: `inventario.view`; guardar: `inventario.manage`; valida insumo y tratamiento contra la clínica).
+- `planes.service.registrarSesion` valida fecha y odontólogo, y llama a `kits.aplicarASesion` (salvo `descontarKit: false`): descuenta con `registrarConsumoProcedimiento` (movimiento + auditoría), nunca dos veces la misma sesión, nunca deja stock negativo; si falta stock registra la sesión igual y devuelve `kit.faltantes`; avisa a los admins (`alertas.alertarAdmins`, tipo `inventario`) cuando algo llega al mínimo o faltó.
+- Pantallas: Inventario → Kits por tratamiento (`ext-operativo.js`) y bloque de sesiones del plan (`ext-clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).

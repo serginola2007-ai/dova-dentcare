@@ -18,6 +18,7 @@ async function obtener(clinicaId, id) {
   if (!plan) throw new ApiError(404, 'Plan de tratamiento no encontrado');
   plan.sesiones = await repo.listarSesiones(id);
   plan.etapas = await etapasRepo.listarPorPlan(id);
+  plan.kitInsumos = plan.tratamiento_id ? Number((await require('../../config/db').query('SELECT count(*) FROM tratamiento_kits WHERE clinica_id=$1 AND tratamiento_id=$2', [clinicaId, plan.tratamiento_id])).rows[0].count) : 0;
   for (const etapa of plan.etapas) {
     etapa.materiales = await inventarioService.listarMaterialesDeEtapa(etapa.id);
   }
@@ -155,9 +156,15 @@ async function registrarSesion(clinicaId, planId, datos, usuario) {
     throw new ApiError(409, `No se pueden registrar sesiones en un plan ${plan.estado}`);
   }
 
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(datos.fecha || ''))) throw new ApiError(400, 'Indicá la fecha de la sesión (AAAA-MM-DD)');
+  if (datos.odontologoId && !(await odontologosRepo.obtenerPorId(clinicaId, datos.odontologoId))) throw new ApiError(400, 'Odontólogo no encontrado');
   const numero = (await repo.contarSesiones(planId)) + 1;
-  await repo.crearSesion(planId, numero, datos);
+  const sesion = await repo.crearSesion(planId, numero, datos);
   await repo.incrementarSesionesRealizadas(planId);
+  // Kit de insumos del tratamiento: se descuenta solo (salvo que se pida no hacerlo). Nunca frena la sesión.
+  const kit = (sesion.estado === 'realizada' && datos.descontarKit !== false)
+    ? await require('../inventario/kits.service').aplicarASesion(clinicaId, sesion.id, plan.tratamiento_id, usuario)
+    : { aplicado: false, descontados: [], faltantes: [] };
 
   await historiaRepo.crear(clinicaId, {
     pacienteId: plan.paciente_id,
@@ -183,7 +190,9 @@ async function registrarSesion(clinicaId, planId, datos, usuario) {
     await programarRecallDeFin(clinicaId, planId, datos.fecha ? String(datos.fecha).slice(0, 10) : null, usuario);
   }
 
-  return obtener(clinicaId, planId);
+  const resultado = await obtener(clinicaId, planId);
+  resultado.kit = kit;
+  return resultado;
 }
 
 /* Seguimiento a largo plazo: al terminar un plan cuyo tratamiento tiene

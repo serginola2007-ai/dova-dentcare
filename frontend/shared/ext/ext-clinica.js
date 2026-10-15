@@ -736,6 +736,17 @@ const DovaClinica = (() => {
           </div><div data-sub></div>` : ''}
         </li>`;
       }).join('')}</ol>` : '<p class="dova-nota">Este tratamiento todavía no tiene etapas.</p>'}
+      <section class="dova-cli-sesiones" data-sesiones>
+        <h5>Sesiones realizadas: ${(plan.sesiones || []).filter((s) => s.estado === 'realizada').length} de ${plan.sesiones_totales || 1}</h5>
+        ${(plan.sesiones || []).length ? `<ol class="dova-cli-ses-lista">${plan.sesiones.map((s) => `<li>Sesión ${s.numero} · ${fmtFecha(s.fecha)}${s.odontologo_nombre ? ` · ${esc(s.odontologo_nombre)}` : ''}${s.procedimiento ? ` · ${esc(s.procedimiento)}` : ''}${s.kit_aplicado ? ' <span class="dova-nota">(kit descontado)</span>' : ''}</li>`).join('')}</ol>` : '<p class="dova-nota">Todavía no se registró ninguna sesión. Registrarlas cuenta para comisiones, rentabilidad e inventario.</p>'}
+        ${ed ? `<form class="dova-cli-form" data-nueva-sesion>
+          <label><span>Fecha</span><input type="date" name="fecha" required value="${X.hoy()}" /></label>
+          <label><span>Profesional</span><select name="odontologoId"><option value="">—</option>${odos.map(([v, t]) => `<option value="${v}" ${String(v) === String(plan.odontologo_id || '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+          <label class="dova-cli-ancho"><span>Qué se hizo</span><input name="procedimiento" maxlength="500" placeholder="Ej.: instrumentación y obturación" /></label>
+          ${plan.kitInsumos ? `<label class="dova-cli-ancho dova-cli-check"><input type="checkbox" name="descontarKit" checked /> <span>Descontar del inventario el kit del tratamiento (${plan.kitInsumos} insumo${plan.kitInsumos === 1 ? '' : 's'})</span></label>` : ''}
+          <div class="dova-cli-ancho"><button class="dova-btn-primary">Registrar sesión</button></div>
+        </form>` : ''}
+      </section>
       ${ed ? `<form class="dova-cli-nueva-etapa" data-nueva>
         <input name="nombre" placeholder="Nueva etapa (ej.: Control)" maxlength="150" aria-label="Nueva etapa" />
         <button class="dova-btn-secundario">Agregar etapa</button>
@@ -746,6 +757,22 @@ const DovaClinica = (() => {
     const pdfb = root.querySelector('[data-pdf-plan]'); if (pdfb) pdfb.addEventListener('click', () => verPdf(`/comprobantes/plan-tratamiento/${plan.id}`, `Plan de tratamiento ${plan.nombre}`));
     const pb = root.querySelector('[data-presupuesto]');
     if (pb) pb.addEventListener('click', async () => { pb.disabled = true; try { await DOVA.post(`/planes-tratamiento/${plan.id}/generar-presupuesto`, {}); toast('Presupuesto generado a partir del plan', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); pb.disabled = false; } });
+    const fs = root.querySelector('[data-nueva-sesion]');
+    if (fs) fs.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = fs.querySelector('button'); btn.disabled = true;
+      try {
+        const r = await DOVA.post(`/planes-tratamiento/${plan.id}/sesiones`, {
+          fecha: fs.fecha.value, odontologoId: fs.odontologoId.value ? Number(fs.odontologoId.value) : undefined,
+          procedimiento: fs.procedimiento.value.trim() || undefined, descontarKit: fs.descontarKit ? fs.descontarKit.checked : undefined,
+        });
+        const k = r && r.kit;
+        if (k && k.faltantes && k.faltantes.length) toast(`Sesión registrada. No se pudo descontar por falta de stock: ${k.faltantes.map((f) => f.insumo).join(', ')}`, 'error');
+        else if (k && k.aplicado) toast(`Sesión registrada y se descontó el kit (${k.descontados.length} insumo${k.descontados.length === 1 ? '' : 's'})`, 'ok');
+        else toast('Sesión registrada', 'ok');
+        recargar();
+      } catch (e) { toast(e.message, 'error'); btn.disabled = false; }
+    });
     const nf = root.querySelector('[data-nueva]');
     if (nf) {
       nf.addEventListener('submit', async (ev) => {

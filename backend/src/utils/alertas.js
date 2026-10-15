@@ -8,7 +8,7 @@ const { query } = require('../config/db');
 const recientes = new Map();
 const REPETIR_MS = 10 * 60 * 1000;
 
-async function alertarAdmins(clinicaId, { clave, titulo, mensaje, alUsuario = null }) {
+async function alertarAdmins(clinicaId, { clave, titulo, mensaje, alUsuario = null, tipo = 'seguridad', ruta = null }) {
   try {
     if (!clinicaId) return;
     const k = `${clinicaId}|${clave || titulo}`;
@@ -23,7 +23,7 @@ async function alertarAdmins(clinicaId, { clave, titulo, mensaje, alUsuario = nu
     const destino = new Set(admins.rows.map((r) => r.id));
     if (alUsuario) destino.add(Number(alUsuario));
     for (const id of destino) {
-      await notif.notificar(clinicaId, id, { tipo: 'seguridad', titulo: String(titulo).slice(0, 150), mensaje: String(mensaje || '').slice(0, 500), entidad: 'seguridad', ruta: 'configuracion' });
+      await notif.notificar(clinicaId, id, { tipo, titulo: String(titulo).slice(0, 150), mensaje: String(mensaje || '').slice(0, 500), entidad: tipo, ruta: ruta || (tipo === 'inventario' ? 'inventario' : 'configuracion') });
     }
   } catch (e) {
     console.error('[alertas] no se pudo avisar:', e.message);

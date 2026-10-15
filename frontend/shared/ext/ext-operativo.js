@@ -1178,7 +1178,48 @@ const DovaOperativo = (() => {
       { id: 'vencen', texto: 'Por vencer', visible: true, render: porVencer },
       { id: 'compras', texto: 'Registrar compra', visible: puede('proveedores.manage'), render: compra },
       { id: 'prov', texto: 'Proveedores', visible: true, render: proveedores },
+      { id: 'kits', texto: 'Kits por tratamiento', visible: true, render: kits },
     ]);
+  }
+
+  // Kit de insumos de cada tratamiento: se descuenta solo al registrar una sesión realizada.
+  async function kits(c) {
+    const maneja = puede('inventario.manage');
+    const lista = await DOVA.get('/inventario/kits');
+    c.innerHTML = `<p class="dova-nota">Cargá qué insumos se usan en cada sesión de un tratamiento. Al registrar una sesión realizada, DOVA los descuenta del stock solo y avisa si algo se está por acabar.</p>
+      <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Tratamiento</th><th>Insumos del kit</th><th></th></tr></thead><tbody>
+      ${lista.map((t) => `<tr><td>${esc(t.nombre)}${t.activo ? '' : ` ${badge('inactivo', 'info')}`}</td><td>${t.insumos ? `${t.insumos}` : '<span class="dova-nota">Sin kit</span>'}</td>
+        <td class="dova-ext-acciones"><button class="dova-btn-link" data-kit="${t.id}">${maneja ? (t.insumos ? 'Editar kit' : 'Armar kit') : 'Ver kit'}</button></td></tr>`).join('') || '<tr><td colspan="3" class="dova-vacio">No hay tratamientos en el catálogo.</td></tr>'}
+      </tbody></table></div>`;
+    c.querySelectorAll('[data-kit]').forEach((b) => b.addEventListener('click', () => editarKit(Number(b.dataset.kit), maneja, () => kits(c))));
+  }
+
+  async function editarKit(tratamientoId, maneja, alGuardar) {
+    const [kit, insumosLista] = await Promise.all([DOVA.get(`/inventario/kits/${tratamientoId}`), DOVA.get('/inventario/insumos')]);
+    const activos = insumosLista.filter((i) => i.activo !== false);
+    const fila = (it = {}) => `<div class="dova-kit-fila" data-fila>
+        <select data-insumo aria-label="Insumo" ${maneja ? '' : 'disabled'}><option value="">Elegí un insumo…</option>${activos.map((i) => `<option value="${i.id}" ${Number(it.insumoId) === i.id ? 'selected' : ''}>${esc(i.nombre)} (stock ${num(i.stock_actual)})</option>`).join('')}</select>
+        <input type="number" data-cant min="0.01" step="0.01" value="${it.cantidad || 1}" aria-label="Cantidad por sesión" ${maneja ? '' : 'disabled'} />
+        ${maneja ? '<button type="button" class="dova-btn-link dova-ext-peligro" data-quitar>Quitar</button>' : ''}</div>`;
+    const box = X.modal(`Kit — ${kit.tratamiento}`, `<form data-kit-form>
+        <p class="dova-nota">Cantidad que se usa en <strong>cada sesión</strong>.</p>
+        <div data-filas>${kit.items.length ? kit.items.map(fila).join('') : (maneja ? fila() : '<p class="dova-nota">Este tratamiento no tiene kit.</p>')}</div>
+        ${maneja ? '<button type="button" class="dova-btn-secundario" data-agregar>+ Agregar insumo</button>' : ''}
+        <p class="dova-error-text" data-err hidden></p>
+        <div class="dova-modal-actions"><button type="button" class="dova-btn-secundario" data-cerrar-modal>${maneja ? 'Cancelar' : 'Cerrar'}</button>${maneja ? '<button class="dova-btn-primary">Guardar kit</button>' : ''}</div>
+      </form>`, { ancho: 'ancho' });
+    if (!box || !maneja) return;
+    const filas = box.querySelector('[data-filas]');
+    const enganchar = () => filas.querySelectorAll('[data-quitar]').forEach((b) => { b.onclick = () => b.closest('[data-fila]').remove(); });
+    enganchar();
+    box.querySelector('[data-agregar]').addEventListener('click', () => { filas.insertAdjacentHTML('beforeend', fila()); enganchar(); });
+    box.querySelector('[data-kit-form]').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = box.querySelector('[data-err]'); err.hidden = true;
+      const items = Array.from(filas.querySelectorAll('[data-fila]')).map((f) => ({ insumoId: Number(f.querySelector('[data-insumo]').value), cantidad: Number(f.querySelector('[data-cant]').value) })).filter((x) => x.insumoId);
+      try { await DOVA.put(`/inventario/kits/${tratamientoId}`, { items }); toast(items.length ? 'Kit guardado' : 'Se quitó el kit', 'ok'); X.cerrarModal(); alGuardar(); }
+      catch (ex) { err.textContent = ex.message; err.hidden = false; }
+    });
   }
 
   async function insumos(c, filtro = '') {
