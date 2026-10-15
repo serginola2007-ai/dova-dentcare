@@ -3,7 +3,7 @@ const { query } = require('../../config/db');
 async function findUsuarioByUsername(clinicaId, username) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.password_hash,
-            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
+            u.activo, u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version, u.proveedor,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
@@ -16,7 +16,7 @@ async function findUsuarioByUsername(clinicaId, username) {
 async function findUsuarioById(id) {
   const res = await query(
     `SELECT u.id, u.clinica_id, u.rol_id, u.nombre, u.username, u.activo,
-            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version,
+            u.es_admin_protegido, u.odontologo_id, u.diseno_preferido, u.debe_cambiar_clave, u.token_version, u.proveedor,
             r.codigo AS rol_codigo, r.nombre AS rol_nombre
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
@@ -46,7 +46,22 @@ async function getPermisosEfectivos(usuarioId, rolId) {
        AND pu.permiso_id NOT IN (SELECT permiso_id FROM rol_permisos WHERE rol_id = $2)`,
     [usuarioId, rolId]
   );
-  return res.rows.filter((r) => r.allow).map((r) => r.codigo);
+  let permisos = res.rows.filter((r) => r.allow).map((r) => r.codigo);
+  // El plan de la clínica puede no incluir algunos módulos: sus permisos se sacan acá,
+  // para que el menú, las pantallas y la API se cierren juntos (ver config/planes.js).
+  const cl = await getClinicaDeUsuario(usuarioId);
+  if (cl) permisos = require('../../config/planes').filtrarPermisos(permisos, cl);
+  // "proveedor": administra la plataforma (clínicas, planes y mensualidades). No da acceso a pacientes.
+  if (cl && cl.proveedor) permisos.push('plataforma.manage');
+  return permisos;
+}
+
+// Plan, ajustes y estado de la clínica de un usuario (y si el usuario es el proveedor).
+async function getClinicaDeUsuario(usuarioId) {
+  const r = await query(
+    `SELECT c.id, c.plan, c.modulos_extra, c.modulos_quitar, c.activa, c.suspendida_motivo, u.proveedor
+       FROM usuarios u JOIN clinicas c ON c.id = u.clinica_id WHERE u.id = $1`, [usuarioId]);
+  return r.rows[0] || null;
 }
 
 async function actualizarUltimoLogin(usuarioId) {
@@ -110,6 +125,7 @@ module.exports = {
   findUsuarioByUsername,
   findUsuarioById,
   getPermisosEfectivos,
+  getClinicaDeUsuario,
   actualizarUltimoLogin,
   guardarRefreshToken,
   findRefreshToken,

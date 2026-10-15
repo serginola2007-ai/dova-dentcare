@@ -5,6 +5,12 @@ async function findBySlug(slug) {
   return res.rows[0] || null;
 }
 
+// Para el login: encuentra la clínica aunque esté suspendida (así se puede avisar con claridad).
+async function findBySlugAunSuspendida(slug) {
+  const res = await query('SELECT * FROM clinicas WHERE slug = $1', [slug]);
+  return res.rows[0] || null;
+}
+
 async function findById(id) {
   const res = await query('SELECT * FROM clinicas WHERE id = $1', [id]);
   return res.rows[0] || null;
@@ -22,4 +28,4 @@ async function update(id, campos) {
   return res.rows[0];
 }
 
-module.exports = { findBySlug, findById, update };
+module.exports = { findBySlug, findBySlugAunSuspendida, findById, update };

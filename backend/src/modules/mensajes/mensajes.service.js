@@ -366,8 +366,8 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
     if (!lock.rows[0].ok) { cliente.release(); return { enviados: 0, fallidos: 0, omitido: 'en_curso' }; }
     try {
       const hora = horaLocal();
-      const clinicas = await query('SELECT id, mensajes_hora, controles_auto, encuesta_auto, indicaciones_auto FROM clinicas WHERE activa AND (controles_auto OR encuesta_auto OR indicaciones_auto)');
-      for (const c of clinicas.rows) {
+      const clinicas = await query('SELECT id, mensajes_hora, controles_auto, encuesta_auto, indicaciones_auto, plan, modulos_extra, modulos_quitar FROM clinicas WHERE activa AND (controles_auto OR encuesta_auto OR indicaciones_auto)');
+      for (const c of require('../../config/planes').conModulo(clinicas.rows, 'whatsapp_auto')) {
         const lote = [];
         // Las indicaciones salen enseguida de la atención (de 8 a 21), no esperan la hora de los mensajes.
         if (c.indicaciones_auto && (ignorarHora || (hora >= 8 && hora < 21))) for (const x of (await indicacionesPendientes(c.id)).slice(0, 200)) lote.push(datosIndicaciones(x));

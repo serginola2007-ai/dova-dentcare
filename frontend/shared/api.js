@@ -158,8 +158,10 @@ const DOVA = (() => {
     marcarPestana(true);
     return data;
   }
-  async function login(username, password) {
-    return abrirSesion(await request('/auth/login', { method: 'POST', body: { username, password }, reintentar: false }));
+  async function login(username, password, clinicaSlug) {
+    const body = { username, password };
+    if (clinicaSlug) body.clinicaSlug = clinicaSlug;
+    return abrirSesion(await request('/auth/login', { method: 'POST', body, reintentar: false }));
   }
   // Bloqueo de pantalla: el servidor deja de aceptar esta sesión hasta que
   // se ingrese la contraseña (aunque se recargue la página).

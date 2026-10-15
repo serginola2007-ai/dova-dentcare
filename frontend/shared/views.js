@@ -59,6 +59,14 @@ const Vistas = (() => {
   // el diseño que tiene guardado en su usuario (en una computadora
   // compartida, el que entra sin tocar nada no pisa su preferencia). Si
   // elige uno de los 3, ese pasa a ser su nuevo diseño guardado.
+  // Código de la clínica (slug): viene de ?clinica=… o de la última vez en este equipo.
+  function codigoClinicaGuardado() {
+    try {
+      const q = new URLSearchParams(location.search).get('clinica');
+      if (q && /^[a-z0-9][a-z0-9-]{0,79}$/i.test(q)) return q.toLowerCase();
+      return localStorage.getItem('dova.clinica') || '';
+    } catch (_e) { return ''; }
+  }
   function vistaLogin(disenoActual) {
     void disenoActual;
     const preseleccion = '';
@@ -71,6 +79,11 @@ const Vistas = (() => {
             <input type="text" id="login-username" required autocomplete="username" />
             <label>Contraseña</label>
             <input type="password" id="login-password" required autocomplete="current-password" />
+            <details class="dova-login-clinica"${codigoClinicaGuardado() ? ' open' : ''}>
+              <summary>Entro a otra clínica</summary>
+              <label for="login-clinica">Código de la clínica</label>
+              <input type="text" id="login-clinica" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(codigoClinicaGuardado())}" placeholder="Te lo da el proveedor de DOVA" />
+            </details>
 
             <fieldset class="dova-login-disenos">
               <legend>Diseño</legend>
@@ -115,7 +128,10 @@ const Vistas = (() => {
       const errorEl = document.getElementById('login-error');
       errorEl.style.display = 'none';
       try {
-        await DOVA.login(username, password);
+        const clinicaEl = document.getElementById('login-clinica');
+        const clinica = clinicaEl ? clinicaEl.value.trim().toLowerCase() : '';
+        await DOVA.login(username, password, clinica);
+        try { if (clinica) localStorage.setItem('dova.clinica', clinica); else localStorage.removeItem('dova.clinica'); } catch (_e) { /* sin almacenamiento: no pasa nada */ }
         const u = DOVA.usuarioActual();
         if (u && u.debeCambiarClave) {
           pedirCambioDeClave(password, () => onSuccess(disenoElegido));

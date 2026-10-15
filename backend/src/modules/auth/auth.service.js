@@ -60,7 +60,15 @@ async function emitirSesion(usuario, { sesionId, sesionInicio, ip, agente } = {}
 const MAX_FALLIDOS_USUARIO = 5;
 const MAX_FALLIDOS_IP = 30;
 
-async function login({ username, password, clinicaSlug = 'dentcarerc', ip, agente }) {
+// Código de la clínica que llega del login: solo minúsculas, números y guiones; si no viene, la principal.
+const SLUG_POR_DEFECTO = () => process.env.DOVA_CLINICA_POR_DEFECTO || 'dentcarerc';
+const slugValido = (v) => (typeof v === 'string' && /^[a-z0-9][a-z0-9-]{0,79}$/.test(v.trim().toLowerCase()) ? v.trim().toLowerCase() : null);
+
+async function login({ username, password, clinicaSlug, ip, agente }) {
+  if (clinicaSlug !== undefined && clinicaSlug !== null && clinicaSlug !== '') {
+    clinicaSlug = slugValido(clinicaSlug);
+    if (!clinicaSlug) throw new ApiError(401, 'Usuario o contraseña incorrectos');
+  } else clinicaSlug = SLUG_POR_DEFECTO();
   // Solo texto plano: nada de listas, objetos ni caracteres de control
   // (["admin"] se convertía en "admin"; un \0 hacía fallar a la base).
   if (!textoCredencial(username, 100) || !textoCredencial(password, 200)) {
@@ -100,7 +108,7 @@ async function login({ username, password, clinicaSlug = 'dentcarerc', ip, agent
 }
 
 async function verificarCredenciales({ username, password, clinicaSlug }) {
-  const clinica = await clinicaRepo.findBySlug(clinicaSlug);
+  const clinica = await clinicaRepo.findBySlugAunSuspendida(clinicaSlug);
   if (!clinica) throw new ApiError(401, 'Usuario o contraseña incorrectos');
   const usuario = await authRepo.findUsuarioByUsername(clinica.id, String(username).trim().slice(0, 100));
   if (!usuario || !usuario.activo) {
@@ -109,6 +117,8 @@ async function verificarCredenciales({ username, password, clinicaSlug }) {
   }
   const passwordOk = await bcrypt.compare(String(password).slice(0, 200), usuario.password_hash);
   if (!passwordOk) throw new ApiError(401, 'Usuario o contraseña incorrectos');
+  // Servicio suspendido: recién con la contraseña correcta se avisa (no se revela a desconocidos).
+  if (clinica.activa === false && !usuario.proveedor) throw new ApiError(403, 'El servicio de tu clínica está suspendido. Comunicate con el proveedor de DOVA.', { codigo: 'CLINICA_SUSPENDIDA' });
   return { usuario, clinica };
 }
 

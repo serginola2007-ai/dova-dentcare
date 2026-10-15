@@ -10,6 +10,8 @@ const router = express.Router();
 router.get('/branding-publico', controller.brandingPublico);
 
 router.get('/', authMiddleware, resolverClinicaMiddleware, controller.obtenerActual);
+// Mi plan: qué módulos incluye el plan de la clínica (lo ve cualquier usuario del sistema).
+router.get('/plan', authMiddleware, resolverClinicaMiddleware, controller.plan);
 router.put('/', authMiddleware, resolverClinicaMiddleware, requirePermiso('clinica.config.manage'), controller.actualizar);
 
 // Política de seguridad de la clínica: bloqueo de pantalla por inactividad y

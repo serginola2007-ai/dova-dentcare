@@ -677,3 +677,16 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-rap-lista li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--dova-borde, #e5e5e5); }
 .dova-rap-lista li > span { min-width: 0; overflow-wrap: anywhere; }
 .dova-rap-res .dova-vacio { margin-top: 10px; }
+
+/* Plataforma y Mi plan */
+.dova-plat-resumen { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 16px; }
+.dova-plat-resumen > div { border: 1px solid var(--line, #ddd); padding: 10px 16px; min-width: 120px; }
+.dova-plat-resumen strong { display: block; font-size: 20px; }
+.dova-plat-resumen span { font-size: 12px; color: var(--ink-soft); }
+.dova-plat-acc { white-space: nowrap; }
+.dova-plat-clave code { font-size: 15px; user-select: all; }
+.dova-plan-lista { list-style: none; padding: 0; margin: 8px 0 0; }
+.dova-plan-lista li { padding: 6px 0; border-bottom: 1px solid var(--line, #e5e5e5); }
+.dova-plan-lista li.no-incluido { color: var(--ink-soft); }
+.dova-login-clinica { margin: 10px 0 4px; }
+.dova-login-clinica summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }

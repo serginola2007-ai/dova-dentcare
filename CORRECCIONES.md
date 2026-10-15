@@ -822,3 +822,13 @@ Se probó todo DOVA como un QA:
   - **Nueva factura** (efectivo) y **Nuevo presupuesto** (tarjeta): abren directo el formulario en su ventana.
   - Informes, Usuarios, Historial de cambios y Configuración, como antes. Cada ícono aparece solo si el usuario tiene el permiso.
 - Pruebas: nueva `ui-accesos-mecanico` 32/32; `ui-mecanico` 27/27, `ui-ventanas` 54/54, `ui-presupuestos-informes` 28/28.
+
+## Tanda: planes por clínica y panel de plataforma (15/10/2026)
+
+- **Planes:** cada clínica tiene un plan (Esencial, Base, Completo, Premium) y se le pueden dar o quitar módulos sueltos. Lo que el plan no incluye desaparece del menú y la API lo rechaza (403). La clínica ve qué incluye en Configuración → **Mi plan**.
+- **Panel Plataforma** (solo el usuario proveedor): crear clínicas (devuelve una clave temporal que se muestra una sola vez), cambiar plan y mensualidad, **suspender / reactivar** (con motivo) y **anotar los pagos de cada mes** (muestra quién debe). No ve datos de pacientes. Todo queda en el historial de cambios.
+- **Ingreso por clínica:** campo "Entro a otra clínica" (código) en el login; recuerda el último en ese equipo.
+- **Suspensión:** corta las sesiones abiertas; con la clave mal no revela si está suspendida.
+- Los envíos automáticos de WhatsApp y la página web respetan el plan de cada clínica.
+- Migración `0054`. Variable nueva opcional: `DOVA_CLINICA_POR_DEFECTO`.
+- **Pruebas:** nuevas `plataforma.test` 37/37 y `ui-plataforma` 13/13.

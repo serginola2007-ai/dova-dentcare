@@ -266,8 +266,8 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
     if (!lock.rows[0].ok) { cliente.release(); return { enviados: 0, fallidos: 0, omitido: 'en_curso' }; }
     try {
       const hora = horaLocal();
-      const clinicas = await query('SELECT id, cobranza_hora FROM clinicas WHERE activa AND cobranza_auto');
-      for (const c of clinicas.rows) {
+      const clinicas = await query('SELECT id, cobranza_hora, plan, modulos_extra, modulos_quitar FROM clinicas WHERE activa AND cobranza_auto');
+      for (const c of require('../../config/planes').conModulo(clinicas.rows, 'whatsapp_auto')) {
         // A la hora elegida y nunca de noche (si el servidor estuvo dormido, no se manda tarde).
         if (!ignorarHora && (hora < c.cobranza_hora || hora >= 20)) continue;
         const l = await listar(c.id, { soloHoy: true });

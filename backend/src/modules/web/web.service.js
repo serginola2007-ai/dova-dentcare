@@ -41,6 +41,8 @@ async function clinicaPublica() {
   const id = Number(process.env.WEB_CLINICA_ID) || null;
   const r = await query(id ? 'SELECT * FROM clinicas WHERE id=$1' : 'SELECT * FROM clinicas WHERE activa IS NOT FALSE ORDER BY id LIMIT 1', id ? [id] : []);
   if (!r.rowCount) throw new ApiError(503, 'La página todavía no está configurada');
+  // El plan de la clínica puede no incluir la página web y el portal.
+  if (!require('../../config/planes').modulosHabilitados(r.rows[0]).has('web_portal')) throw new ApiError(503, 'La página no está disponible');
   return r.rows[0];
 }
 

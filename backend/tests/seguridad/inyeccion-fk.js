@@ -45,7 +45,7 @@ const NO = /^\/api\/(auth|web\/|eventos|usuarios\/me)/;
   const tablas = (await db.query("SELECT table_name t FROM information_schema.columns WHERE column_name='clinica_id' AND table_schema='public' AND table_name IN (SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE')")).rows.map((r) => r.t);
   const antes = {};
   for (const t of tablas) {
-    const tieneId = (await db.query("SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name='id'", [t])).rowCount;
+    const tieneId = (await db.query("SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name='id' AND data_type IN ('integer','bigint')", [t])).rowCount;
     if (tieneId) antes[t] = Number((await db.query(`SELECT COALESCE(max(id),0) m FROM ${t}`)).rows[0].m);
   }
 

@@ -158,8 +158,8 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
   let enviados = 0; let fallidos = 0;
   try {
     const hora = horaLocal(); const hoy = hoyIso();
-    const clinicas = await query('SELECT id, resumen_hora, resumen_correos, resumen_whatsapp FROM clinicas WHERE activa AND resumen_activo');
-    for (const c of clinicas.rows) {
+    const clinicas = await query('SELECT id, resumen_hora, resumen_correos, resumen_whatsapp, plan, modulos_extra, modulos_quitar FROM clinicas WHERE activa AND resumen_activo');
+    for (const c of require('../../config/planes').conModulo(clinicas.rows, 'whatsapp_auto')) {
       if (!ignorarHora && hora < c.resumen_hora) continue;
       // Reserva el resumen de hoy (si otro servidor ya lo tomó, no se repite). Uno fallido se reintenta a la media hora.
       const r = await query(`INSERT INTO resumenes_diarios (clinica_id, fecha) VALUES ($1,$2) ON CONFLICT (clinica_id, fecha) DO UPDATE SET estado='enviando', actualizado_en=now()

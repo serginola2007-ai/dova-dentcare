@@ -16,6 +16,13 @@ async function estadoUsuario(id, rolIdDesconocido) {
   if (c && ahora - c.t < CACHE_MS) return c.v;
   const authRepo = require('../modules/auth/auth.repository');
   const u = await authRepo.findUsuarioById(id);
+  const cl = u && u.activo ? await authRepo.getClinicaDeUsuario(u.id) : null;
+  // Servicio de la clínica suspendido (por ejemplo, mensualidad sin pagar): nadie entra, los datos se conservan.
+  if (cl && cl.activa === false && !cl.proveedor) {
+    const v = { activo: false, suspendida: true, motivo: cl.suspendida_motivo || null };
+    cache.set(id, { t: ahora, v });
+    return v;
+  }
   const v = u && u.activo
     ? { activo: true, permisos: await authRepo.getPermisosEfectivos(u.id, u.rol_id), tokenVersion: Number(u.token_version) || 0, debeCambiarClave: !!u.debe_cambiar_clave, clinicaId: u.clinica_id, odontologoId: u.odontologo_id || null }
     : { activo: false };
@@ -42,6 +49,7 @@ async function authMiddleware(req, res, next) {
   }
   try {
     const est = await estadoUsuario(Number(payload.sub));
+    if (est.suspendida) return next(new ApiError(403, 'El servicio de tu clínica está suspendido. Comunicate con el proveedor de DOVA.', { codigo: 'CLINICA_SUSPENDIDA' }));
     if (!est.activo) return next(new ApiError(401, 'Tu usuario fue desactivado. Consultá con el administrador.'));
     // Contraseña cambiada, rol cambiado o sesiones cerradas: los tokens anteriores ya no valen.
     if ((Number(payload.tv) || 0) !== est.tokenVersion || Number(payload.clinicaId) !== Number(est.clinicaId)) return next(new ApiError(401, 'Tu sesión se cerró. Volvé a iniciar sesión.'));

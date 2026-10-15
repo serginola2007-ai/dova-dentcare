@@ -7,6 +7,13 @@ async function obtener(clinicaId) {
   return clinica;
 }
 
+async function planDe(clinicaId) {
+  const { query } = require('../../config/db');
+  const r = await query('SELECT plan, modulos_extra, modulos_quitar, mensualidad FROM clinicas WHERE id=$1', [clinicaId]);
+  if (!r.rowCount) throw new ApiError(404, 'Clínica no encontrada');
+  return require('../../config/planes').detallePlan(r.rows[0]);
+}
+
 async function obtenerBrandingPublico(slug) {
   const clinica = await repo.findBySlug(slug);
   if (!clinica) throw new ApiError(404, 'Clínica no encontrada');
@@ -82,4 +89,5 @@ async function actualizarSeguridad(clinicaId, datos, actor) {
   return obtenerSeguridad(clinicaId);
 }
 
-module.exports = { obtener, obtenerBrandingPublico, actualizar, obtenerSeguridad, actualizarSeguridad };
+module.exports = {
+  planDe, obtener, obtenerBrandingPublico, actualizar, obtenerSeguridad, actualizarSeguridad };

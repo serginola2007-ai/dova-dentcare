@@ -132,6 +132,15 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Archivar pendientes viejos: `modules/seguimiento/archivo.js`; estado `archivado` en `paciente_recalls` y `controles_programados` (no se borra nada, se restaura).
 - Pantallas: `shared/ext/ext-avisos.js`. Pruebas: `tests/resumen-indicaciones.test.js`, `tests/ui-avisos.js`.
 
+## Planes por clínica y panel de plataforma (0054)
+- Plan de cada clínica: `clinicas.plan` (esencial/base/completo/premium), `modulos_extra`, `modulos_quitar`. Catálogo de módulos y plan mínimo en `config/planes.js`.
+- Se aplica en UN solo lugar: `auth.repository.getPermisosEfectivos` saca los permisos de módulos que el plan no incluye (menú, pantallas y API se cierran juntos). Lo que no tiene permiso propio (web pública, envíos automáticos) usa `conModulo(...)`/`modulosHabilitados(...)`.
+- Panel del dueño: `modules/plataforma/` (`/api/plataforma`, permiso sintetizado `plataforma.manage` solo para usuarios con `usuarios.proveedor`; no da acceso a datos de pacientes). Alta de clínica (roles, permisos, admin con clave temporal), plan, suspensión y pagos mensuales (`suscripcion_pagos`). `GET /api/clinica/plan` = "Mi plan".
+- Suspensión: `clinicas.activa=false`; el login responde 403 `CLINICA_SUSPENDIDA` solo con la clave correcta y el middleware corta los tokens abiertos (el proveedor queda exento).
+- Login por clínica: `clinicaSlug` en el cuerpo (por defecto `DOVA_CLINICA_POR_DEFECTO` o `dentcarerc`); la pantalla de ingreso tiene "Entro a otra clínica" (también `?clinica=`).
+- Límite conocido: la página web pública atiende UNA clínica por instalación (`WEB_CLINICA_ID`).
+- Pantallas: `shared/ext/ext-plataforma.js`. Pruebas: `tests/plataforma.test.js`, `tests/ui-plataforma.js`.
+
 ## Consentimientos
 - Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.
 - Disparadores en la base impiden modificar o borrar firmados (para borrar un paciente de prueba: `SET dova.borrando_paciente='on'`).

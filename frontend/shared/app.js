@@ -55,6 +55,7 @@ const DovaApp = (() => {
     { grupo: 'administracion', ruta: 'usuarios', label: 'Usuarios', permiso: 'usuarios.manage' },
     { grupo: 'administracion', ruta: 'auditoria', label: 'Historial de cambios', permiso: 'auditoria.view' },
     { grupo: 'administracion', ruta: 'helpdesk', label: 'Ayuda técnica', permiso: 'helpdesk.view' },
+    { grupo: 'administracion', ruta: 'plataforma', label: 'Plataforma', permiso: 'plataforma.manage' },
   ];
 
   // ---- Selector de diseño (moderno/minimalista/tecnico) ----
@@ -378,6 +379,10 @@ const DovaApp = (() => {
         case 'catalogo':
           elMain.innerHTML = '<div></div>';
           await DovaOperativo.catalogo(elMain.firstElementChild);
+          break;
+        case 'plataforma':
+          elMain.innerHTML = '<div></div>';
+          await DovaPlataforma.seccion(elMain.firstElementChild);
           break;
         case 'helpdesk':
           elMain.innerHTML = await Vistas.vistaHelpdesk();

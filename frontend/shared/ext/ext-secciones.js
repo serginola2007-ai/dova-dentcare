@@ -1145,6 +1145,7 @@ const DovaSecciones = (() => {
     await tarjetaDatosClinica(elMain);
     await tarjetaMensajes(elMain);
     if (window.DovaAvisos) await DovaAvisos.tarjetaResumen(elMain);
+    if (window.DovaPlataforma) await DovaPlataforma.tarjetaMiPlan(elMain);
     if (!puede('recalls.manage', 'clinica.config.manage', 'tratamientos.manage')) return;
     const cont = document.createElement('div');
     cont.innerHTML = '<h2 class="dova-view-title" style="margin-top:32px">Controles periódicos</h2><div data-tipos></div><div data-trat></div>';
