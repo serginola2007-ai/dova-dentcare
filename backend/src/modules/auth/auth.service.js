@@ -138,6 +138,7 @@ async function completarLogin(usuario, clinica, ctx) {
       odontologoId: usuario.odontologo_id,
       permisos: s.permisos,
       disenoPreferido: usuario.diseno_preferido || null,
+      temaPreferido: usuario.tema_preferido || 'claro',
       debeCambiarClave: !!usuario.debe_cambiar_clave,
     },
     clinica: {

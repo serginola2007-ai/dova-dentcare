@@ -33,7 +33,7 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     ids.push((await q1("INSERT INTO turnos (clinica_id, paciente_id, odontologo_id, fecha, hora_inicio, duracion_minutos, estado, motivo, sala) VALUES (1,$1,$2,$3,$4,30,'reservado','Control',$5) RETURNING id", [p, odo, manana, hora, `U${suf}${hora}`])).id);
   }
   try {
-    for (const [dis, vp] of [['moderno', { width: 1366, height: 900 }], ['tecnico', { width: 390, height: 844 }], ['minimalista', { width: 820, height: 1180 }]]) {
+    for (const [i, [dis, vp]] of [['mecanico', { width: 1366, height: 900 }], ['mecanico', { width: 390, height: 844 }], ['mecanico', { width: 820, height: 1180 }]].entries()) {
       await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido=$1 WHERE username='recep1'", [dis]);
       const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = [];
       p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
@@ -44,10 +44,10 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
       await p.waitForSelector('.dova-rec-estado', { timeout: 10000 }); await p.waitForTimeout(1200);
       // El navegador calcula "mañana" con la hora de Paraguay; el servidor de prueba usa otro huso: se elige el día a mano.
       await p.fill('[data-f] [name=fecha]', manana); await p.click('[data-f] button'); await p.waitForTimeout(1200);
-      P(`[${dis}] Muestra WhatsApp Business conectado y el estado del envío automático`, /conectado/.test(await p.textContent('.dova-rec-estado')) && /apagado/.test(await p.textContent('.dova-rec-estado')));
-      P(`[${dis}] Lista los turnos de mañana`, await p.locator('main tr', { hasText: LU }).count() === 1);
-      P(`[${dis}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
-      if (dis === 'moderno') {
+      P(`[${dis}-${vp.width}] Muestra WhatsApp Business conectado y el estado del envío automático`, /conectado/.test(await p.textContent('.dova-rec-estado')) && /apagado/.test(await p.textContent('.dova-rec-estado')));
+      P(`[${dis}-${vp.width}] Lista los turnos de mañana`, await p.locator('main tr', { hasText: LU }).count() === 1);
+      P(`[${dis}-${vp.width}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
+      if (i === 0) {
         await p.locator('main tr', { hasText: LU }).locator('[data-enviar]').click(); await p.waitForTimeout(1500);
         P('Enviar: el turno queda "Enviado" y llegó a WhatsApp', await p.locator('main tr', { hasText: LU }).locator('text=Enviado').count() >= 1 && recibidos.length === 1);
         P('…ya no ofrece "Enviar" de nuevo', await p.locator('main tr', { hasText: LU }).locator('[data-enviar]').count() === 0);
@@ -58,16 +58,16 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
         const urlPop = pedidos[0] || pop.url();
         P('"Mandar por mi WhatsApp" abre wa.me con el mensaje y el enlace', /wa\.me\/595\d+\?text=/.test(urlPop) || /whatsapp/.test(urlPop), urlPop);
         await pop.close().catch(() => {});
-        await p.screenshot({ path: `${DIR}/rec-moderno.png`, fullPage: true });
+        await p.screenshot({ path: `${DIR}/rec-mecanico.png`, fullPage: true });
       }
-      if (dis === 'tecnico') await p.screenshot({ path: `${DIR}/rec-celular.png`, fullPage: true });
-      P(`[${dis}] Sin errores de consola`, err.length === 0, err);
+      if (i === 1) await p.screenshot({ path: `${DIR}/rec-celular.png`, fullPage: true });
+      P(`[${dis}-${vp.width}] Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }
     // Configuración (admin)
-    await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='admin'");
+    await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='admin'");
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage();
-    await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
+    await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
     await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800); await enVentana(p);
     await p.evaluate(() => { window.DovaSubPendiente = 'recordatorios'; return DovaApp.navegar('seguimiento'); });
     await p.waitForSelector('.dova-rec-config summary'); await p.click('.dova-rec-config summary');
@@ -89,11 +89,11 @@ const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { 
     P('La lista muestra de qué número sale cada recordatorio', await p.locator('main tr', { hasText: NO }).filter({ hasText: '555 666' }).count() === 1 && await p.locator('main tr', { hasText: MA }).filter({ hasText: /A mano/ }).count() === 1);
     await ctx.close();
     // El doctor: su WhatsApp y sus turnos
-    await db.query("DELETE FROM login_intentos; UPDATE usuarios SET diseno_preferido='minimalista' WHERE username='odo1'");
+    await db.query("DELETE FROM login_intentos; UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='odo1'");
     await db.query('UPDATE odontologos SET whatsapp_numero=NULL, whatsapp_phone_id=NULL, whatsapp_envia=false WHERE id=$1', [odo]);
     const cd = await b.newContext({ viewport: { width: 390, height: 844 } }); const pd = await cd.newPage(); const errD = [];
     pd.on('pageerror', (e) => errD.push(e.message)); pd.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) errD.push(m.text()); });
-    await pd.goto(`${URL0}/minimalista/index.html`); await pd.fill('#login-username', 'odo1'); await pd.fill('#login-password', 'clave123'); await pd.click('#form-login button[type=submit]');
+    await pd.goto(`${URL0}/mecanico/index.html`); await pd.fill('#login-username', 'odo1'); await pd.fill('#login-password', 'clave123'); await pd.click('#form-login button[type=submit]');
     await pd.waitForSelector('#shell-root:not([style*="display: none"])'); await pd.waitForTimeout(800); await enVentana(pd);
     await pd.evaluate(() => DovaApp.navegar('configuracion')); await pd.waitForSelector('.dova-mi-whatsapp', { timeout: 10000 });
     P('Doctor: Configuración muestra "Mi WhatsApp para recordatorios"', /Todavía no registraste/.test(await pd.textContent('.dova-mi-whatsapp')));

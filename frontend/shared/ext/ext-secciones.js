@@ -568,6 +568,7 @@ const DovaSecciones = (() => {
       { id: 'cobro', texto: 'Avisos de cobro', visible: puede('cobranza.manage'), render: subCobro },
       { id: 'online', texto: 'Cobro online', visible: puede('cobro_online.manage'), render: (c) => DovaPlataforma.cobroOnline(c) },
       { id: 'comisiones', texto: 'Comisiones', visible: puede('comisiones.view', 'comisiones.manage'), render: subComisiones },
+      { id: 'rentabilidad', texto: 'Rentabilidad', visible: puede('rentabilidad.view'), render: subRentabilidad },
       { id: 'metas', texto: 'Metas', visible: puede('metas.manage', 'kpis.view', 'comisiones.view'), render: subMetas },
       { id: 'seguros', texto: 'Seguros y convenios', visible: puede('aseguradoras.manage'), render: subSeguros },
       { id: 'listas', texto: 'Listas de precios', visible: puede('listas_precios.manage'), render: subListas },
@@ -722,6 +723,38 @@ const DovaSecciones = (() => {
       });
       cargarLiq();
     }
+  }
+
+  async function subRentabilidad(c) {
+    const ods = await X.opcionesOdontologos();
+    const inicio = `${X.hoy().slice(0, 7)}-01`;
+    c.innerHTML = `<form class="dova-ext-filtros" data-f><div><label>Desde</label><input type="date" name="desde" value="${inicio}"/></div><div><label>Hasta</label><input type="date" name="hasta" value="${X.hoy()}"/></div>
+      <div><label>Odontólogo</label><select name="odontologoId"><option value="">Todos</option>${ods.map(([i, n]) => `<option value="${i}">${esc(n)}</option>`).join('')}</select></div><button class="dova-btn-secundario">Calcular</button></form>
+      <p class="dova-nota">Lo ganado = sesiones realizadas × (precio neto del plan ÷ sesiones). Se descuentan los insumos usados en cada sesión (a su precio de compra), el laboratorio y la comisión de los odontólogos. El laboratorio no está atado a un tratamiento: por eso aparece por odontólogo y en el total, no en cada tratamiento.</p>
+      <div data-res></div>`;
+    const f = c.querySelector('[data-f]');
+    const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
+    const cls = (v) => (v < 0 ? 'dova-ext-neg' : '');
+    const calcular = async () => {
+      const q = new URLSearchParams(Object.fromEntries(Array.from(new FormData(f)).filter(([, v]) => v))).toString();
+      const r = await DOVA.get(`/finanzas/rentabilidad?${q}`);
+      const t = r.totales;
+      c.querySelector('[data-res]').innerHTML = `<div class="dova-ext-kpis">
+          <div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${fmtGs(t.produccion)}</div><div class="dova-ext-kpi-label">Trabajos realizados</div></div>
+          <div class="dova-ext-kpi"><div class="dova-ext-kpi-valor">${fmtGs(t.costoInsumos + t.costoLaboratorio + t.comision)}</div><div class="dova-ext-kpi-label">Costos (insumos, laboratorio, comisión)</div></div>
+          <div class="dova-ext-kpi"><div class="dova-ext-kpi-valor ${cls(t.margen)}">${fmtGs(t.margen)}</div><div class="dova-ext-kpi-label">Margen (${pct(t.margenPct)})</div></div></div>
+        ${r.avisos.insumosSinPrecio ? `<p class="dova-nota">${r.avisos.insumosSinPrecio} uso${r.avisos.insumosSinPrecio === 1 ? '' : 's'} de insumos sin precio de compra cargado: se contaron a cero. Cargá el precio en Inventario para que el margen sea real.</p>` : ''}
+        <h3 class="dova-section-title">Por tratamiento</h3>
+        <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Tratamiento</th><th>Sesiones</th><th>Realizado</th><th>Insumos</th><th>Comisión</th><th>Margen</th><th>%</th></tr></thead><tbody>
+          ${r.porTratamiento.map((x) => `<tr><td><strong>${esc(x.tratamiento)}</strong></td><td>${x.sesiones}</td><td>${fmtGs(x.produccion)}</td><td>${fmtGs(x.costoInsumos)}</td><td>${fmtGs(x.comision)}</td><td class="${cls(x.margen)}"><strong>${fmtGs(x.margen)}</strong></td><td>${pct(x.margenPct)}</td></tr>`).join('') || '<tr><td colspan="7" class="dova-vacio">No hay sesiones realizadas en ese período.</td></tr>'}
+        </tbody></table></div>
+        <h3 class="dova-section-title">Por odontólogo</h3>
+        <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Odontólogo</th><th>Sesiones</th><th>Realizado</th><th>Insumos</th><th>Laboratorio</th><th>Comisión</th><th>Margen</th><th>%</th></tr></thead><tbody>
+          ${r.porOdontologo.map((x) => `<tr><td><strong>${esc(x.odontologo)}</strong></td><td>${x.sesiones}</td><td>${fmtGs(x.produccion)}</td><td>${fmtGs(x.costoInsumos)}</td><td>${fmtGs(x.costoLaboratorio)}</td><td>${fmtGs(x.comision)}</td><td class="${cls(x.margen)}"><strong>${fmtGs(x.margen)}</strong></td><td>${pct(x.margenPct)}</td></tr>`).join('') || '<tr><td colspan="8" class="dova-vacio">No hay sesiones realizadas en ese período.</td></tr>'}
+        </tbody></table></div>`;
+    };
+    f.addEventListener('submit', (e) => { e.preventDefault(); calcular().catch((x) => X.toast(x.message, 'error')); });
+    await calcular();
   }
 
   async function subMetas(c) {

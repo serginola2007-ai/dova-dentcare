@@ -70,7 +70,7 @@ const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message
     // ---------------- Pantallas ----------------
     await db.query('DELETE FROM login_intentos');
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 }, timezoneId: TZ }); const p = await ctx.newPage(); const err = errores(p);
-    await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
+    await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
     await p.waitForURL(/\/mecanico\//, { timeout: 15000 });
     await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(1200);
     const ids = await p.$$eval('#mec-iconos [data-mec-ir]', (l) => l.map((x) => x.dataset.mecIr));
@@ -146,7 +146,7 @@ const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message
     // Celular: el turno rápido entra en la pantalla.
     await db.query('DELETE FROM login_intentos');
     const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: TZ, hasTouch: true }); const p2 = await ctx2.newPage(); const err2 = errores(p2);
-    await p2.goto(`${URL0}/moderno/index.html`); await p2.fill('#login-username', 'admin'); await p2.fill('#login-password', 'admin'); await p2.click('#form-login button[type=submit]');
+    await p2.goto(`${URL0}/mecanico/index.html`); await p2.fill('#login-username', 'admin'); await p2.fill('#login-password', 'admin'); await p2.click('#form-login button[type=submit]');
     await p2.waitForURL(/\/mecanico\//, { timeout: 15000 }); await p2.waitForSelector('#shell-root:not([style*="display: none"])'); await p2.waitForTimeout(1000);
     if (await p2.locator('#mec-iconos [data-mec-ir="nuevo-turno"]').isVisible()) {
       await p2.click('#mec-iconos [data-mec-ir="nuevo-turno"]'); await p2.waitForSelector('.dova-modal-box [data-disp]');
@@ -160,7 +160,7 @@ const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message
     await db.query('DELETE FROM turnos WHERE odontologo_id=$1', [odo]);
     await db.query('DELETE FROM agenda_bloqueos WHERE odontologo_id=$1', [odo]);
     await db.query('DELETE FROM odontologos WHERE id=$1', [odo]).catch((e) => console.error(e.message));
-    await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='admin'");
+    await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='admin'");
     const cl = await db.connect();
     try {
       await cl.query('BEGIN'); await cl.query("SET LOCAL dova.borrando_paciente='on'");

@@ -28,7 +28,7 @@ async function codigosValidos(codigos) {
 }
 
 const ROLES_SISTEMA = ['admin', 'odontologo', 'recepcion', 'asistente', 'helpdesk'];
-const DISENOS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
+const DISENOS_VALIDOS = ['mecanico']; // único diseño vigente (el campo se conserva por compatibilidad)
 // Diseños reservados a administradores (hoy ninguno: el mecánico es para todos).
 const DISENOS_SOLO_ADMIN = [];
 
@@ -334,8 +334,16 @@ async function cerrarSesiones(clinicaId, id, actor) {
   return { ok: true };
 }
 
-// ---- Preferencia de diseño propia (self-service, cualquier usuario logueado) ----
-async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido, actor) {
+// ---- Preferencias propias (self-service, cualquier usuario logueado) ----
+// DOVA tiene un solo diseño; lo único que se elige es el modo claro u oscuro (solo desde Configuración).
+const TEMAS_VALIDOS = ['claro', 'oscuro'];
+async function actualizarMiDisenoPreferido(usuarioId, disenoPreferido, actor, tema) {
+  if (tema !== undefined) {
+    if (typeof tema !== 'string' || !TEMAS_VALIDOS.includes(tema)) throw new ApiError(400, `tema debe ser uno de: ${TEMAS_VALIDOS.join(', ')}`);
+    const t = await repo.actualizarTemaPreferido(usuarioId, tema);
+    if (!t) throw new ApiError(404, 'Usuario no encontrado');
+    return { temaPreferido: t.tema_preferido };
+  }
   if (typeof disenoPreferido !== 'string' || !DISENOS_VALIDOS.includes(disenoPreferido)) {
     throw new ApiError(400, `disenoPreferido debe ser uno de: ${DISENOS_VALIDOS.filter((d) => !DISENOS_SOLO_ADMIN.includes(d)).join(', ')}`);
   }

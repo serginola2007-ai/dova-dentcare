@@ -1,5 +1,5 @@
 /* DOVA — motor de la SPA, compartido por los 3 diseños.
-   Cada skin (original/minimalista/tecnico) trae su propio index.html con
+   El único diseño (mecánico) trae su index.html en frontend/mecanico y comparte todo este código (shared/).
    la estructura del layout (sidebar, topbar, etc.) y llama a DovaApp.iniciar()
    pasándole los IDs de sus contenedores. El contenido de cada vista es
    idéntico entre skins; solo cambia el CSS alrededor. */
@@ -46,8 +46,8 @@ const DovaApp = (() => {
     { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores']] },
     { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'], subs: [['trat', 'Tratamientos y precios', 'tratamientos.manage'], ['odo', 'Odontólogos', 'usuarios.manage']] },
     { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
-    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage', 'cobro_online.manage'],
-      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['online', 'Cobro online', 'cobro_online.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
+    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'rentabilidad.view', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage', 'cobro_online.manage'],
+      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['online', 'Cobro online', 'cobro_online.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['rentabilidad', 'Rentabilidad', 'rentabilidad.view'], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
         ['seguros', 'Seguros y convenios', 'aseguradoras.manage'], ['listas', 'Listas de precios', 'listas_precios.manage'], ['cierre', 'Cerrar meses', 'clinica.config.manage']] },
     { grupo: 'reportes', ruta: 'informes', label: 'Informes', permiso: 'reportes.view',
       subs: [['dia', 'Del día'], ['semana', 'De la semana'], ['mes', 'Del mes'], ['anio', 'Del año'], ['detalle', 'Reportes detallados']] },
@@ -59,39 +59,16 @@ const DovaApp = (() => {
     { grupo: 'administracion', ruta: 'plataforma', label: 'Plataforma', permiso: 'plataforma.manage' },
   ];
 
-  // ---- Selector de diseño (moderno/minimalista/tecnico) ----
-  // DOVA es UNA sola aplicación: cada estilo visual vive en su propia
-  // carpeta estática hermana (frontend/moderno, frontend/minimalista,
-  // frontend/tecnico) que comparte TODO este código (shared/). Cambiar de
-  // diseño significa navegar a la carpeta hermana correspondiente — la
-  // sesión (localStorage) es la misma para las 3, así que no se pierde.
-  const TEMAS_VALIDOS = ['moderno', 'minimalista', 'tecnico', 'mecanico'];
-
-  function normalizarTema(t) {
-    return TEMAS_VALIDOS.includes(t) ? t : null;
-  }
-
-  // Detecta en qué carpeta de tema estamos parados a partir de la URL.
-  // Admite tanto "/moderno/index.html" como "/moderno" (algunos servidores
-  // estáticos, como el usado en desarrollo, sirven "clean URLs" sin barra
-  // final ni nombre de archivo).
-  function temaActual() {
-    const m = location.pathname.match(/\/(moderno|minimalista|tecnico|mecanico)(?:\/|$)/);
-    return m ? m[1] : null;
-  }
-
-  // Navega a la carpeta del tema pedido, conservando la ruta (#hash) actual
-  // para que el cambio de diseño no te devuelva siempre al dashboard.
-  function irATema(tema) {
-    // Desde una ventana: cambia el diseño de toda la página.
-    if (MODO_VENTANA && EN_IFRAME) { try { window.top.DovaApp.irATema(tema); return; } catch (_e) { /* sigue acá */ } }
-    const destino = normalizarTema(tema);
-    if (!destino) return;
-    const actual = temaActual();
-    if (actual === destino) { location.reload(); return; }
-    if (!actual) { return; } // no estamos en una carpeta de tema reconocible (raro): no hacer nada
-    const nuevaRuta = location.pathname.replace(new RegExp(`/${actual}(/|$)`), `/${destino}$1`);
-    location.href = nuevaRuta + location.search + location.hash;
+  // ---- Modo claro / oscuro ----
+  // DOVA tiene un único diseño. El modo claro u oscuro es una preferencia de cada usuario que
+  // solo se cambia en Configuración > Apariencia: se guarda en el servidor (lo sigue a donde entre)
+  // y en este navegador (para pintar bien la pantalla de ingreso y evitar parpadeos).
+  function aplicarModo(tema) {
+    if (MODO_VENTANA && EN_IFRAME) { try { window.top.DovaApp.aplicarModo(tema); return; } catch (_e) { /* sigue acá */ } }
+    const modo = tema === 'oscuro' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', modo);
+    try { localStorage.setItem('dova-tema', modo); } catch (_e) { /* sin almacenamiento */ }
+    if (window.DovaVentanas) { try { window.DovaVentanas.aplicarTema(modo); } catch (_e) { /* */ } }
   }
 
   function cerrarGrupos(excepto) {
@@ -522,9 +499,7 @@ const DovaApp = (() => {
         navegar(rutaInicial || 'dashboard', restoInicial.length ? restoInicial.join('/') : undefined);
       }
     }
-    // Si venimos de cambiar de diseño (irATema hizo una navegación completa
-    // de página, sea desde el login o desde Configuración), mostrar acá la
-    // confirmación.
+    // Mensaje pendiente de una navegación completa de página (si lo hubiera).
     const flash = DOVA.consumeFlash();
     if (flash) Vistas.toast(flash, 'ok');
     document.dispatchEvent(new CustomEvent('dova:entrar', { detail: { navegar } }));
@@ -549,35 +524,14 @@ const DovaApp = (() => {
     try { await navegar(r || 'dashboard', resto.length ? resto.join('/') : undefined); } finally { window.DovaSubPendiente = null; }
   }
 
-  // Después de un login recién hecho: el diseño elegido en el propio
-  // formulario de login (elegidoEnLogin) manda. Si coincide con lo que el
-  // backend ya tenía guardado no hay nada que actualizar; si es distinto,
-  // se guarda como nueva preferencia. Con eso decidido, si la carpeta
-  // elegida es otra a la actual se redirige ahí (la sesión ya quedó guardada
-  // en localStorage, así que la carpeta destino la recupera sin volver a
-  // loguearse); si es la misma carpeta, se entra directo.
-  async function decidirDestinoTrasLogin(elLogin, elShell, elegidoEnLogin) {
+  // Después de un login recién hecho: se aplica el modo claro/oscuro que el usuario eligió y se entra.
+  function decidirDestinoTrasLogin(elLogin, elShell) {
     const usuario = DOVA.usuarioActual();
-    const prefGuardada = normalizarTema(usuario && usuario.disenoPreferido);
-    // Sin elección explícita ("Mi diseño habitual"): el guardado del usuario;
-    // si nunca eligió uno, el de la carpeta actual.
-    const destino = normalizarTema(elegidoEnLogin) || prefGuardada || temaActual() || 'moderno';
-    if (destino !== prefGuardada) {
-      try { await DOVA.actualizarDisenoPreferido(destino); } catch (_e) { /* no bloquea el ingreso si falla */ }
-    }
-    const actual = temaActual();
-    if (actual && destino !== actual) {
-      irATema(destino); // recarga en la carpeta correcta con la sesión ya guardada
-      return;
-    }
+    aplicarModo(usuario && usuario.temaPreferido);
     entrarADova(elLogin, elShell);
   }
 
-  // Al recargar la página con una sesión ya activa (no pasó por el form de
-  // login esta vez): se respeta el diseño ya guardado tal cual, sin volver
-  // a preguntar. Si nunca eligió uno (cuenta muy vieja, dato corrupto),
-  // "moderno" queda como default silencioso — el selector para cambiarlo
-  // sigue disponible en Configuración > Apariencia.
+  // Al recargar con una sesión ya activa: igual, con el modo guardado del usuario.
   function decidirDestinoTrasSesionExistente(elLogin, elShell) {
     const usuario = DOVA.usuarioActual();
     // Quedó pendiente el cambio obligatorio de contraseña: vuelve al login.
@@ -585,18 +539,13 @@ const DovaApp = (() => {
       DOVA.logout().catch(() => {}).finally(() => location.reload());
       return;
     }
-    const pref = normalizarTema(usuario && usuario.disenoPreferido) || 'moderno';
-    const actual = temaActual();
-    if (actual && pref !== actual) {
-      irATema(pref);
-      return;
-    }
+    aplicarModo(usuario && usuario.temaPreferido);
     entrarADova(elLogin, elShell);
   }
 
   function iniciarSesionUI(elLogin, elShell) {
-    elLogin.innerHTML = Vistas.vistaLogin(temaActual());
-    Vistas.initLogin((disenoElegido) => decidirDestinoTrasLogin(elLogin, elShell, disenoElegido));
+    elLogin.innerHTML = Vistas.vistaLogin();
+    Vistas.initLogin(() => decidirDestinoTrasLogin(elLogin, elShell));
   }
 
   /* Estado "cargando" de lo que pidió el usuario: barra fina arriba y el botón
@@ -685,6 +634,6 @@ const DovaApp = (() => {
     }
   }
 
-  return { iniciar, navegar, irATema, enVentana: () => MODO_VENTANA, escritorio: () => ESCRITORIO };
+  return { iniciar, navegar, aplicarModo, enVentana: () => MODO_VENTANA, escritorio: () => ESCRITORIO };
 })();
 window.DovaApp = DovaApp;

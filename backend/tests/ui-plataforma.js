@@ -10,7 +10,7 @@ const DIR = process.env.CAPTURAS || os.tmpdir(); const res = [];
 const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, ok ? '' : String(JSON.stringify(d)).slice(0, 300)); };
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const entrar = async (p, usuario, clave, clinica) => {
-  await p.goto(`${URL0}/moderno/index.html`);
+  await p.goto(`${URL0}/mecanico/index.html`);
   await p.fill('#login-username', usuario); await p.fill('#login-password', clave);
   if (clinica) { await p.evaluate(() => { document.querySelector('.dova-login-clinica').open = true; }); await p.fill('#login-clinica', clinica); }
   await p.click('#form-login button[type=submit]');
@@ -22,7 +22,7 @@ const entrar = async (p, usuario, clave, clinica) => {
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   try {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage(); const err = errores(p);
-    await p.goto(`${URL0}/moderno/index.html?clinica=dentcarerc`);
+    await p.goto(`${URL0}/mecanico/index.html?clinica=dentcarerc`);
     await p.waitForSelector('#login-clinica');
     P('El login trae el código de la clínica (desde el enlace)', (await p.inputValue('#login-clinica')) === 'dentcarerc');
     await entrar(p, 'admin', 'admin', 'no-existe');

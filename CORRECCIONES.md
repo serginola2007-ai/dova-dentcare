@@ -864,3 +864,10 @@ Se probó todo DOVA como un QA:
 - Un dispositivo compartido pasa al último usuario que lo activa; los dispositivos dados de baja por el navegador se limpian solos.
 - Hay que cargar una vez `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (ver README). En iPhone funciona con la app instalada en la pantalla de inicio.
 - Migración `0057`. **Pruebas:** `push.test` 18/18 y `ui-push` 8/8.
+
+## Tanda: un solo diseño (mecánico) con modo claro y oscuro (15/10/2026)
+
+- Se eliminaron los diseños Moderno, Minimalista y Técnico y el selector de diseño (en el ingreso y en Configuración). Las direcciones viejas redirigen al diseño único.
+- **Modo claro / oscuro:** se elige solo en **Configuración → Apariencia** (se quitó el botón de la barra). Se guarda en la cuenta, así acompaña al usuario en cualquier dispositivo, y llega al instante a las ventanas abiertas. Sin elección, claro.
+- El diseño mecánico tiene ahora paleta clara y oscura con los colores de la marca.
+- Migración `0058`. **Pruebas:** `ui-mecanico` 33/33 (incluye cambio de modo, otro dispositivo y recarga).

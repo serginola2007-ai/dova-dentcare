@@ -12,7 +12,7 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
 const TZ = process.env.DOVA_TZ || 'America/Asuncion';
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const sinDesborde = (f) => f.evaluate(() => document.documentElement.scrollWidth - window.innerWidth <= 0);
-const login = async (b, vp, u, c, dis = 'moderno') => {
+const login = async (b, vp, u, c, dis = 'mecanico') => {
   await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$1, debe_cambiar_clave=false WHERE username=$2', [dis, u]);
   const ctx = await b.newContext({ viewport: vp, timezoneId: TZ, hasTouch: vp.width < 800 }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');

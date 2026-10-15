@@ -228,15 +228,13 @@ const DOVA = (() => {
     } catch (_e) { return null; }
   }
 
-  /* Selector de diseño (moderno/minimalista/tecnico): el backend es la
-     fuente de verdad (se guarda en la BD, ligado al usuario). Acá solo
-     actualizamos la sesión en caché para que usuarioActual().disenoPreferido
-     quede al día sin forzar un nuevo login. */
-  async function actualizarDisenoPreferido(disenoPreferido) {
-    const data = await request('/usuarios/me/preferencias', { method: 'PATCH', body: { disenoPreferido } });
+  /* Modo claro / oscuro: preferencia propia de cada usuario, guardada en el servidor
+     (sigue al usuario entre dispositivos). Acá solo se actualiza la sesión en caché. */
+  async function actualizarTema(tema) {
+    const data = await request('/usuarios/me/preferencias', { method: 'PATCH', body: { tema } });
     const perfil = getPerfil();
     if (perfil && perfil.usuario) {
-      perfil.usuario.disenoPreferido = data.disenoPreferido;
+      perfil.usuario.temaPreferido = data.temaPreferido;
       setPerfil(perfil);
     }
     return data;
@@ -286,7 +284,7 @@ const DOVA = (() => {
     refrescar: () => refrescarToken(),
     apiBase: () => apiBase,
     request, login, bloquear, desbloquear, marcarDesbloqueada, marcarBloqueada, estaBloqueada: () => (PADRE ? PADRE.estaBloqueada() : bloqueada), limpiarSesion: () => clearSession(), logout, logoutTodas, usuarioActual, clinicaActual, tienePermiso, tieneAlguno, estaAutenticado, descargarPdf,
-    actualizarDisenoPreferido, cambiarClave, setFlash, consumeFlash,
+    actualizarTema, cambiarClave, setFlash, consumeFlash,
     get: (p) => request(p),
     post: (p, body) => request(p, { method: 'POST', body }),
     put: (p, body) => request(p, { method: 'PUT', body }),

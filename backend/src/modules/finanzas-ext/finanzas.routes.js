@@ -200,6 +200,7 @@ r.post('/comisiones/liquidar', requirePermiso('comisiones.manage'), h(async (req
   await auditoria.registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: 'liquidar_comision', modulo: 'comisiones', entidadId: ins.rows[0].id, detalle: { odontologoId, desde, hasta, comision: o.comision } });
   return ins.rows[0];
 }));
+r.get('/rentabilidad', requirePermiso('rentabilidad.view'), h((req) => s.rentabilidad(req.clinicaId, { odontologoId: req.query.odontologoId, desde: req.query.desde, hasta: req.query.hasta })));
 r.get('/metas-progreso', requirePermiso('metas.manage', 'kpis.view', 'comisiones.view'), h((req) => s.progresoMetas(req.clinicaId, req.query.periodo || hoyIso().slice(0, 7))));
 
 // Cierre contable: nadie puede registrar/modificar movimientos hasta esa fecha.

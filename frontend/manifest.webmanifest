@@ -19,8 +19,8 @@
     { "src": "/iconos/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Agenda", "url": "/moderno/#agenda", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
-    { "name": "Pacientes", "url": "/moderno/#pacientes", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
-    { "name": "Caja", "url": "/moderno/#caja", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] }
+    { "name": "Agenda", "url": "/mecanico/#agenda", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
+    { "name": "Pacientes", "url": "/mecanico/#pacientes", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] },
+    { "name": "Caja", "url": "/mecanico/#caja", "icons": [{ "src": "/iconos/icono-192.png", "sizes": "192x192" }] }
   ]
 }

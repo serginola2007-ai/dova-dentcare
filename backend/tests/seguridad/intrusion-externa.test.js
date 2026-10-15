@@ -22,7 +22,7 @@ const FILTRA = /DATABASE_URL|JWT_SECRET|password_hash|BEGIN [A-Z ]*PRIVATE KEY|n
   // 1) Archivos del servidor que no deben poder bajarse
   const rutasSecretas = ['/.env', '/backend/.env', '/../backend/.env', '/%2e%2e/backend/.env', '/shared/..%2f..%2fbackend%2f.env', '/shared/%2e%2e/%2e%2e/backend/.env',
     '/.git/config', '/.git/HEAD', '/package.json', '/backend/package.json', '/src/app.js', '/backend/src/app.js', '/render.yaml', '/CLAUDE.md', '/SECURITY-AUDIT.md',
-    '/README.md', '/backend/src/config/env.js', '/node_modules/express/package.json', '/uploads/', '/shared/', '/moderno/../../backend/.env', '/web/..%5c..%5cbackend%5c.env',
+    '/README.md', '/backend/src/config/env.js', '/node_modules/express/package.json', '/uploads/', '/shared/', '/mecanico/../../backend/.env', '/web/..%5c..%5cbackend%5c.env',
     '/api/../backend/.env', '/%2e/%2e/etc/passwd', '/shared/..%252f..%252fbackend%252f.env'];
   let expuestos = [];
   for (const r of rutasSecretas) {
@@ -98,7 +98,7 @@ const FILTRA = /DATABASE_URL|JWT_SECRET|password_hash|BEGIN [A-Z ]*PRIVATE KEY|n
   await db.query('DELETE FROM login_intentos');
 
   // 7) Cabeceras, CORS y métodos
-  const home = await pedir('GET', '/moderno/');
+  const home = await pedir('GET', '/mecanico/');
   const h = home.h;
   P('No revela la tecnología del servidor (sin X-Powered-By)', !h.get('x-powered-by'));
   P('Cabeceras de protección: CSP, HSTS, nosniff, anti-iframe ajeno, Referrer-Policy', /script-src 'self'/.test(h.get('content-security-policy') || '') && /max-age/.test(h.get('strict-transport-security') || '') && h.get('x-content-type-options') === 'nosniff' && /frame-ancestors 'self'/.test(h.get('content-security-policy') || '') && !!h.get('referrer-policy'));

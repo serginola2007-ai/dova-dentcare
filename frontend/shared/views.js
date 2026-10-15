@@ -37,28 +37,7 @@ const Vistas = (() => {
     try { return await fn(); } catch (e) { toast(e.message || 'Ocurrió un error', 'error'); throw e; }
   }
 
-  // ---------------- SELECTOR DE DISEÑO / APARIENCIA ----------------
-  // Catálogo de los 3 estilos visuales de DOVA. Los textos son los mismos
-  // en el login, en Configuración > Apariencia y en cualquier otro lugar
-  // donde se elija diseño.
-  const DISENOS = [
-    { id: 'moderno', nombre: 'Moderno', desc: 'Una interfaz actual, visual y dinámica, pensada para una experiencia moderna.' },
-    { id: 'minimalista', nombre: 'Minimalista', desc: 'Una interfaz limpia, simple y ordenada, enfocada en facilitar el trabajo diario.' },
-    { id: 'tecnico', nombre: 'Técnico', desc: 'Una interfaz orientada a información, control y gestión detallada.' },
-    { id: 'mecanico', nombre: 'Mecánico', desc: 'Estilo de sistema de escritorio clásico con los colores de la clínica: menú en mayúsculas, íconos a la izquierda y parámetros activos a la vista.' },
-  ];
-  // Diseños que puede elegir el usuario actual (el mecánico, solo un admin; en el login, nunca).
-  const disenosPara = (usuario) => DISENOS.filter((d) => !d.soloAdmin || (usuario && usuario.rol === 'admin'));
-
   // ---------------- LOGIN ----------------
-  // El selector de diseño vive acá mismo, junto a usuario/contraseña (en
-  // vez de una pantalla aparte que aparecía después de loguearse): se
-  // preselecciona el diseño de la carpeta actual (o "moderno" si no se
-  // puede determinar) y el usuario puede cambiarlo antes de entrar.
-  // Por defecto queda marcada "Mi diseño habitual": cada operador entra con
-  // el diseño que tiene guardado en su usuario (en una computadora
-  // compartida, el que entra sin tocar nada no pisa su preferencia). Si
-  // elige uno de los 3, ese pasa a ser su nuevo diseño guardado.
   // Código de la clínica (slug): viene de ?clinica=… o de la última vez en este equipo.
   function codigoClinicaGuardado() {
     try {
@@ -67,12 +46,10 @@ const Vistas = (() => {
       return localStorage.getItem('dova.clinica') || '';
     } catch (_e) { return ''; }
   }
-  function vistaLogin(disenoActual) {
-    void disenoActual;
-    const preseleccion = '';
+  function vistaLogin() {
     return `
       <div class="dova-login-wrap">
-        <div class="dova-login-card dova-login-card-ancha">
+        <div class="dova-login-card">
           <h1 class="dova-login-title">Iniciar sesión</h1>
           <form id="form-login">
             <label>Usuario</label>
@@ -85,23 +62,6 @@ const Vistas = (() => {
               <input type="text" id="login-clinica" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(codigoClinicaGuardado())}" placeholder="Te lo da el proveedor de DOVA" />
             </details>
 
-            <fieldset class="dova-login-disenos">
-              <legend>Diseño</legend>
-              <label class="dova-diseno-habitual${preseleccion === '' ? ' seleccionado' : ''}" data-diseno-radio-card="">
-                <input type="radio" name="login-diseno" value="" ${preseleccion === '' ? 'checked' : ''} />
-                <span><strong>Mi diseño habitual</strong><br><span class="dova-nota">Entrás con el diseño que elegiste la última vez. Elegí otro abajo solo si querés cambiarlo.</span></span>
-              </label>
-              <div class="dova-disenos-grid dova-disenos-grid-login">
-                ${disenosPara(null).map((d) => `
-                  <label class="dova-diseno-card dova-diseno-card-radio${d.id === preseleccion ? ' seleccionado' : ''}" data-diseno-radio-card="${d.id}">
-                    <input type="radio" name="login-diseno" value="${d.id}" ${d.id === preseleccion ? 'checked' : ''} />
-                    ${previewDiseno(d.id)}
-                    <h3>${esc(d.nombre)}</h3>
-                    <p>${esc(d.desc)}</p>
-                  </label>`).join('')}
-              </div>
-            </fieldset>
-
             <button type="submit" class="dova-btn-primary">Ingresar</button>
             <p id="login-error" class="dova-error-text" style="display:none;"></p>
           </form>
@@ -111,20 +71,10 @@ const Vistas = (() => {
   function initLogin(onSuccess) {
     const form = document.getElementById('form-login');
 
-    // Resaltar visualmente la tarjeta del diseño elegido (el radio real
-    // queda oculto; la tarjeta entera funciona como botón).
-    document.querySelectorAll('[data-diseno-radio-card]').forEach((card) => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('[data-diseno-radio-card]').forEach((c) => c.classList.remove('seleccionado'));
-        card.classList.add('seleccionado');
-      });
-    });
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value;
-      const disenoElegido = (form.querySelector('input[name="login-diseno"]:checked') || {}).value || '';
       const errorEl = document.getElementById('login-error');
       errorEl.style.display = 'none';
       try {
@@ -134,10 +84,10 @@ const Vistas = (() => {
         try { if (clinica) localStorage.setItem('dova.clinica', clinica); else localStorage.removeItem('dova.clinica'); } catch (_e) { /* sin almacenamiento: no pasa nada */ }
         const u = DOVA.usuarioActual();
         if (u && u.debeCambiarClave) {
-          pedirCambioDeClave(password, () => onSuccess(disenoElegido));
+          pedirCambioDeClave(password, () => onSuccess());
           return;
         }
-        onSuccess(disenoElegido);
+        onSuccess();
       } catch (err) {
         errorEl.textContent = err.message || 'No se pudo iniciar sesión. Revisá tu conexión a internet.';
         errorEl.style.display = 'block';
@@ -190,75 +140,20 @@ const Vistas = (() => {
     initCambioClave(document.getElementById('form-cambio-clave'), () => claveActual, () => { toast('Contraseña actualizada', 'ok'); alTerminar(); });
   }
 
-  function previewDiseno(id) {
-    return `
-      <div class="dova-preview dova-preview-${id}">
-        <div class="dova-preview-barra"><span class="dova-preview-dot"></span></div>
-        <div class="dova-preview-cuerpo">
-          <div class="dova-preview-bloque"></div><div class="dova-preview-bloque"></div><div class="dova-preview-bloque"></div>
-        </div>
-      </div>`;
-  }
-
-  function vistaSelectorDiseno() {
-    return `
-      <div class="dova-selector-diseno">
-        <h1 class="dova-selector-diseno-titulo">Elegí cómo querés ver DOVA</h1>
-        <p class="dova-selector-diseno-subtitulo">Seleccioná el estilo de interfaz que mejor se adapte a tu clínica. Podés cambiarlo cuando quieras desde Configuración.</p>
-        <div class="dova-disenos-grid">
-          ${disenosPara(DOVA.usuarioActual()).map((d) => `
-            <div class="dova-diseno-card">
-              ${previewDiseno(d.id)}
-              <h3>${esc(d.nombre)}</h3>
-              <p>${esc(d.desc)}</p>
-              <button class="dova-btn-primary" data-elegir-diseno="${d.id}" type="button">Elegir ${esc(d.nombre.toLowerCase())}</button>
-            </div>`).join('')}
-        </div>
-        <p id="selector-diseno-error" class="dova-error-text" style="display:none;"></p>
-      </div>`;
-  }
-
-  function initSelectorDiseno(onElegido) {
-    document.querySelectorAll('[data-elegir-diseno]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const tema = btn.dataset.elegirDiseno;
-        const errorEl = document.getElementById('selector-diseno-error');
-        errorEl.style.display = 'none';
-        document.querySelectorAll('[data-elegir-diseno]').forEach((b) => { b.disabled = true; });
-        try {
-          await DOVA.actualizarDisenoPreferido(tema);
-          onElegido(tema);
-        } catch (e) {
-          document.querySelectorAll('[data-elegir-diseno]').forEach((b) => { b.disabled = false; });
-          errorEl.textContent = e.message || 'No se pudo guardar tu preferencia. Intentá de nuevo.';
-          errorEl.style.display = 'block';
-        }
-      });
-    });
-  }
-
   // ---------------- CONFIGURACIÓN ----------------
   function vistaConfiguracion() {
-    const actual = (DOVA.usuarioActual() || {}).disenoPreferido || null;
+    const modo = (DOVA.usuarioActual() || {}).temaPreferido === 'oscuro' ? 'oscuro' : 'claro';
     return `
       <h2 class="dova-view-title">Configuración</h2>
       <p class="dova-subtitulo">Preferencias de tu cuenta en DOVA.</p>
 
       <h3 class="dova-section-title">Apariencia</h3>
-      <p class="dova-nota">Estilo de DOVA — el cambio se guarda en tu cuenta y te va a acompañar en cualquier dispositivo donde inicies sesión.</p>
-      <div class="dova-apariencia-grid">
-        ${disenosPara(DOVA.usuarioActual()).map((d) => {
-          const esActual = d.id === actual;
-          return `
-            <div class="dova-diseno-card ${esActual ? 'seleccionado' : ''}">
-              ${previewDiseno(d.id)}
-              <h3>${esc(d.nombre)} ${esActual ? '<span class="dova-badge dova-badge-ok">Actual</span>' : ''}</h3>
-              <p>${esc(d.desc)}</p>
-              <button class="${esActual ? 'dova-btn-secundario' : 'dova-btn-primary'}" data-elegir-diseno-config="${d.id}" type="button" ${esActual ? 'disabled' : ''}>
-                ${esActual ? 'Seleccionado' : 'Elegir ' + esc(d.nombre.toLowerCase())}
-              </button>
-            </div>`;
-        }).join('')}
+      <div class="dova-card dova-card-clave" data-apariencia>
+        <p class="dova-nota">Elegí cómo ver DOVA: con fondo claro o con fondo oscuro. El cambio se guarda en tu cuenta y te acompaña en cualquier dispositivo donde inicies sesión. Esta es la única parte de DOVA donde se cambia.</p>
+        <div class="dova-modo-opciones" role="radiogroup" aria-label="Modo de color">
+          <label class="dova-modo-opcion${modo === 'claro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="claro" ${modo === 'claro' ? 'checked' : ''} /> <span><strong>Claro</strong><br><span class="dova-nota">Fondo crema, ideal con buena luz.</span></span></label>
+          <label class="dova-modo-opcion${modo === 'oscuro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="oscuro" ${modo === 'oscuro' ? 'checked' : ''} /> <span><strong>Oscuro</strong><br><span class="dova-nota">Fondo oscuro, descansa la vista en ambientes con poca luz.</span></span></label>
+        </div>
       </div>
 
       <h3 class="dova-section-title">Seguridad</h3>
@@ -286,24 +181,21 @@ const Vistas = (() => {
     });
     if (window.DovaPWA) { DovaPWA.activarTarjeta(); DovaPWA.activarAvisosUI(); }
     if (window.DovaSeguridad) DovaSeguridad.activar();
-    document.querySelectorAll('[data-elegir-diseno-config]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const tema = btn.dataset.elegirDisenoConfig;
-        const textoOriginal = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Guardando…';
+    document.querySelectorAll('[name="modo-color"]').forEach((radio) => {
+      radio.addEventListener('change', async () => {
+        const tema = radio.value;
+        const opciones = document.querySelectorAll('.dova-modo-opcion');
+        document.querySelectorAll('[name="modo-color"]').forEach((r) => { r.disabled = true; });
         try {
-          await DOVA.actualizarDisenoPreferido(tema);
-          // El toast se muestra recién después de aterrizar en la carpeta
-          // nueva (ver DOVA.consumeFlash() en app.js), porque acá la página
-          // se descarga enseguida y un toast inmediato no llegaría a verse.
-          DOVA.setFlash('El diseño se actualizó correctamente.');
-          DovaApp.irATema(tema);
+          await DOVA.actualizarTema(tema);
+          DovaApp.aplicarModo(tema);
+          opciones.forEach((o) => o.classList.toggle('seleccionado', o.querySelector('input').value === tema));
+          toast(tema === 'oscuro' ? 'Modo oscuro activado' : 'Modo claro activado', 'ok');
         } catch (e) {
-          toast(e.message || 'No se pudo cambiar el diseño', 'error');
-          btn.disabled = false;
-          btn.textContent = textoOriginal;
-        }
+          toast(e.message || 'No se pudo cambiar el modo', 'error');
+          const antes = tema === 'oscuro' ? 'claro' : 'oscuro';
+          document.querySelectorAll('[name="modo-color"]').forEach((r) => { r.checked = r.value === antes; });
+        } finally { document.querySelectorAll('[name="modo-color"]').forEach((r) => { r.disabled = false; }); }
       });
     });
   }
@@ -2161,7 +2053,6 @@ const Vistas = (() => {
     vistaModoConsulta, initModoConsulta, renderPanelConsulta, initPanelConsulta,
     vistaBuscadorGlobal, initBuscadorGlobal,
     vistaUsuariosAdmin, initUsuariosAdmin,
-    vistaSelectorDiseno, initSelectorDiseno,
     vistaConfiguracion, initConfiguracion,
   };
 })();

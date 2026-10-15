@@ -21,13 +21,11 @@ dova/
     │   ├── base.css       Variables de marca y estilos base compartidos
     │   ├── config.js      URL del backend para desarrollo local (ver Netlify más abajo)
     │   └── config.template.js  Plantilla que Netlify usa para generar config.js en el build
-    ├── moderno/          Diseño 1: interfaz actual, tarjetas con sombra suave, radios generosos
-    ├── minimalista/      Diseño 2: sin bordes marcados, whitespace, tipografía como jerarquía
-    ├── tecnico/          Diseño 3: barra superior densa, monoespaciado, estilo panel operativo/ERP
+    ├── mecanico/         El único diseño (index.html + skin.css, claro y oscuro)
     └── mecanico/         Diseño 4: sistema de escritorio clásico con los colores de la clínica, íconos y parámetros activos
 ```
 
-Los 3 diseños comparten el 100% de la lógica (`shared/*.js`) y solo cambian
+El diseño comparte el 100% de la lógica (`shared/*.js`) y solo cambian
 `index.html` (fuentes/estructura mínima) y `skin.css` (colores/layout). Esto
 significa que corregir un bug o agregar una función se hace **una sola vez**
 y se refleja automáticamente en los tres.
@@ -60,7 +58,7 @@ Servir la carpeta `frontend/` con cualquier servidor de archivos estáticos
 cd frontend
 npx serve -l 8080 .
 ```
-Luego abrir `http://localhost:8080/moderno/index.html` (o `minimalista`/`tecnico` —
+Luego abrir `http://localhost:8080/mecanico/index.html` (o `minimalista`/`tecnico` —
 cualquiera de los tres sirve como punto de entrada; ver "Sistema de
 diseños" más abajo para cómo decide DOVA cuál mostrar).
 
@@ -125,50 +123,14 @@ funcione de una.
 - **Cuentas de pacientes en la web**: no necesitan email. Las personas nuevas se registran solas; los pacientes con ficha entran con un código que se genera en DOVA → Página web → "Cuentas de pacientes" y se manda por WhatsApp.
 - **Email (opcional, solo avisos de pagos)**: el plan gratis de Render bloquea el SMTP, así que se usa **Brevo** por su API web: `BREVO_API_KEY` y `MAIL_REMITENTE` (email verificado en Brevo), `MAIL_NOMBRE` opcional. Con un plan pago también sirve SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`). Para pruebas locales: `MAIL_TRANSPORTE=archivo` y `MAIL_ARCHIVO=/ruta/emails.jsonl`.
 
-## Sistema de diseños
+## Diseño único y modo claro / oscuro
 
-Cada usuario elige su estilo visual la primera vez que inicia sesión y esa
-elección queda guardada **en el backend**, ligada a su usuario (columna
-`diseno_preferido` en la tabla `usuarios`, valores `moderno` / `minimalista`
-/ `tecnico` / `mecanico`). `localStorage` solo cachea la sesión (igual que el resto de
-DOVA) — nunca es la única fuente de verdad, así que la preferencia viaja
-con el usuario a cualquier dispositivo donde inicie sesión.
+DOVA tiene **un solo diseño** (el mecánico: menú en mayúsculas, íconos a la izquierda, ventanas, parámetros activos y colores de la clínica). Lo único que cada usuario elige es el **modo claro u oscuro**, y solo se cambia en **Configuración → Apariencia** (no hay botones de modo en otro lado ni en el ingreso).
 
-**Flujo:**
-1. Login correcto → el backend devuelve `usuario.disenoPreferido`.
-2. Si es `null` (todavía no eligió) → aparece el selector de diseño de
-   pantalla completa ("Elegí cómo querés ver DOVA") con las 3 tarjetas.
-3. Al elegir, se guarda con `PATCH /api/usuarios/me/preferencias` y el
-   navegador pasa a la carpeta de ese diseño (`/moderno/`, `/minimalista/`
-   o `/tecnico/`), **sin perder la sesión** (los tokens JWT están en
-   `localStorage`, que es el mismo para las 3 carpetas del mismo sitio).
-4. En cada login/recarga posterior, DOVA compara la preferencia guardada
-   contra la carpeta donde está parado y redirige automáticamente a la
-   correcta (hay un pequeño script en el `<head>` de cada `index.html` que
-   hace esto ANTES de pintar nada, para evitar el parpadeo del diseño
-   equivocado).
-5. Si el backend no puede confirmar la preferencia (caída de red, por
-   ejemplo) DOVA no se rompe: simplemente no redirige y sigue mostrando la
-   carpeta donde ya estás.
-
-**Cómo cambiarlo después:** dentro de DOVA, **Configuración → Apariencia**
-muestra las mismas 3 tarjetas, marca la actual, y al elegir otra guarda el
-cambio y navega a esa carpeta manteniendo la sesión abierta (no hay que
-volver a loguearse ni se pierde ningún dato).
-
-**Seguridad:** el endpoint `PATCH /api/usuarios/me/preferencias` solo puede
-modificar la preferencia **del usuario autenticado** (usa el id que viene
-en su propio token JWT, nunca un id que mande el cliente) y valida en el
-backend que el valor recibido sea exactamente `moderno`, `minimalista` o
-`tecnico` — cualquier otro valor se rechaza con 400, incluso si el request
-está manipulado a mano.
-
-**Para agregar un cuarto diseño en el futuro** (ej. "corporativo"): crear
-`frontend/corporativo/` con su propio `index.html` + `skin.css` (copiando la
-estructura de cualquiera de los 3 actuales), agregarlo a la lista
-`TEMAS_VALIDOS` en `shared/app.js`, al `CHECK` de la migración de
-`diseno_preferido` (nueva migración) y a la lista `DISENOS` en
-`shared/views.js`. No hace falta tocar el backend más que esa migración.
+- Se guarda en el usuario (`usuarios.tema_preferido`: `claro` por defecto u `oscuro`), así lo acompaña en cualquier dispositivo. `PATCH /api/usuarios/me/preferencias` con `{ "tema": "claro" | "oscuro" }`.
+- El navegador guarda además `dova-tema` para pintar bien la pantalla de ingreso; `shared/pre-diseno.js` lo aplica antes de pintar (sin parpadeo). Sin elección guardada, claro (no se usa la preferencia del sistema operativo).
+- Los dos modos están en `frontend/mecanico/skin.css` (variables `--mec-*`). Las ventanas abiertas reciben el cambio al instante.
+- Las direcciones viejas (`/moderno/`, `/minimalista/`, `/tecnico/`) redirigen a `/mecanico/`. La carpeta se llama `mecanico` por historia.
 
 ## Deployment
 

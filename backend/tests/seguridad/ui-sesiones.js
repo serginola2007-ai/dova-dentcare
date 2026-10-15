@@ -15,8 +15,8 @@ async function api(m, url, body, tok) { const r = await fetch(`${BASE}/api${url}
 const esperar = async (fn, ms = 6000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch (_e) { /* */ } await new Promise((r) => setTimeout(r, 200)); } return false; };
 async function entrar(b, user, pass, vp = { width: 1366, height: 900 }) {
   const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = errores(p);
-  await p.goto(`${BASE}/moderno/index.html`); await p.waitForLoadState('networkidle'); await p.evaluate(() => localStorage.clear());
-  await p.goto(`${BASE}/moderno/index.html`); await p.waitForSelector('#login-username');
+  await p.goto(`${BASE}/mecanico/index.html`); await p.waitForLoadState('networkidle'); await p.evaluate(() => localStorage.clear());
+  await p.goto(`${BASE}/mecanico/index.html`); await p.waitForSelector('#login-username');
   await p.fill('#login-username', user); await p.fill('#login-password', pass); await p.click('button[type=submit]'); await p.waitForTimeout(2200);
   return { ctx, p, err };
 }
@@ -24,7 +24,7 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
 // Sesiones con cookie HttpOnly: nada sensible en el navegador, la sesión sobrevive a recargar,
 // migración de sesiones viejas, cerrar sesión y cerrar en todos los dispositivos.
 (async () => {
-  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='moderno' WHERE username IN ('admin','recep1')");
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='mecanico' WHERE username IN ('admin','recep1')");
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const { ctx, p, err } = await entrar(b, 'recep1', 'clave123');
   const ls = await p.evaluate(() => JSON.stringify(localStorage));
@@ -56,7 +56,7 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
   // Así quedan en la base los tokens emitidos antes de la migración 0040 (sin sesion_id).
   await db.query("UPDATE refresh_tokens SET sesion_id = NULL WHERE token_hash = encode(sha256($1::bytea), 'hex')", [rt]);
   const c4 = await b.newContext(); const p4 = await c4.newPage(); const e4 = errores(p4);
-  await p4.goto(`${BASE}/moderno/index.html`); await p4.waitForTimeout(500);
+  await p4.goto(`${BASE}/mecanico/index.html`); await p4.waitForTimeout(500);
   await p4.evaluate(([t, u, c]) => localStorage.setItem('dova_session', JSON.stringify({ accessToken: 'viejo', refreshToken: t, usuario: u, clinica: c })), [rt, lj.usuario, lj.clinica]);
   await p4.evaluate(() => { location.hash = 'pacientes'; }); await p4.reload(); await p4.waitForTimeout(3000);
   P('Sesión vieja: sigue adentro sin volver a ingresar', await p4.locator('#shell-root').isVisible());

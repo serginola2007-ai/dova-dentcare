@@ -33,7 +33,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
 frontend/           JavaScript puro, sin build
-  moderno/ minimalista/ tecnico/ mecanico/   4 diseños: cada uno es index.html + skin.css (mecanico: colores de la clínica, para todos, más shared/mecanico.js)
+  mecanico/   el ÚNICO diseño: index.html + skin.css con modo claro y oscuro (colores de la clínica, más shared/mecanico.js)
   shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, ventanas.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
   web/              página pública + portal del paciente
   sw.js             service worker (precache con VERSION)
@@ -45,7 +45,7 @@ frontend/           JavaScript puro, sin build
 npm install
 npm run migrate:up      # migraciones (usa MIGRATION_DATABASE_URL o DATABASE_URL)
 npm run seed            # roles/permisos/admin (es seguro correrlo siempre)
-npm run dev             # servidor con recarga (node --watch) → http://localhost:4000/moderno/
+npm run dev             # servidor con recarga (node --watch) → http://localhost:4000/mecanico/
 npm run lint            # ESLint (tiene que dar 0)
 npm run build           # node --check de todos los .js
 npm audit               # tiene que dar 0 vulnerabilidades
@@ -84,7 +84,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
   - tablas sin caja alrededor;
   - pestañas subrayadas;
   - no anidar bordes.
-- Un cambio visual va en `shared/` para que llegue a los 3 diseños. Lo propio de un diseño va en su `skin.css`.
+- Un cambio visual va en `shared/` en `shared/`; lo del diseño va en `mecanico/skin.css`, siempre con variables para que funcionen el modo claro y el oscuro.
 - Pestañas de una sección: `X.subPestanas(...)` en `shared/ext/*.js`. Si una sección del menú tiene pestañas, el menú de `shared/app.js` las lista en `subs` con los **mismos id y permisos**.
 - Al cambiar archivos del frontend, subir `VERSION` en `frontend/sw.js` (`dova-vNN`) y agregar al precache los archivos nuevos.
 - Textos en español rioplatense, claros para personal no técnico ("Guardar", "No se pudo…", sin jerga).
@@ -92,7 +92,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 ## Pruebas
 
 - **Seguridad:** `backend/tests/seguridad/` contra un servidor local en `NODE_ENV=production` con una base de prueba. Pasos y última corrida en `SECURITY-TESTS.md`.
-- **Pantallas:** se prueban con Playwright en un navegador real (los 3 diseños, escritorio, tablet y celular), verificando que no haya desbordes ni errores de consola.
+- **Pantallas:** se prueban con Playwright en un navegador real (modo claro y oscuro, escritorio, tablet y celular), verificando que no haya desbordes ni errores de consola.
 - El límite de 10 logins por minuto por cuenta es real: al correr muchas pruebas seguidas, dejar ~1 minuto entre archivos.
 
 ## Recordatorios por WhatsApp
@@ -119,7 +119,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - En `app.js`: `ESCRITORIO` (página principal: `navegar()` abre ventanas) y `MODO_VENTANA` (adentro: renderiza la sección y avisa título/historial con `DovaVentanas.alNavegar`).
 - La sesión es una sola: la ventana pide el token a la página principal (`window.DovaCompartido` en `api.js`), comparte el bloqueo y escucha el tiempo real de la principal (`tiempo-real.js`).
 - Diseño mecánico: la tira de íconos (`shared/mecanico.js`, `ACCESOS`) tiene accesos directos: Nuevo turno y Pacientes (`shared/ext/ext-rapido.js`, `DovaRapido`), Nueva factura (`facturacion/nueva`) y Nuevo presupuesto (`presupuestos/nuevo`). El turno rápido usa `modalTurno({ soloDisponibles: true })` + `GET /api/agenda/disponibles` (`agenda/agenda.disponibles.js`); al crear con `soloDisponible: true` el servidor exige que el odontólogo esté en horario y libre. Pruebas: `tests/ui-accesos-mecanico.js`.
-- Pruebas: `tests/ui-ventanas.js`. Para probar el contenido de una sección sin ventanas, una prueba puede abrir `/<diseño>/index.html?ventana=1#<ruta>` en la misma pestaña después de entrar.
+- Pruebas: `tests/ui-ventanas.js`. Para probar el contenido de una sección sin ventanas, una prueba puede abrir `/mecanico/index.html?ventana=1#<ruta>` en la misma pestaña después de entrar.
 
 ## Presupuestos e Informes
 - Sección Presupuestos (`shared/ext/ext-presupuestos.js`, `GET /api/presupuestos`). El servidor exige la C.I. del paciente (o `pacienteCi` para cargarla) y al menos un ítem; valida odontólogo y tratamientos contra la clínica.
@@ -186,3 +186,9 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Suscripciones caídas (404/410) se borran solas. Solo endpoints https. `setEnviador()` permite simular el envío en pruebas.
 - Env: `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`; sin claves no se ofrece. Front: `DovaPWA.avisosHtml/activarAvisosUI` (Configuración), `sw.js` (`push` y `notificationclick` → `postMessage dova-ir` → `tiempo-real.js` navega). En iPhone requiere la app instalada en inicio.
 - Pruebas: `tests/push.test.js` (18), `tests/ui-push.js` (8).
+
+
+## Diseño único y modo claro / oscuro
+- Solo existe el diseño `mecanico` (carpeta `frontend/mecanico`). `/moderno/`, `/minimalista/` y `/tecnico/` redirigen (301) ahí; el selector de diseño y su pantalla se eliminaron.
+- Modo claro/oscuro: `usuarios.tema_preferido` (migración 0058), en la sesión como `temaPreferido`; `DOVA.actualizarTema(tema)` → `PATCH /usuarios/me/preferencias {tema}`; `DovaApp.aplicarModo(tema)` pone `data-theme` (light/dark), lo guarda en `localStorage('dova-tema')` y lo propaga a las ventanas (`DovaVentanas.aplicarTema`). **Solo se cambia en Configuración → Apariencia**: no agregar toggles en otras partes.
+- Colores nuevos en el CSS: usar variables (`--white`, `--ink`, `--mec-*`), nunca hex fijos, o se rompe el modo oscuro. Pruebas: `tests/ui-mecanico.js`.

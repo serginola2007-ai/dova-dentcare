@@ -34,7 +34,7 @@ const entrar = async (p, dis, user, clave) => {
   await db.query('UPDATE usuarios SET debe_cambiar_clave=false WHERE id=$1', [u.id]);
   try {
     // ---------- Ingreso directo y sesiones abiertas (3 diseños) ----------
-    for (const [dis, vp] of [['moderno', { width: 1366, height: 900 }], ['tecnico', { width: 390, height: 844 }], ['minimalista', { width: 820, height: 1180 }]]) {
+    for (const [dis, vp] of [['mecanico', { width: 1366, height: 900 }], ['mecanico', { width: 390, height: 844 }], ['mecanico', { width: 820, height: 1180 }]]) {
       await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$2 WHERE id=$1', [u.id, dis]);
       const { ctx, p, err } = await nuevaPagina(b, vp);
       await entrar(p, dis, user, clave);
@@ -50,7 +50,7 @@ const entrar = async (p, dis, user, clave) => {
     // ---------- Candado ----------
     await db.query('DELETE FROM login_intentos');
     const { ctx, p, err } = await nuevaPagina(b, { width: 1366, height: 900 });
-    await entrar(p, 'minimalista', user, clave);
+    await entrar(p, 'mecanico', user, clave);
     await p.evaluate(() => DovaApp.navegar('pacientes')); await p.waitForTimeout(1200);
     await p.evaluate(() => DovaBloqueo.bloquear()); await p.waitForSelector('#dova-candado');
     P('Bloquear: el candado tapa la pantalla', await visibleShell(p) === false && await p.locator('#candado-clave').isVisible());
@@ -84,7 +84,7 @@ const entrar = async (p, dis, user, clave) => {
     // ---------- Política (admin) ----------
     await db.query('DELETE FROM login_intentos');
     const a = await nuevaPagina(b, { width: 1366, height: 900 });
-    await entrar(a.p, 'moderno', 'admin', 'admin');
+    await entrar(a.p, 'mecanico', 'admin', 'admin');
     await a.p.evaluate(() => DovaApp.navegar('configuracion')); await a.p.waitForSelector('#form-politica', { timeout: 8000 });
     P('Política: sin opciones de verificación en dos pasos', await a.p.locator('#pol-2fa').count() === 0);
     await a.p.selectOption('#pol-bloqueo', '30'); await a.p.click('#form-politica button[type=submit]'); await a.p.waitForTimeout(1200);

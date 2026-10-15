@@ -15,7 +15,7 @@ const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, o
   await db.query('DELETE FROM pacientes WHERE clinica_id=1 AND ci LIKE $1', [`8${suf}%`]);
   await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false WHERE username='recep1'");
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-  for (const [dis, vp, n] of [['moderno', { width: 1366, height: 900 }, 1], ['tecnico', { width: 390, height: 844 }, 2]]) {
+  for (const [dis, vp, n] of [['mecanico', { width: 1366, height: 900 }, 1], ['mecanico', { width: 390, height: 844 }, 2]]) {
     const wb = new ExcelJS.Workbook(); const h = wb.addWorksheet('P');
     h.addRow(['Nombre', 'Apellido', 'CI', 'Teléfono', 'Fecha de nacimiento']);
     h.addRow([`Importada${n}`, `Prueba${suf}`, `8${suf}${n}1`, '0981 123 456', '10/10/1980']);
@@ -49,7 +49,7 @@ const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, o
   }
   await b.close();
   await db.query('DELETE FROM pacientes WHERE clinica_id=1 AND ci LIKE $1', [`8${suf}%`]);
-  await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='recep1'");
+  await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='recep1'");
   await db.end();
   const ok = res.filter(Boolean).length; console.log(`\n${ok}/${res.length}`); process.exit(ok === res.length ? 0 : 1);
 })().catch((e) => { console.error(e); process.exit(1); });

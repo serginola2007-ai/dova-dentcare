@@ -110,6 +110,7 @@ const PERMISOS = [
   { codigo: 'ajustes.manage', modulo: 'finanzas', descripcion: 'Registrar ajustes de cuenta (descuentos, bonificaciones, incobrables)' },
   { codigo: 'comisiones.view', modulo: 'finanzas', descripcion: 'Ver comisiones y producción de odontólogos' },
   { codigo: 'comisiones.manage', modulo: 'finanzas', descripcion: 'Configurar reglas y liquidar comisiones' },
+  { codigo: 'rentabilidad.view', modulo: 'finanzas', descripcion: 'Ver la rentabilidad por tratamiento y por odontólogo' },
   { codigo: 'metas.manage', modulo: 'finanzas', descripcion: 'Configurar metas de producción' },
   { codigo: 'kpis.view', modulo: 'reportes', descripcion: 'Ver estadísticas de la clínica' },
   // Facturación (comprobantes internos; ver backend/src/modules/facturacion)

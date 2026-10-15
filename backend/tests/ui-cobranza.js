@@ -40,16 +40,16 @@ const login = async (b, dis, vp, u, c) => {
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   try {
     // ---------- Recepción: Avisos de cobro ----------
-    for (const [dis, vp] of [['moderno', { width: 1366, height: 900 }], ['tecnico', { width: 390, height: 844 }]]) {
+    for (const [i, [dis, vp]] of [['mecanico', { width: 1366, height: 900 }], ['mecanico', { width: 390, height: 844 }]].entries()) {
       await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido=$1 WHERE username='recep1'", [dis]);
       const { ctx, p, err } = await login(b, dis, vp, 'recep1', 'clave123');
       await p.evaluate(() => { window.DovaSubPendiente = 'cobro'; return DovaApp.navegar('finanzas'); });
       await p.waitForSelector('[data-cuotas]', { timeout: 10000 }); await p.waitForTimeout(800);
       const filaC = p.locator('[data-cuotas] tr', { hasText: LO }).filter({ hasText: '6 días de atraso' });
-      P(`[${dis}] Avisos de cobro: la cuota vencida aparece con los días de atraso${dis === 'moderno' ? ' y "Toca hoy"' : ' y el aviso ya enviado'}`, await (dis === 'moderno' ? filaC.filter({ hasText: 'Toca hoy' }) : filaC.filter({ hasText: 'Enviado' })).count() === 1);
-      P(`[${dis}] El presupuesto sin respuesta también`, await p.locator('[data-press] tr', { hasText: LO }).count() === 1);
-      P(`[${dis}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
-      if (dis === 'moderno') {
+      P(`[${dis}${i ? '-celular' : ''}] Avisos de cobro: la cuota vencida aparece con los días de atraso${i === 0 ? ' y "Toca hoy"' : ' y el aviso ya enviado'}`, await (i === 0 ? filaC.filter({ hasText: 'Toca hoy' }) : filaC.filter({ hasText: 'Enviado' })).count() === 1);
+      P(`[${dis}${i ? '-celular' : ''}] El presupuesto sin respuesta también`, await p.locator('[data-press] tr', { hasText: LO }).count() === 1);
+      P(`[${dis}${i ? '-celular' : ''}] Sin desborde`, await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 0);
+      if (i === 0) {
         await p.locator('[data-cuotas] tr', { hasText: LO }).locator('[data-cob-enviar]').click(); await p.waitForTimeout(1500);
         P('Enviar: llega a WhatsApp y la fila muestra el aviso', recibidos.length === 1 && await p.locator('[data-cuotas] tr', { hasText: LO }).filter({ hasText: 'Enviado' }).count() === 1);
         const pedidos = []; ctx.on('request', (rq) => { if (/wa\.me|whatsapp/.test(rq.url())) pedidos.push(rq.url()); });
@@ -60,13 +60,13 @@ const login = async (b, dis, vp, u, c) => {
         P('…sin avisos de error (un solo pedido por toque)', !/Ya se le mand/.test((await p.locator('#dova-toasts').textContent().catch(() => '')) || ''));
         await p.screenshot({ path: `${DIR}/cobro-recepcion.png`, fullPage: false });
       } else await p.screenshot({ path: `${DIR}/cobro-celular.png` });
-      P(`[${dis}] Sin errores de consola`, err.length === 0, err);
+      P(`[${dis}${i ? '-celular' : ''}] Sin errores de consola`, err.length === 0, err);
       await ctx.close();
     }
     // ---------- Admin: configurar ----------
-    await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='admin'");
+    await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='admin'");
     {
-      const { ctx, p, err } = await login(b, 'moderno', { width: 1366, height: 900 }, 'admin', 'admin');
+      const { ctx, p, err } = await login(b, 'mecanico', { width: 1366, height: 900 }, 'admin', 'admin');
       await p.evaluate(() => { window.DovaSubPendiente = 'cobro'; return DovaApp.navegar('finanzas'); });
       await p.waitForSelector('[data-cob-cfg] summary'); await p.click('[data-cob-cfg] summary');
       P('Configurar: muestra cómo le llega el mensaje', /venció el/.test(await p.textContent('[data-cob-cfg]')));
@@ -113,7 +113,7 @@ const login = async (b, dis, vp, u, c) => {
     await b.close();
     await db.query('UPDATE web_config SET pagos_activos=$1 WHERE clinica_id=1', [web.pagos_activos]);
     await db.query('UPDATE clinicas SET cobranza_hora=10, cobranza_max_avisos=3 WHERE id=1');
-    await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='recep1'");
+    await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='recep1'");
     await db.query('DELETE FROM web_pagos WHERE paciente_id=$1', [pid]);
     await db.query('DELETE FROM pacientes WHERE id=$1', [pid]);
   }

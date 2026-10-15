@@ -15,9 +15,9 @@ const TZ = process.env.DOVA_TZ || 'America/Asuncion';
 const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const login = async (b, vp, u, c) => {
-  await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno', debe_cambiar_clave=false WHERE username=$1", [u]);
+  await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='mecanico', debe_cambiar_clave=false WHERE username=$1", [u]);
   const ctx = await b.newContext({ viewport: vp, timezoneId: TZ }); const p = await ctx.newPage(); const err = errores(p);
-  await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
+  await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
   await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(600);
   await enVentana(p);
   return { ctx, p, err };

@@ -19,7 +19,7 @@ const recibidos = []; let n = 0;
 const meta = http.createServer((rq, rs) => { let b = ''; rq.on('data', (c) => { b += c; }); rq.on('end', () => { recibidos.push(JSON.parse(b || '{}')); n += 1; rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ messages: [{ id: `wamid.UIM${n}` }] })); }); });
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const sinDesborde = (p) => p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth <= 0);
-const login = async (b, vp, u, c, dis = 'moderno') => {
+const login = async (b, vp, u, c, dis = 'mecanico') => {
   await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$1 WHERE username=$2', [dis, u]);
   const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
@@ -139,7 +139,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       const buf = fs.readFileSync(path.join(RX, arch));
       await db.query("INSERT INTO estudios (clinica_id, paciente_id, tipo, pieza, fecha, archivo, mime, tamano, nombre_archivo) VALUES (1,$1,'periapical',$2,$3,$4,'image/png',$5,$6)", [pO, pieza, h, buf, buf.length, arch]);
     }
-    await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='odo1'");
+    await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username='odo1'");
     {
       const { ctx, p, err } = await login(b, { width: 1366, height: 900 }, 'admin', 'admin');
       await p.evaluate((id) => DovaApp.navegar('paciente', id), pO); await p.waitForTimeout(1500);
@@ -186,7 +186,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
     }
     // Visor en el celular
     {
-      const { ctx, p, err } = await login(b, { width: 390, height: 844 }, 'admin', 'admin', 'tecnico');
+      const { ctx, p, err } = await login(b, { width: 390, height: 844 }, 'admin', 'admin', 'mecanico');
       await p.evaluate((id) => DovaApp.navegar('paciente', id), pO); await p.waitForTimeout(1500);
       await p.click('.dova-tab[data-tab="fotos"], [data-tab="fotos"]').catch(() => {});
       await p.waitForSelector('[data-abrir-visor]', { timeout: 10000 }); await p.click('[data-abrir-visor]'); await p.waitForTimeout(1500);
@@ -198,7 +198,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
     await b.close();
     await db.query('UPDATE clinicas SET lista_espera_auto=$1, controles_auto=$2, encuesta_auto=$3, mensajes_hora=$4, resena_url=$5 WHERE id=1', [cfgAntes.lista_espera_auto, cfgAntes.controles_auto, cfgAntes.encuesta_auto, cfgAntes.mensajes_hora, cfgAntes.resena_url]);
     await db.query('UPDATE web_config SET reservas_activas=$1 WHERE clinica_id=1', [webAntes.reservas_activas]);
-    await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username IN ('admin','recep1')");
+    await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username IN ('admin','recep1')");
     await db.query('DELETE FROM ofertas_turno WHERE odontologo_id=$1', [odo]);
     await db.query('DELETE FROM turnos WHERE odontologo_id=$1 OR paciente_id IN (SELECT id FROM pacientes WHERE ci LIKE $2)', [odo, `UM${suf}%`]);
     await db.query("SET dova.borrando_paciente='on'; DELETE FROM pacientes WHERE ci LIKE '" + `UM${suf}` + "%'; RESET dova.borrando_paciente");

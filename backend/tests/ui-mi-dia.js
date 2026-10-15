@@ -14,7 +14,7 @@ const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new 
 const sumar = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const sinDesborde = (p) => p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth <= 0);
-const login = async (b, vp, u, c, dis = 'moderno') => {
+const login = async (b, vp, u, c, dis = 'mecanico') => {
   await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$1 WHERE username=$2', [dis, u]);
   const ctx = await b.newContext({ viewport: vp, timezoneId: TZ, hasTouch: vp.width < 800 }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
@@ -40,7 +40,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
 
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   try {
-    for (const [dis, vp] of [['moderno', { width: 1366, height: 900 }], ['minimalista', { width: 1280, height: 860 }], ['tecnico', { width: 1366, height: 900 }], ['mecanico', { width: 1440, height: 900 }], ['moderno', { width: 820, height: 1180 }], ['moderno', { width: 390, height: 844 }]]) {
+    for (const [dis, vp] of [['mecanico', { width: 1366, height: 900 }], ['mecanico', { width: 1280, height: 860 }], ['mecanico', { width: 1366, height: 900 }], ['mecanico', { width: 1440, height: 900 }], ['mecanico', { width: 820, height: 1180 }], ['mecanico', { width: 390, height: 844 }]]) {
       const tag = `[${dis} ${vp.width}]`;
       const { ctx, p, err } = await login(b, vp, 'odo1', 'clave123', dis);
       await p.waitForSelector('.dova-midia-tabla', { timeout: 15000 });
@@ -62,7 +62,7 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
       P(`${tag} Laboratorio por llegar: la corona atrasada`, /Corona · pieza 21[\s\S]*Atrasado/.test(await p.locator('.dova-midia-labs').textContent()));
       P(`${tag} Saludo sin el título ("Buenas …, Carmen")`, /^Buen[ao]s? (días|tardes|noches), (?!Dra)/.test((await p.textContent('.dova-view-title')).trim()));
       P(`${tag} Pendientes: filas cerradas hasta tocarlas`, await p.locator('.dova-mis-pendientes .dova-atender-panel:not([hidden])').count() === 0);
-      if (vp.width === 1366 && dis === 'moderno') await p.screenshot({ path: `${DIR}/midia-hoy.png`, fullPage: true });
+      if (vp.width === 1366 && dis === 'mecanico') await p.screenshot({ path: `${DIR}/midia-hoy.png`, fullPage: true });
       P(`${tag} Sin desborde horizontal (hoy)`, await sinDesborde(p));
       await p.click('[data-midia-dia="1"]');
       await p.waitForSelector('.dova-midia-tabla tbody tr >> text=Ceci', { timeout: 10000 });
@@ -105,10 +105,10 @@ const login = async (b, vp, u, c, dis = 'moderno') => {
     };
     for (const [u, c, vp] of [['admin', 'admin', { width: 1366, height: 900 }], ['recep1', 'clave123', { width: 1366, height: 900 }], ['odo1', 'clave123', { width: 1366, height: 900 }], ['odo1', 'clave123', { width: 390, height: 844 }], ['admin', 'admin', { width: 390, height: 844 }]]) {
       const tag = `[vacío ${u} ${vp.width}]`;
-      await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username=$1", [u]);
+      await db.query('DELETE FROM login_intentos'); await db.query("UPDATE usuarios SET diseno_preferido='mecanico' WHERE username=$1", [u]);
       const ctx = await b.newContext({ viewport: vp, timezoneId: TZ }); const p = await ctx.newPage(); const err = errores(p);
       await vacios(p);
-      await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
+      await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
       await p.waitForSelector('[data-inicio-marca]:not(.atenuada)', { timeout: 15000 }); await p.waitForTimeout(800);
       const t = (await p.textContent('[data-inicio-marca]')).replace(/\s+/g, '');
       P(`${tag} Aparece el logo y el nombre de la clínica`, t === 'DentCareRC' && await p.locator('[data-inicio-marca] svg').count() === 1, t);

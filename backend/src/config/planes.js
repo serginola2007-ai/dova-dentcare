@@ -22,7 +22,7 @@ const MODULOS = {
   ayuda_tecnica: { nombre: 'Ayuda técnica dentro del sistema', desde: 'base', permisos: ['helpdesk.assign', 'helpdesk.create', 'helpdesk.reply', 'helpdesk.resolve', 'helpdesk.view', 'helpdesk.view_all'] },
   cuentas_cobrar: { nombre: 'Quién debe y desde cuándo', desde: 'completo', permisos: ['cuenta_corriente.view'] },
   convenios: { nombre: 'Seguros, convenios y listas de precios', desde: 'completo', permisos: ['aseguradoras.manage', 'listas_precios.manage'] },
-  comisiones: { nombre: 'Comisiones y metas', desde: 'completo', permisos: ['comisiones.manage', 'comisiones.view', 'metas.manage'] },
+  comisiones: { nombre: 'Comisiones y metas', desde: 'completo', permisos: ['comisiones.manage', 'comisiones.view', 'metas.manage', 'rentabilidad.view'] },
   whatsapp_auto: { nombre: 'WhatsApp automático (recordatorios, cobros, mensajes y resumen del día)', desde: 'completo', permisos: ['cobranza.manage'] },
   gestion_clinica: { nombre: 'Laboratorio, esterilización, equipos y asistencia del personal', desde: 'completo', permisos: ['equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'] },
   ortodoncia: { nombre: 'Ortodoncia', desde: 'completo', permisos: ['ortodoncia.manage', 'ortodoncia.view'] },

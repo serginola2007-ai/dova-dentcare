@@ -699,3 +699,8 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-cli-comparar.lado .dova-cli-cmp-linea { display: none; }
 .dova-cli-comparar.lado .dova-cli-cmp-et.izq { left: 10px; } .dova-cli-comparar.lado .dova-cli-cmp-et.der { right: 10px; }
 [data-avisos-box] [hidden] { display: none !important; }
+.dova-ext-neg { color: var(--danger, #A33B2E); }
+.dova-modo-opciones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.dova-modo-opcion { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border: 1px solid var(--border-strong); background: var(--white); cursor: pointer; min-width: 220px; flex: 1; }
+.dova-modo-opcion.seleccionado { border-color: var(--terracotta); box-shadow: inset 0 0 0 1px var(--terracotta); }
+.dova-modo-opcion input { width: auto; margin-top: 3px; }

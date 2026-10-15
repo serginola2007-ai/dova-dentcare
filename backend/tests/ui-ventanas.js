@@ -13,7 +13,7 @@ const P = (n, ok, d) => { res.push(!!ok); console.log(ok ? 'OK  ' : 'MAL ', n, o
 const TZ = process.env.DOVA_TZ || 'America/Asuncion';
 const errores = (p) => { const e = []; p.on('pageerror', (x) => e.push(x.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) e.push(m.text()); }); return e; };
 const sinDesborde = (p) => p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth <= 0);
-const login = async (b, vp, u, c, dis = 'moderno') => {
+const login = async (b, vp, u, c, dis = 'mecanico') => {
   await db.query('DELETE FROM login_intentos'); await db.query('UPDATE usuarios SET diseno_preferido=$1, debe_cambiar_clave=false WHERE username=$2', [dis, u]);
   const ctx = await b.newContext({ viewport: vp, timezoneId: TZ, hasTouch: vp.width < 800 }); const p = await ctx.newPage(); const err = errores(p);
   await p.goto(`${URL0}/${dis}/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
@@ -31,7 +31,7 @@ const menu = async (p, grupo, ruta, sub) => {
 (async () => {
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   try {
-    // ---------------- Escritorio (moderno) ----------------
+    // ---------------- Escritorio (mecánico) ----------------
     {
       const vp = { width: 1440, height: 900 };
       const { ctx, p, err } = await login(b, vp, 'admin', 'admin');
@@ -106,11 +106,11 @@ const menu = async (p, grupo, ruta, sub) => {
         P('Una fila de Inicio abre su sección en una ventana', await ventana(p, ruta).isVisible());
       }
       // Tema
-      await p.click('#theme-toggle-btn'); await p.waitForTimeout(300);
+      await p.evaluate(() => DovaApp.aplicarModo('oscuro')); await p.waitForTimeout(300);
       const tp = await p.evaluate(() => document.documentElement.getAttribute('data-theme'));
       const tv = await ventana(p, 'agenda').locator('iframe').evaluate((f) => f.contentDocument.documentElement.getAttribute('data-theme'));
-      P('Claro/oscuro llega a las ventanas abiertas', tp === tv, { tp, tv });
-      await p.click('#theme-toggle-btn');
+      P('Claro/oscuro llega a las ventanas abiertas', tp === 'dark' && tp === tv, { tp, tv });
+      await p.evaluate(() => DovaApp.aplicarModo('claro'));
       await p.screenshot({ path: `${DIR}/ventanas-escritorio.png` });
       // Recargar: vuelven las ventanas
       const abiertas = await p.evaluate(() => DovaVentanas.abiertas().map((v) => v.ruta).sort().join(','));
@@ -134,7 +134,7 @@ const menu = async (p, grupo, ruta, sub) => {
       await ctx.close();
     }
     // ---------------- Los otros diseños ----------------
-    for (const dis of ['minimalista', 'tecnico', 'mecanico']) {
+    for (const dis of ['mecanico']) {
       const { ctx, p, err } = await login(b, { width: 1366, height: 860 }, 'admin', 'admin', dis);
       await p.evaluate(() => { window.DovaSubPendiente = null; return DovaApp.navegar('agenda'); });
       await marco(p, 'agenda').locator('h2, .dova-view-title').first().waitFor({ timeout: 15000 });

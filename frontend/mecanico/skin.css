@@ -3,44 +3,61 @@
    Barra de menú en mayúsculas, tira de íconos a la izquierda, área de
    trabajo bordó con las pantallas como "ventanas" con barra de título,
    recuadros de "Parámetros activos" y "Ventanas abiertas recientemente",
-   barra de estado abajo y letra Tahoma chica. Siempre claro. Para todos los usuarios. */
-:root, :root[data-theme] {
+   barra de estado abajo y letra Tahoma chica. Claro u oscuro (lo elige cada usuario en Configuración). Para todos los usuarios. */
+:root, :root[data-theme="light"] {
+  color-scheme: light;
   --cream: #F7EEE1; --ink: #2B241E; --ink-soft: #6E5A48;
   --terracotta: #B96A47; --terracotta-dark: #8F4F32;
   --sage: #7C8A66; --sage-dark: #5F7254; --rust: #A8432E;
   --border: #DCC8AE; --border-strong: #B49C82; --white: #FFFFFF; --on-dark: #FFFFFF;
   --barra: #5E3322; --bordo: #9A5536; --bordo-osc: #5E3322; --gris: #EFE0C9; --gris-claro: #FBF6EE;
+  --mec-escritorio: #9A5536; --mec-luz: #FFFFFF; --mec-sombra: #6E5A48; --mec-hundido: #B49C82; --mec-activo: #E6D3BA;
+  --mec-linea: #EADCC8; --mec-fila-par: #FBF4EA; --mec-hover: #F6E2D3; --mec-in-osc: #9C866F; --mec-in-luz: #E3D2BC;
+  --mec-trazo: #2B241E; --mec-enlace: #5E3322; --mec-marca: #9A5536; --mec-inact1: #8a7a6e; --mec-inact2: #b5a698;
   --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(60,30,15,0.30);
 }
-body { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; font-size: 12px; background: var(--bordo); color: var(--ink); }
+/* Modo oscuro: mismos tonos de la marca (terracota, crema, salvia) sobre marrones muy oscuros. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --cream: #1B1410; --ink: #F0E6D8; --ink-soft: #B6A18A;
+  --terracotta: #D98159; --terracotta-dark: #E8A57C;
+  --sage: #8FA189; --sage-dark: #A3B69C; --rust: #E0776C;
+  --border: #4A3A2E; --border-strong: #6A5646; --white: #261D17; --on-dark: #FFFFFF;
+  --barra: #120C08; --bordo: #8A4A2E; --bordo-osc: #3E2216; --gris: #32261E; --gris-claro: #261D17;
+  --mec-escritorio: #17100C; --mec-luz: #54433A; --mec-sombra: #0E0906; --mec-hundido: #6A5646; --mec-activo: #46352A;
+  --mec-linea: #3A2D24; --mec-fila-par: #2C221B; --mec-hover: #4A3226; --mec-in-osc: #0E0906; --mec-in-luz: #54433A;
+  --mec-trazo: #000000; --mec-enlace: #E8A57C; --mec-marca: #E8A57C; --mec-inact1: #3A3029; --mec-inact2: #54453A;
+  --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(0,0,0,0.6);
+}
+body { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; font-size: 12px; background: var(--mec-escritorio); color: var(--ink); }
 input, select, textarea, button { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; font-size: 12px; }
-input, select, textarea { padding: 4px 6px; border-radius: 0; border-color: #9C866F #E3D2BC #E3D2BC #9C866F; }
+input, select, textarea { padding: 4px 6px; border-radius: 0; border-color: var(--mec-in-osc) var(--mec-in-luz) var(--mec-in-luz) var(--mec-in-osc); }
 label { font-size: 11px; color: var(--ink); }
 
 /* ---- Estructura ---- */
 .mec-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .mec-shell[style*="display: none"] { display: none !important; }
-.dova-topbar { display: flex; align-items: center; gap: 14px; padding: 3px 8px; background: var(--gris); color: var(--ink); border-bottom: 1px solid #B49C82; box-shadow: inset 0 -1px 0 #FFFFFF; }
+.dova-topbar { display: flex; align-items: center; gap: 14px; padding: 3px 8px; background: var(--gris); color: var(--ink); border-bottom: 1px solid var(--mec-hundido); box-shadow: inset 0 -1px 0 var(--mec-luz); }
 .dova-marca { display: flex; align-items: center; gap: 8px; }
-.dova-marca-producto { font-weight: 700; font-size: 13px; letter-spacing: 2px; color: var(--bordo); cursor: pointer; }
+.dova-marca-producto { font-weight: 700; font-size: 13px; letter-spacing: 2px; color: var(--mec-marca); cursor: pointer; }
 .dova-marca-clinica { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
 .dova-menu { display: flex; gap: 0; flex: 1; flex-wrap: wrap; }
 .dova-menu-item { background: none; border: 1px solid transparent; color: var(--ink); padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; border-radius: 0; }
 .dova-menu-item:hover, .dova-menu-item:focus-visible { background: var(--bordo); color: #FFFFFF; }
-.dova-menu-item.activo { border-color: #B49C82 #FFFFFF #FFFFFF #B49C82; background: #E6D3BA; color: var(--ink); font-weight: 700; }
-.dova-submenu, .dova-submenu2 { background: var(--gris-claro); border: 1px solid #6E5A48; border-radius: 0; box-shadow: 2px 2px 0 rgba(60,30,15,0.30); padding: 2px; }
+.dova-menu-item.activo { border-color: var(--mec-hundido) var(--mec-luz) var(--mec-luz) var(--mec-hundido); background: var(--mec-activo); color: var(--ink); font-weight: 700; }
+.dova-submenu, .dova-submenu2 { background: var(--gris-claro); border: 1px solid var(--mec-sombra); border-radius: 0; box-shadow: 2px 2px 0 rgba(60,30,15,0.30); padding: 2px; }
 .dova-submenu .dova-menu-item { text-transform: none; text-align: left; padding: 4px 18px 4px 10px; }
 .dova-submenu .dova-menu-item.activo { background: var(--bordo); color: #FFFFFF; border-color: transparent; }
-.dova-logout { background: var(--gris); border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; color: var(--ink); font-size: 11px; padding: 3px 10px; text-transform: uppercase; border-radius: 0; }
-.dova-logout:active { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; }
-.dova-campana-btn { border-radius: 0; color: var(--ink); border-color: #B49C82; }
+.dova-logout { background: var(--gris); border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); color: var(--ink); font-size: 11px; padding: 3px 10px; text-transform: uppercase; border-radius: 0; }
+.dova-logout:active { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); }
+.dova-campana-btn { border-radius: 0; color: var(--ink); border-color: var(--mec-hundido); }
 .dova-vivo-punto { box-shadow: 0 0 0 2px var(--gris); }
 
-.mec-cuerpo { flex: 1; display: flex; align-items: flex-start; min-height: 0; background: var(--bordo); }
-.mec-iconos { flex: 0 0 46px; align-self: stretch; display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; background: var(--gris); border-right: 1px solid #B49C82; box-shadow: inset -1px 0 0 #FFFFFF; }
-.mec-icono { width: 38px; height: 36px; display: grid; place-items: center; background: transparent; border: 1px solid transparent; color: var(--bordo-osc); cursor: pointer; padding: 0; }
-.mec-icono:hover, .mec-icono:focus-visible { border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; background: var(--gris-claro); }
-.mec-icono.activo { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; background: #E6D3BA; }
+.mec-cuerpo { flex: 1; display: flex; align-items: flex-start; min-height: 0; background: var(--mec-escritorio); }
+.mec-iconos { flex: 0 0 46px; align-self: stretch; display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; background: var(--gris); border-right: 1px solid var(--mec-hundido); box-shadow: inset -1px 0 0 var(--mec-luz); }
+.mec-icono { width: 38px; height: 36px; display: grid; place-items: center; background: transparent; border: 1px solid transparent; color: var(--mec-enlace); cursor: pointer; padding: 0; }
+.mec-icono:hover, .mec-icono:focus-visible { border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); background: var(--gris-claro); }
+.mec-icono.activo { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); background: var(--mec-activo); }
 
 /* Pantalla actual: una "ventana" con barra de título */
 .dova-main { flex: 1; min-width: 0; margin: 10px; padding: 0 12px 14px; background: var(--gris-claro); border: 1px solid var(--bordo-osc); box-shadow: 2px 2px 0 rgba(60,30,15,0.30); max-width: none; }
@@ -50,24 +67,24 @@ label { font-size: 11px; color: var(--ink); }
 }
 .dova-main > .dova-cargando:first-child { padding-top: 14px; }
 .dova-view-title, .dova-section-title { font-family: inherit; text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: .4px; }
-.dova-section-title { color: var(--bordo); border-bottom: 1px solid var(--border-strong); padding-bottom: 3px; }
+.dova-section-title { color: var(--mec-marca); border-bottom: 1px solid var(--border-strong); padding-bottom: 3px; }
 .dova-subtitulo, .dova-nota { font-size: 11px; }
 
 /* Recuadros con título (fieldset clásico) */
-.dova-card, .dova-ext-kpis, .dova-ext-caja { background: #FFFFFF; border: 1px solid; border-color: #B49C82 #FFFFFF #FFFFFF #B49C82; border-radius: 0; box-shadow: inset 1px 1px 0 #E3D2BC; }
+.dova-card, .dova-ext-kpis, .dova-ext-caja { background: var(--white); border: 1px solid; border-color: var(--mec-hundido) var(--mec-luz) var(--mec-luz) var(--mec-hundido); border-radius: 0; box-shadow: inset 1px 1px 0 var(--mec-in-luz); }
 .dova-card-valor { font-size: 18px; }
-.dova-tabla { font-size: 12px; background: #FFFFFF; border: 1px solid #B49C82; }
-.dova-tabla th { background: var(--gris); color: var(--ink); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #B49C82; padding: 4px 6px; }
-.dova-tabla td { padding: 3px 6px; border-bottom: 1px solid #EADCC8; }
-.dova-tabla tbody tr:nth-child(even) td { background: #FBF4EA; }
-.dova-tabla tbody tr:hover td { background: #F6E2D3; }
+.dova-tabla { font-size: 12px; background: var(--white); border: 1px solid var(--mec-hundido); }
+.dova-tabla th { background: var(--gris); color: var(--ink); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--mec-hundido); padding: 4px 6px; }
+.dova-tabla td { padding: 3px 6px; border-bottom: 1px solid var(--mec-linea); }
+.dova-tabla tbody tr:nth-child(even) td { background: var(--mec-fila-par); }
+.dova-tabla tbody tr:hover td { background: var(--mec-hover); }
 .dova-btn-primary, .dova-btn-primario, .dova-btn-secundario, .dova-btn-peligro {
-  border-radius: 0; font-size: 12px; padding: 4px 12px; border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; box-shadow: 1px 1px 0 #2B241E;
+  border-radius: 0; font-size: 12px; padding: 4px 12px; border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); box-shadow: 1px 1px 0 var(--mec-trazo);
 }
 .dova-btn-primary, .dova-btn-primario { background: var(--bordo); color: #FFFFFF; border-color: #D9946F #5E3322 #5E3322 #D9946F; }
 .dova-btn-secundario { background: var(--gris); color: var(--ink); }
 .dova-btn-primary:active, .dova-btn-primario:active, .dova-btn-secundario:active { box-shadow: none; transform: translate(1px, 1px); }
-.dova-tabs, .dova-ext-subtabs { border-bottom: 1px solid #B49C82; }
+.dova-tabs, .dova-ext-subtabs { border-bottom: 1px solid var(--mec-hundido); }
 .dova-modal { border-radius: 0; border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); }
 
 /* Columna derecha: parámetros y ventanas recientes */
@@ -78,14 +95,14 @@ label { font-size: 11px; color: var(--ink); }
 .mec-param dt { font-weight: 700; text-transform: uppercase; color: var(--ink-soft); }
 .mec-param dd { margin: 0; overflow-wrap: anywhere; }
 .mec-recientes-lista { list-style: none; margin: 0; padding: 4px; font-size: 11px; }
-.mec-recientes-lista li { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; border-bottom: 1px dotted #DCC8AE; }
-.mec-reciente { background: none; border: 0; padding: 3px 4px; color: var(--bordo-osc); text-align: left; cursor: pointer; font-size: 11px; text-decoration: underline; }
+.mec-recientes-lista li { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; border-bottom: 1px dotted var(--border); }
+.mec-reciente { background: none; border: 0; padding: 3px 4px; color: var(--mec-enlace); text-align: left; cursor: pointer; font-size: 11px; text-decoration: underline; }
 .mec-reciente:hover { background: var(--bordo); color: #FFFFFF; }
 .mec-hora { color: var(--ink-soft); flex-shrink: 0; }
 .mec-vacio { padding: 4px; color: var(--ink-soft); }
 
-.mec-estado { display: flex; gap: 0; background: var(--gris); border-top: 1px solid #FFFFFF; box-shadow: 0 -1px 0 #B49C82; font-size: 11px; padding: 2px 4px; }
-.mec-estado span { padding: 1px 10px; border: 1px solid; border-color: #B49C82 #FFFFFF #FFFFFF #B49C82; margin-right: 4px; white-space: nowrap; }
+.mec-estado { display: flex; gap: 0; background: var(--gris); border-top: 1px solid var(--mec-luz); box-shadow: 0 -1px 0 var(--mec-hundido); font-size: 11px; padding: 2px 4px; }
+.mec-estado span { padding: 1px 10px; border: 1px solid; border-color: var(--mec-hundido) var(--mec-luz) var(--mec-luz) var(--mec-hundido); margin-right: 4px; white-space: nowrap; }
 .mec-estado span:last-child { margin-left: auto; margin-right: 0; }
 
 /* Login */
@@ -104,7 +121,7 @@ label { font-size: 11px; color: var(--ink); }
   .dova-topbar { flex-wrap: wrap; gap: 8px; position: relative; z-index: 901; }
   .dova-menu { order: 3; width: 100%; flex-basis: 100%; flex-direction: column; max-height: 0; overflow: hidden; }
   body.dova-menu-abierto .dova-menu { max-height: 80vh; overflow-y: auto; }
-  .dova-menu-item { text-align: left; border-bottom: 1px solid #DCC8AE; }
+  .dova-menu-item { text-align: left; border-bottom: 1px solid var(--border); }
   .dova-topbar .dova-campana, .dova-logout { order: 4; }
   .mec-estado span:nth-child(2), .mec-estado span:nth-child(3) { display: none; }
   .dova-login-title { margin: 0 -20px 16px; }
@@ -126,16 +143,16 @@ label { font-size: 11px; color: var(--ink); }
 .mec-shell ~ .dova-ventanas .dova-ventana, .dova-ventana { border-radius: 0; }
 body .dova-ventana { border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); background: var(--gris-claro); }
 body .dova-ventana.activa { box-shadow: 4px 4px 0 rgba(60,30,15,0.45); }
-body .dova-ventana-barra { height: 26px; padding: 0 3px 0 8px; background: linear-gradient(90deg, #8a7a6e, #b5a698); color: #FFFFFF; border-bottom: 1px solid var(--bordo-osc); }
+body .dova-ventana-barra { height: 26px; padding: 0 3px 0 8px; background: linear-gradient(90deg, var(--mec-inact1), var(--mec-inact2)); color: #FFFFFF; border-bottom: 1px solid var(--bordo-osc); }
 body .dova-ventana.activa .dova-ventana-barra { background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
 body .dova-ventana:not(.activa) .dova-ventana-titulo { color: #F3ECE3; }
 body .dova-ventana-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-body .dova-ventana-btn, body .dova-ventana-zoom { height: 18px; min-width: 20px; padding: 0 4px; font-size: 12px; color: var(--ink); background: var(--gris); border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; border-radius: 0; }
+body .dova-ventana-btn, body .dova-ventana-zoom { height: 18px; min-width: 20px; padding: 0 4px; font-size: 12px; color: var(--ink); background: var(--gris); border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); border-radius: 0; }
 body .dova-ventana-zoom { min-width: 40px; font-size: 10px; }
-body .dova-ventana-btn:active, body .dova-ventana-zoom:active { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; }
+body .dova-ventana-btn:active, body .dova-ventana-zoom:active { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); }
 body .dova-ventana-btn:hover, body .dova-ventana-zoom:hover { background: var(--gris-claro); }
 body .dova-ventana-cerrar:hover { background: var(--rust); color: #FFFFFF; }
-body .dova-tareas { background: var(--gris); border-top: 1px solid #FFFFFF; box-shadow: 0 -1px 0 #B49C82; padding: 3px 6px; gap: 3px; }
-body .dova-tarea-item, body .dova-tarea-inicio { border: 1px solid; border-color: #FFFFFF #6E5A48 #6E5A48 #FFFFFF; border-radius: 0; background: var(--gris); }
+body .dova-tareas { background: var(--gris); border-top: 1px solid var(--mec-luz); box-shadow: 0 -1px 0 var(--mec-hundido); padding: 3px 6px; gap: 3px; }
+body .dova-tarea-item, body .dova-tarea-inicio { border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); border-radius: 0; background: var(--gris); }
 body .dova-tarea { font-size: 11px; padding: 3px 8px; }
-body .dova-tarea-item.activa { border-color: #6E5A48 #FFFFFF #FFFFFF #6E5A48; background: #E6D3BA; font-weight: 700; }
+body .dova-tarea-item.activa { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); background: var(--mec-activo); font-weight: 700; }

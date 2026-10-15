@@ -1,7 +1,5 @@
 [build]
-  # Publica la carpeta frontend/ completa: moderno/, minimalista/, tecnico/
-  # y shared/ (un solo sitio Netlify, un solo dominio, los 3 diseños
-  # conviven como subcarpetas — ver README > Sistema de diseños).
+  # Publica la carpeta frontend/ completa: mecanico/ (el único diseño) y shared/.
   publish = "frontend"
   # Genera shared/config.js con la URL real del backend a partir de la
   # variable de entorno DOVA_API_URL (configurala en Netlify > Site
@@ -11,47 +9,30 @@
   # rompe un build de prueba, pero en producción real hay que configurarla).
   command = "sed \"s#__DOVA_API_URL__#${DOVA_API_URL:-http://localhost:4000/api}#\" frontend/shared/config.template.js > frontend/shared/config.js"
 
-# Raíz del sitio -> diseño moderno por default. El propio index.html de
-# moderno redirige enseguida a la carpeta correcta si esta sesión ya tiene
-# guardada otra preferencia (ver el script de "selector de diseño" en su
-# <head>), así que este default solo se nota en el primerísimo ingreso.
+# Raíz del sitio -> DOVA (único diseño: mecánico). Los enlaces viejos a los otros diseños llevan al actual.
 [[redirects]]
   from = "/"
-  to = "/moderno/"
+  to = "/mecanico/"
   status = 302
-
 [[redirects]]
-  from = "/moderno"
-  to = "/moderno/"
+  from = "/mecanico"
+  to = "/mecanico/"
   status = 301
-[[redirects]]
-  from = "/minimalista"
-  to = "/minimalista/"
-  status = 301
-[[redirects]]
-  from = "/tecnico"
-  to = "/tecnico/"
-  status = 301
-
-# DOVA rutea internamente por #hash (no History API), así que en la
-# práctica nunca llegan al servidor URLs como /dashboard o /pacientes. Estos
-# 3 fallbacks quedan igual como red de seguridad: si alguna vez se agrega
-# ruteo por path real, o alguien pega/guarda un link con un path que no es
-# un archivo real dentro de una carpeta de tema, sirven el index.html de
-# esa carpeta en vez de un 404 (Netlify solo aplica esto cuando NO hay un
-# archivo real con ese path — así que skin.css, api.js, etc. se siguen
-# sirviendo normalmente).
 [[redirects]]
   from = "/moderno/*"
-  to = "/moderno/index.html"
-  status = 200
+  to = "/mecanico/"
+  status = 301
 [[redirects]]
   from = "/minimalista/*"
-  to = "/minimalista/index.html"
-  status = 200
+  to = "/mecanico/"
+  status = 301
 [[redirects]]
   from = "/tecnico/*"
-  to = "/tecnico/index.html"
+  to = "/mecanico/"
+  status = 301
+[[redirects]]
+  from = "/mecanico/*"
+  to = "/mecanico/index.html"
   status = 200
 
 [[headers]]

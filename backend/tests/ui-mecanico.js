@@ -14,18 +14,18 @@ const req = async (m, url, body, tok) => {
 const q1 = async (s, p) => (await db.query(s, p)).rows[0];
 
 (async () => {
-  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='moderno' WHERE username IN ('admin','recep1')");
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='mecanico' WHERE username IN ('admin','recep1')");
   const A = (await req('POST', '/auth/login', { username: 'admin', password: 'admin' })).j.accessToken;
   const R = (await req('POST', '/auth/login', { username: 'recep1', password: 'clave123' })).j.accessToken;
   // ---- API ----
-  const rr = await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'mecanico' }, R);
-  P('Recepción también puede elegir el diseño mecánico', rr.s === 200 && (await q1("SELECT diseno_preferido FROM usuarios WHERE username='recep1'")).diseno_preferido === 'mecanico', rr);
-  P('Diseño inexistente o con otro tipo de dato: 400', (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: ['mecanico'] }, A)).s === 400 && (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'otro' }, A)).s === 400);
-  const r = await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'mecanico' }, A);
-  P('El admin también', r.s === 200 && r.j.disenoPreferido === 'mecanico', r);
+  const rr = await req('PATCH', '/usuarios/me/preferencias', { tema: 'oscuro' }, R);
+  P('Cualquier usuario puede elegir el modo oscuro', rr.s === 200 && rr.j.temaPreferido === 'oscuro' && (await q1("SELECT tema_preferido FROM usuarios WHERE username='recep1'")).tema_preferido === 'oscuro', rr);
+  P('Modo inexistente o con otro tipo de dato: 400', (await req('PATCH', '/usuarios/me/preferencias', { tema: ['oscuro'] }, A)).s === 400 && (await req('PATCH', '/usuarios/me/preferencias', { tema: 'azul' }, A)).s === 400);
+  P('Los diseños que ya no existen se rechazan: 400', (await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'moderno' }, A)).s === 400);
   const lr = await req('POST', '/auth/login', { username: 'recep1', password: 'clave123' });
-  P('Al entrar, la recepción recibe su diseño mecánico guardado', lr.s === 200 && lr.j.usuario.disenoPreferido === 'mecanico', lr.j && lr.j.usuario);
-  await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username='recep1'");
+  P('Al entrar, la recepción recibe su modo guardado', lr.s === 200 && lr.j.usuario.temaPreferido === 'oscuro' && lr.j.usuario.disenoPreferido === 'mecanico', lr.j && lr.j.usuario);
+  await req('PATCH', '/usuarios/me/preferencias', { tema: 'claro' }, R);
+  await db.query("UPDATE usuarios SET diseno_preferido='mecanico', tema_preferido='claro' WHERE username IN ('admin','recep1')");
 
   // ---- Pantallas ----
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
@@ -33,7 +33,7 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
     await db.query('DELETE FROM login_intentos');
     const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = [];
     p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
-    await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
+    await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
     await p.waitForURL(/\/mecanico\//, { timeout: 15000 });
     await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(1500);
     P(`[${nombre}] Con "mecánico" guardado, entra en ese diseño`, /\/mecanico\//.test(p.url()));
@@ -54,8 +54,9 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
       await p.locator('#mec-recientes [data-mec-rec]', { hasText: 'Facturación' }).click(); await p.waitForTimeout(1200);
       P('Tocar una ventana reciente la vuelve a abrir', await p.locator('.dova-ventana[data-ventana-ruta="facturacion"].activa').count() === 1);
       await p.evaluate(() => DovaApp.navegar('configuracion'));
-      await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[data-elegir-diseno-config="mecanico"]').waitFor({ timeout: 15000 });
-      P('Configuración → Apariencia ofrece el diseño mecánico', await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[data-elegir-diseno-config="mecanico"]').count() === 1);
+      await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[name="modo-color"]').first().waitFor({ timeout: 15000 });
+      P('Configuración → Apariencia ofrece claro y oscuro (y no hay otro diseño)', await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[name="modo-color"]').count() === 2 && await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[data-elegir-diseno-config]').count() === 0);
+      P('No hay botón de claro/oscuro fuera de Configuración', await p.locator('#theme-toggle-btn').count() === 0);
       await p.evaluate(() => DovaApp.navegar('dashboard')); await p.waitForTimeout(1800);
       await p.screenshot({ path: `${DIR}/mecanico-escritorio.png` });
     } else {
@@ -65,28 +66,48 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
     P(`[${nombre}] Sin errores de consola`, err.length === 0, err);
     await ctx.close();
   }
-  // Recepción: lo ve en el login y en Configuración, lo elige y entra con él.
+  // Recepción: el login no ofrece diseños; el modo oscuro se cambia solo en Configuración, llega a las ventanas y se conserva.
   await db.query('DELETE FROM login_intentos');
   const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage(); const errR = [];
   p.on('pageerror', (e) => errR.push(e.message));
-  await p.goto(`${URL0}/moderno/index.html`);
-  P('En el login aparecen los 4 diseños, mecánico incluido', await p.locator('[data-diseno-radio-card="mecanico"]').count() === 1 && await p.locator('.dova-disenos-grid-login [data-diseno-radio-card]').count() === 4);
+  await p.goto(`${URL0}/mecanico/index.html`);
+  P('En el login no hay selector de diseño ni botón de modo', await p.locator('[data-diseno-radio-card]').count() === 0 && await p.locator('#theme-toggle-btn').count() === 0 && await p.locator('#login-username').count() === 1);
+  P('Sin elección guardada arranca en modo claro', await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'light');
   await p.screenshot({ path: `${DIR}/mecanico-login.png` });
   await p.fill('#login-username', 'recep1'); await p.fill('#login-password', 'clave123'); await p.click('#form-login button[type=submit]');
   await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800);
+  const colorFondo = () => p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const claro = await colorFondo();
   await p.evaluate(() => DovaApp.navegar('configuracion'));
   const cfgR = p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe');
-  await cfgR.locator('[data-elegir-diseno-config="mecanico"]').waitFor({ timeout: 15000 });
-  P('Recepción: Configuración ofrece el diseño mecánico', await cfgR.locator('[data-elegir-diseno-config="mecanico"]').count() === 1);
+  await cfgR.locator('[name="modo-color"][value="oscuro"]').waitFor({ timeout: 15000 });
+  P('Recepción: Configuración ofrece el modo claro y el oscuro', await cfgR.locator('[name="modo-color"]').count() === 2 && await cfgR.locator('[name="modo-color"][value="claro"]').isChecked());
   await p.screenshot({ path: `${DIR}/mecanico-apariencia.png` });
-  await cfgR.locator('[data-elegir-diseno-config="mecanico"]').click(); await p.waitForURL(/\/mecanico\//, { timeout: 15000 });
-  await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(1500);
-  P('Recepción entra al diseño mecánico y lo conserva', /\/mecanico\//.test(p.url()) && (await q1("SELECT diseno_preferido FROM usuarios WHERE username='recep1'")).diseno_preferido === 'mecanico');
+  await cfgR.locator('[name="modo-color"][value="oscuro"]').check(); await p.waitForTimeout(1200);
+  const oscuro = await colorFondo();
+  P('Al elegir oscuro cambia toda la pantalla, también la ventana abierta', await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark' && oscuro !== claro && await p.evaluate(() => document.querySelector('.dova-ventana[data-ventana-ruta="configuracion"] iframe').contentDocument.documentElement.getAttribute('data-theme')) === 'dark', { claro, oscuro });
+  P('…y queda guardado en su usuario', (await q1("SELECT tema_preferido FROM usuarios WHERE username='recep1'")).tema_preferido === 'oscuro');
+  await p.screenshot({ path: `${DIR}/mecanico-oscuro.png` });
+  await p.evaluate(() => DovaApp.navegar('dashboard')); await p.waitForTimeout(1200);
+  await p.screenshot({ path: `${DIR}/mecanico-oscuro-escritorio.png` });
+  await p.reload(); await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(1200);
+  P('Al recargar sigue en modo oscuro', await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark');
+  // Otro dispositivo (navegador limpio): el modo lo trae la cuenta.
+  const ctx2 = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p2 = await ctx2.newPage();
+  await db.query('DELETE FROM login_intentos');
+  await p2.goto(`${URL0}/mecanico/index.html`); await p2.fill('#login-username', 'recep1'); await p2.fill('#login-password', 'clave123'); await p2.click('#form-login button[type=submit]');
+  await p2.waitForSelector('#shell-root:not([style*="display: none"])'); await p2.waitForTimeout(800);
+  P('En otro dispositivo, al ingresar, también aparece en oscuro', await p2.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark');
+  await ctx2.close();
+  await p.evaluate(() => DovaApp.navegar('configuracion')); await p.waitForTimeout(800);
+  await p.frameLocator('.dova-ventana[data-ventana-ruta="configuracion"] iframe').locator('[name="modo-color"][value="claro"]').check(); await p.waitForTimeout(1000);
+  P('Vuelve al modo claro desde Configuración', await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'light' && (await q1("SELECT tema_preferido FROM usuarios WHERE username='recep1'")).tema_preferido === 'claro');
+  await p.evaluate(() => DovaApp.navegar('dashboard')); await p.waitForTimeout(1000);
   P('…con sus accesos (sin los que no puede ver) y parámetros', await p.locator('#mec-iconos [data-mec-ir="nuevo-turno"]').count() === 1 && await p.locator('#mec-iconos [data-mec-ir="usuarios"]').count() === 0 && /Recepci/i.test(await p.textContent('#mec-parametros')));
   await p.screenshot({ path: `${DIR}/mecanico-recepcion.png` });
   P('…sin errores de consola', errR.length === 0, errR);
   await ctx.close(); await b.close();
-  await db.query("UPDATE usuarios SET diseno_preferido='moderno' WHERE username IN ('admin','recep1')");
+  await db.query("UPDATE usuarios SET diseno_preferido='mecanico', tema_preferido='claro' WHERE username IN ('admin','recep1')");
   await db.end();
   const ok = res.filter(Boolean).length; console.log(`\n${ok}/${res.length}`); process.exit(ok === res.length ? 0 : 1);
 })().catch((e) => { console.error(e); process.exit(1); });

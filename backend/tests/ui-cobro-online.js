@@ -44,7 +44,7 @@ const mock = http.createServer((rq, rs) => {
     // ---- Clínica ----
     await db.query('DELETE FROM login_intentos');
     const ctx2 = await b.newContext({ viewport: { width: 1366, height: 900 } }); const a = await ctx2.newPage(); const err2 = errores(a);
-    await a.goto(`${URL0}/moderno/index.html`); await a.fill('#login-username', 'admin'); await a.fill('#login-password', 'admin'); await a.click('#form-login button[type=submit]');
+    await a.goto(`${URL0}/mecanico/index.html`); await a.fill('#login-username', 'admin'); await a.fill('#login-password', 'admin'); await a.click('#form-login button[type=submit]');
     await a.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await a.waitForTimeout(1000);
     await a.evaluate(() => DovaApp.navegar('finanzas'));
     const f = a.frameLocator('.dova-ventana[data-ventana-ruta="finanzas"] iframe');

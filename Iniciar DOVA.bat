@@ -16,7 +16,7 @@ call npm run seed
 echo Iniciando DOVA en http://localhost:4000 ...
 start "DOVA" cmd /k "cd /d "%BASE%backend" && npm run dev"
 timeout /t 4 /nobreak >nul
-start http://localhost:4000/moderno/
+start http://localhost:4000/mecanico/
 
 echo.
 echo DOVA esta corriendo. No cierres la ventana "DOVA".

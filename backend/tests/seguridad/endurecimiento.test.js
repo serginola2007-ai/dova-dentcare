@@ -172,7 +172,7 @@ const H = async (url, opts = {}) => fetch(B.replace('/api', '') + url, opts);
   P('CORS: un origen ajeno se rechaza', h.status === 403 && !h.headers.get('access-control-allow-origin'), h.status);
   h = await H('/api/health', { headers: { Origin: (process.env.DOVA_URL || 'http://localhost:4500') } });
   P('CORS: el propio sitio funciona, sin credenciales', h.status === 200 && !h.headers.get('access-control-allow-credentials'));
-  h = await H('/moderno/index.html');
+  h = await H('/mecanico/index.html');
   const csp = h.headers.get('content-security-policy') || '';
   const scriptSrc = (csp.match(/script-src ([^;]*)/) || [])[1] || '';
   P('CSP: scripts solo propios (sin unsafe-inline)', scriptSrc.trim() === "'self'", scriptSrc);

@@ -87,7 +87,7 @@ async function escuchar(tok, ms, alAbrir) {
   r = await req('PUT', `/usuarios/${recep.id}`, { nombre: 'Recepción Uno', clinicaId: adminB.clinica_id, clinica_id: adminB.clinica_id, es_admin_protegido: true, esAdminProtegido: true, permisos: ['usuarios.manage'], token_version: 0, password_hash: 'x', passwordHash: 'x', activo: true }, { tok: A });
   const ru = await q1('SELECT clinica_id, es_admin_protegido, password_hash FROM usuarios WHERE id=$1', [recep.id]);
   P('Editar usuario con clinica_id, es_admin_protegido, permisos y password_hash en el cuerpo: se ignoran', r.s === 200 && ru.clinica_id === 1 && !ru.es_admin_protegido && ru.password_hash === recep.password_hash, { s: r.s, ru: { c: ru.clinica_id, p: ru.es_admin_protegido } });
-  r = await req('PATCH', '/usuarios/me/preferencias', { disenoPreferido: 'moderno', rolId: rolAdmin, rol_id: rolAdmin }, { tok: R });
+  r = await req('PATCH', '/usuarios/me/preferencias', { tema: 'oscuro', disenoPreferido: 'mecanico', rolId: rolAdmin, rol_id: rolAdmin }, { tok: R });
   P('Preferencias propias con rolId admin en el cuerpo: el rol no cambia', (await q1('SELECT rol_id FROM usuarios WHERE id=$1', [recep.id])).rol_id === recep.rol_id, r);
   const odoB = await q1('SELECT id FROM odontologos WHERE clinica_id<>1 ORDER BY id LIMIT 1');
   if (odoB) {

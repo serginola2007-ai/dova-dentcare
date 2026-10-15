@@ -13,14 +13,14 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
 (async () => {
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   await db.query("SET dova.borrando_paciente='on'; DELETE FROM pacientes WHERE apellido='Tablet' AND ci LIKE 'CT%'; RESET dova.borrando_paciente");
-  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='moderno' WHERE username='admin'");
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='mecanico' WHERE username='admin'");
   const suf = String(Date.now() % 1000000);
   const pid = (await q1("INSERT INTO pacientes (clinica_id, nombre, apellido, ci) VALUES (1,'Sofía','Tablet',$1) RETURNING id", [`CT${suf}`])).id;
   const k = (await q1("INSERT INTO consentimientos (clinica_id, paciente_id, procedimiento, texto) VALUES (1,$1,'Blanqueamiento','Acepto el blanqueamiento dental y sus posibles efectos: sensibilidad temporal.') RETURNING id", [pid])).id;
   const ctx = await b.newContext({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: false });
   const p = await ctx.newPage(); const err = [];
   p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
-  await p.goto(`${URL0}/moderno/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
+  await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', 'admin'); await p.fill('#login-password', 'admin'); await p.click('#form-login button[type=submit]');
   await p.waitForSelector('#shell-root:not([style*="display: none"])'); await p.waitForTimeout(800); await enVentana(p);
   await p.evaluate((id) => DovaApp.navegar('paciente', id), pid); await p.waitForTimeout(1500);
   await p.locator('#ficha-tabs [data-tab], main .dova-tab').filter({ hasText: /Consentimientos/ }).first().click(); await p.waitForTimeout(1500);

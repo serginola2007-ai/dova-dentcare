@@ -217,4 +217,41 @@ async function verificarBloqueoContable(clinicaId, fecha) {
   }
 }
 
-module.exports = { cuentaCorriente, reporteAntiguedad, calcularComisiones, progresoMetas, precioParaPaciente, verificarBloqueoContable, movimientos, AJUSTES_CREDITO, AJUSTES_DEBITO };
+/** Rentabilidad del período: lo producido menos insumos, laboratorio y comisión.
+ *  Por tratamiento no incluye laboratorio (el trabajo de laboratorio no está atado a un tratamiento): ese costo se muestra por odontólogo y en el total. */
+async function rentabilidad(clinicaId, { desde, hasta, odontologoId }) {
+  const com = await calcularComisiones(clinicaId, { odontologoId, desde, hasta });
+  const sesIds = com.odontologos.flatMap((o) => o.detalle.map((d) => d.sesionId));
+  const redondear = (n) => Math.round(n * 100) / 100;
+  const info = sesIds.length ? (await query(
+    `SELECT s.id, COALESCE(t.id,0) AS tratamiento_id, COALESCE(t.nombre, 'Sin tratamiento del catálogo') AS tratamiento,
+            COALESCE((SELECT sum(sm.cantidad * COALESCE(i.precio_compra,0)) FROM sesion_materiales sm JOIN insumos i ON i.id=sm.insumo_id WHERE sm.sesion_id=s.id),0) AS costo_insumos,
+            (SELECT count(*) FROM sesion_materiales sm JOIN insumos i ON i.id=sm.insumo_id WHERE sm.sesion_id=s.id AND i.precio_compra IS NULL)::int AS insumos_sin_precio
+       FROM sesiones_tratamiento s JOIN planes_tratamiento pt ON pt.id=s.plan_id LEFT JOIN tratamientos t ON t.id=pt.tratamiento_id
+      WHERE pt.clinica_id=$1 AND s.id = ANY($2::int[])`, [clinicaId, sesIds])).rows : [];
+  const porSes = Object.fromEntries(info.map((x) => [x.id, x]));
+  const trat = {}; const odo = [];
+  let insumosSinPrecio = 0;
+  for (const o of com.odontologos) {
+    let insumos = 0;
+    for (const d of o.detalle) {
+      const x = porSes[d.sesionId]; if (!x) continue;
+      const ci = Number(x.costo_insumos); insumos += ci; insumosSinPrecio += x.insumos_sin_precio;
+      const t = trat[x.tratamiento_id] || (trat[x.tratamiento_id] = { tratamientoId: x.tratamiento_id || null, tratamiento: x.tratamiento, sesiones: 0, produccion: 0, costoInsumos: 0, comision: 0 });
+      t.sesiones += 1; t.produccion += d.valor; t.costoInsumos += ci; t.comision += d.comision;
+    }
+    const comision = o.comision; // ya descontado el laboratorio si la regla lo indica
+    const margen = o.produccion - insumos - o.costoLaboratorio - comision;
+    odo.push({ odontologoId: o.odontologoId, odontologo: o.odontologo, sesiones: o.sesiones, produccion: redondear(o.produccion), costoInsumos: redondear(insumos), costoLaboratorio: redondear(o.costoLaboratorio), comision: redondear(comision), margen: redondear(margen), margenPct: o.produccion > 0 ? redondear((margen / o.produccion) * 100) : null });
+  }
+  const porTratamiento = Object.values(trat).map((t) => {
+    const margen = t.produccion - t.costoInsumos - t.comision;
+    return { ...t, produccion: redondear(t.produccion), costoInsumos: redondear(t.costoInsumos), comision: redondear(t.comision), margen: redondear(margen), margenPct: t.produccion > 0 ? redondear((margen / t.produccion) * 100) : null };
+  }).sort((a, b) => b.margen - a.margen);
+  const sum = (arr, k) => redondear(arr.reduce((acc, x) => acc + x[k], 0));
+  const totales = { sesiones: sum(odo, 'sesiones'), produccion: sum(odo, 'produccion'), costoInsumos: sum(odo, 'costoInsumos'), costoLaboratorio: sum(odo, 'costoLaboratorio'), comision: sum(odo, 'comision'), margen: sum(odo, 'margen') };
+  totales.margenPct = totales.produccion > 0 ? redondear((totales.margen / totales.produccion) * 100) : null;
+  return { desde, hasta, totales, porTratamiento, porOdontologo: odo.sort((a, b) => b.margen - a.margen), avisos: { insumosSinPrecio } };
+}
+
+module.exports = { rentabilidad, cuentaCorriente, reporteAntiguedad, calcularComisiones, progresoMetas, precioParaPaciente, verificarBloqueoContable, movimientos, AJUSTES_CREDITO, AJUSTES_DEBITO };

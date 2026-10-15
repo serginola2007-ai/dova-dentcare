@@ -143,10 +143,15 @@ async function obtenerPasswordHash(id) {
   return res.rows[0]?.password_hash || null;
 }
 
-// ---- Preferencia de diseño (selector moderno/minimalista/tecnico) ----
+// ---- Preferencia de diseño (único diseño vigente: mecanico; se conserva el campo) ----
 async function obtenerDisenoPreferido(id) {
   const res = await query('SELECT diseno_preferido FROM usuarios WHERE id = $1', [id]);
   return res.rows[0]?.diseno_preferido || null;
+}
+
+async function actualizarTemaPreferido(id, tema) {
+  const res = await query('UPDATE usuarios SET tema_preferido = $1, actualizado_en = now() WHERE id = $2 RETURNING id, tema_preferido', [tema, id]);
+  return res.rows[0] || null;
 }
 
 async function actualizarDisenoPreferido(id, disenoPreferido) {
@@ -193,5 +198,5 @@ module.exports = {
   listar, obtener, existeUsername, contarAdminsProtegidosActivos, contarAdminsActivos, crear, actualizar,
   cambiarPassword, obtenerPasswordHash,
   overridesDeUsuario, setOverride, quitarOverride,
-  obtenerDisenoPreferido, actualizarDisenoPreferido,
+  obtenerDisenoPreferido, actualizarDisenoPreferido, actualizarTemaPreferido,
 };

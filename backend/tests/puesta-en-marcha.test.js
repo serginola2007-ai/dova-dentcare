@@ -14,7 +14,7 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
 const item = (r, id) => r.j.items.find((i) => i.id === id);
 
 (async () => {
-  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='moderno' WHERE username IN ('adminb','recep1')");
+  await db.query("DELETE FROM login_intentos; UPDATE usuarios SET debe_cambiar_clave=false, diseno_preferido='mecanico' WHERE username IN ('adminb','recep1')");
   const cb = (await q1("SELECT id FROM clinicas WHERE slug='clinica-b'")).id;
   const antes = await q1('SELECT nombre, direccion, telefono, horario_atencion, email, config FROM clinicas WHERE id=$1', [cb]);
   await db.query("UPDATE clinicas SET direccion=NULL, telefono=NULL, horario_atencion=NULL, config = config - 'puesta_en_marcha_oculta' WHERE id=$1", [cb]);
@@ -52,7 +52,7 @@ const item = (r, id) => r.j.items.find((i) => i.id === id);
     for (const [nombre, vp] of [['escritorio', { width: 1366, height: 900 }], ['celular', { width: 390, height: 844 }]]) {
       const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); const err = [];
       p.on('pageerror', (e) => err.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL|google|status of 4/.test(m.text())) err.push(m.text()); });
-      await p.goto(`${URL0}/moderno/index.html`);
+      await p.goto(`${URL0}/mecanico/index.html`);
       await p.fill('#login-username', 'adminb'); await p.fill('#login-password', 'Clave1234!');
       await p.route('**/api/auth/login', async (route) => { const d = JSON.parse(route.request().postData()); d.clinicaSlug = 'clinica-b'; await route.continue({ postData: JSON.stringify(d) }); });
       await p.click('#form-login button[type=submit]');
