@@ -405,7 +405,7 @@ const DovaClinica = (() => {
         <div class="dova-cli-filtros">
           <select data-fcat aria-label="Categoría"><option value="">Todas las categorías</option>${CATEGORIAS.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('')}</select>
           <input data-fpieza placeholder="Pieza" maxlength="2" inputmode="numeric" aria-label="Pieza" />
-          ${fotos.length > 1 ? '<button class="dova-btn-secundario" data-comparar>Comparar antes / después</button>' : ''}
+          ${fotos.filter((f) => f.tiene_archivo).length > 1 ? '<button class="dova-btn-secundario" data-comparar>Comparar antes / después</button>' : ''}
           ${puede('fotos_clinicas.manage') ? '<button class="dova-btn-primary" data-nueva-foto>+ Agregar foto</button>' : ''}
         </div>
       </div>
@@ -443,7 +443,7 @@ const DovaClinica = (() => {
     c.querySelector('[data-fpieza]').addEventListener('input', (e) => { filtroPieza = e.target.value.trim(); pintar(); });
     const nf = c.querySelector('[data-nueva-foto]'); if (nf) nf.addEventListener('click', () => formFoto(c.querySelector('[data-form-foto]'), pid, { alGuardar: recargar }));
     const ne = c.querySelector('[data-nuevo-estudio]'); if (ne) ne.addEventListener('click', () => formEstudio(c.querySelector('[data-form-estudio]'), pid, { alGuardar: recargar }));
-    const cmp = c.querySelector('[data-comparar]'); if (cmp) cmp.addEventListener('click', () => comparar(fotos));
+    const cmp = c.querySelector('[data-comparar]'); if (cmp) cmp.addEventListener('click', () => { const cl = DOVA.clinicaActual && DOVA.clinicaActual(); comparar(fotos.filter((f) => f.tiene_archivo), { clinica: cl && cl.nombre }); });
     c.querySelectorAll('[data-ver-estudio]').forEach((b) => b.addEventListener('click', () => visorEstudio(estudios.find((x) => String(x.id) === b.dataset.verEstudio), estudios)));
     const av = c.querySelector('[data-abrir-visor]');
     if (av) av.addEventListener('click', () => { const img = estudios.filter((e) => e.tiene_archivo && /^image\//.test(e.mime || '')); visorEstudio(img[0], estudios); });
@@ -519,18 +519,25 @@ const DovaClinica = (() => {
     } catch (er) { v.innerHTML = `<p class="dova-error-text">${esc(er.message)}</p>`; }
   }
 
-  function comparar(fotos) {
+  // Comparador antes / después: división deslizable o lado a lado, y descarga como imagen para mandársela al paciente.
+  function comparar(fotos, { clinica } = {}) {
     const op = (sel) => fotos.map((f) => `<option value="${f.id}" ${sel === f.id ? 'selected' : ''}>${esc(fmtFecha(f.fecha))} · ${esc(CAT_NOMBRE[f.categoria] || f.categoria)}${f.pieza ? ` · ${esc(f.pieza)}` : ''}</option>`).join('');
     const ini = fotos.find((f) => ['inicial', 'antes'].includes(f.categoria)) || fotos[fotos.length - 1];
     const fin = fotos.find((f) => ['final', 'despues'].includes(f.categoria) && f !== ini) || fotos.find((f) => f !== ini);
     X.modal('Antes / después', `
       <div class="dova-cli-form"><label><span>Antes</span><select data-a>${op(ini.id)}</select></label><label><span>Después</span><select data-b>${op(fin.id)}</select></label></div>
+      <div class="dova-cli-cmp-modos" role="group" aria-label="Forma de comparar">
+        <button type="button" class="dova-btn-secundario activo" data-modo="division" aria-pressed="true">Deslizar</button>
+        <button type="button" class="dova-btn-secundario" data-modo="lado" aria-pressed="false">Lado a lado</button>
+        <button type="button" class="dova-btn-primary" data-descargar>Descargar imagen</button>
+      </div>
       <figure class="dova-cli-comparar" data-cmp>
         <img data-img-b alt="Después" /><div class="dova-cli-comparar-antes" data-capa><img data-img-a alt="Antes" /></div>
         <span class="dova-cli-cmp-et izq">Antes</span><span class="dova-cli-cmp-et der">Después</span><div class="dova-cli-cmp-linea" data-linea></div>
       </figure>
       <input type="range" min="0" max="100" value="50" data-rango aria-label="Mover la división entre antes y después" class="dova-cli-rango" />`, { ancho: 'ancho' });
     const box = document.querySelector('.dova-modal-box');
+    const sel = (k) => fotos.find((f) => String(f.id) === box.querySelector(k).value);
     const poner = async () => {
       const [a, b] = await Promise.all([urlArchivo(`/clinico/fotos/${box.querySelector('[data-a]').value}/archivo`), urlArchivo(`/clinico/fotos/${box.querySelector('[data-b]').value}/archivo`)]).catch((e) => { toast(e.message, 'error'); return []; });
       if (a) { box.querySelector('[data-img-a]').src = a; box.querySelector('[data-img-b]').src = b; }
@@ -538,9 +545,47 @@ const DovaClinica = (() => {
     const mover = () => { const v = box.querySelector('[data-rango]').value; box.querySelector('[data-cmp]').style.setProperty('--pos', `${v}%`); };
     box.querySelector('[data-a]').addEventListener('change', poner); box.querySelector('[data-b]').addEventListener('change', poner);
     box.querySelector('[data-rango]').addEventListener('input', mover);
+    box.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => {
+      const lado = b.dataset.modo === 'lado';
+      box.querySelector('[data-cmp]').classList.toggle('lado', lado);
+      box.querySelector('[data-rango]').hidden = lado;
+      box.querySelectorAll('[data-modo]').forEach((o) => { const on = o === b; o.classList.toggle('activo', on); o.setAttribute('aria-pressed', String(on)); });
+    }));
+    // Imagen para mandar: las dos fotos una al lado de la otra, con fecha y el nombre de la clínica (sin datos del paciente).
+    box.querySelector('[data-descargar]').addEventListener('click', async () => {
+      const cargar = (src) => new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => mal(new Error('No se pudo leer la foto')); i.src = src; });
+      try {
+        const [ia, ib] = await Promise.all([cargar(box.querySelector('[data-img-a]').src), cargar(box.querySelector('[data-img-b]').src)]);
+        const W = 800; const H = 800; const M = 24; const T = 56; const PIE = 56;
+        const cv = document.createElement('canvas'); cv.width = W * 2 + M * 3; cv.height = H + T + PIE + M;
+        const g = cv.getContext('2d');
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height);
+        const dibujar = (img, x, titulo) => {
+          g.fillStyle = '#111111'; g.fillRect(x, T, W, H);
+          const k = Math.min(W / img.width, H / img.height); const w = img.width * k; const h = img.height * k;
+          g.drawImage(img, x + (W - w) / 2, T + (H - h) / 2, w, h);
+          g.fillStyle = '#222222'; g.font = '600 26px sans-serif'; g.textBaseline = 'middle'; g.fillText(titulo, x, T / 2 + 4);
+        };
+        dibujar(ia, M, `Antes · ${fmtFecha(sel('[data-a]').fecha)}`);
+        dibujar(ib, W + M * 2, `Después · ${fmtFecha(sel('[data-b]').fecha)}`);
+        if (clinica) { g.fillStyle = '#666666'; g.font = '22px sans-serif'; g.fillText(clinica, M, T + H + PIE / 2 + 6); }
+        const blob = await new Promise((ok) => cv.toBlob(ok, 'image/jpeg', 0.9));
+        if (!blob) throw new Error('No se pudo armar la imagen');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `antes-despues-${new Date().toISOString().slice(0, 10)}.jpg`;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      } catch (e) { toast(e.message, 'error'); }
+    });
     mover(); poner();
   }
 
+  // Desde otras pantallas (por ejemplo el tablero de ortodoncia): abre el comparador con las fotos del paciente.
+  async function compararPaciente(pacienteId) {
+    let fotos = [];
+    try { fotos = (await DOVA.get(`/clinico/fotos/paciente/${Number(pacienteId)}`)).filter((f) => f.tiene_archivo); } catch (e) { toast(e.message, 'error'); return; }
+    if (fotos.length < 2) { toast('Hacen falta al menos 2 fotos del paciente para comparar', 'error'); return; }
+    const cl = DOVA.clinicaActual && DOVA.clinicaActual();
+    comparar(fotos, { clinica: cl && cl.nombre });
+  }
 
   // =================================================================
   // RECETAS (Fase 2): varios medicamentos, verificación de alergias, PDF
@@ -914,6 +959,6 @@ const DovaClinica = (() => {
     resumen360(pid).catch(() => {});
   }
 
-  return { consulta, extenderFicha, panelFotosEstudios, formFoto, formEstudio, formReceta, verPdf, planDetalle };
+  return { consulta, extenderFicha, compararPaciente, panelFotosEstudios, formFoto, formEstudio, formReceta, verPdf, planDetalle };
 })();
 window.DovaClinica = DovaClinica;

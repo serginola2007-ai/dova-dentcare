@@ -35,6 +35,7 @@ const DovaApp = (() => {
       subs: [['bandeja', 'Para contactar'], ['recalls', 'Controles periódicos', ['recalls.view', 'recalls.manage']], ['controles', 'Controles después de un tratamiento'], ['observacion', 'Piezas en observación'],
         ['sinturno', 'Tratamientos sin turno', ['planes_tratamiento.view', 'seguimiento.view']], ['presupuestos', 'Presupuestos sin respuesta', 'presupuestos.view'], ['recordatorios', 'Recordatorios de turnos', ['agenda.view', 'recordatorios.propios']],
         ['reactivacion', 'Pacientes que no volvieron'], ['cumpleanos', 'Cumpleaños'], ['tareas', 'Tareas', 'tareas.manage'], ['biopsias', 'Biopsias', ['especialidades.edit', 'pacientes.clinical.view']], ['comunicaciones', 'Llamadas y mensajes']] },
+    { grupo: 'movimientos', ruta: 'ortodoncia', label: 'Ortodoncia', permiso: ['ortodoncia.view', 'ortodoncia.manage'] },
     { grupo: 'movimientos', ruta: 'web', label: 'Página web', permiso: ['web.ver', 'web.configurar'],
       subs: [['solicitudes', 'Lo que llegó', ['web.ver', 'web.configurar']], ['pagos', 'Pagos para revisar', 'web.ver'], ['accesos', 'Cuentas de pacientes', 'web.ver'], ['config', 'Configurar la página', 'web.configurar']] },
     { grupo: 'movimientos', ruta: 'operaciones', label: 'Clínica', permiso: ['agenda.config', 'equipos.manage', 'esterilizacion.manage', 'laboratorio.manage', 'fichaje.use', 'fichaje.view_all'],
@@ -45,8 +46,8 @@ const DovaApp = (() => {
     { grupo: 'reportes', ruta: 'inventario', label: 'Inventario', permiso: 'inventario.view', subs: [['insumos', 'Insumos'], ['vencen', 'Por vencer'], ['compras', 'Registrar compra', 'proveedores.manage'], ['prov', 'Proveedores']] },
     { grupo: 'reportes', ruta: 'catalogo', label: 'Tratamientos', permiso: ['tratamientos.manage', 'usuarios.manage'], subs: [['trat', 'Tratamientos y precios', 'tratamientos.manage'], ['odo', 'Odontólogos', 'usuarios.manage']] },
     { grupo: 'reportes', ruta: 'indicadores', label: 'Estadísticas', permiso: ['kpis.view'] },
-    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage'],
-      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
+    { grupo: 'reportes', ruta: 'finanzas', label: 'Finanzas', permiso: ['cuenta_corriente.view', 'comisiones.view', 'comisiones.manage', 'aseguradoras.manage', 'listas_precios.manage', 'metas.manage', 'cobranza.manage', 'cobro_online.manage'],
+      subs: [['deuda', 'Quién debe y desde cuándo', ['cuenta_corriente.view', 'reportes.view']], ['cobro', 'Avisos de cobro', 'cobranza.manage'], ['online', 'Cobro online', 'cobro_online.manage'], ['comisiones', 'Comisiones', ['comisiones.view', 'comisiones.manage']], ['metas', 'Metas', ['metas.manage', 'kpis.view', 'comisiones.view']],
         ['seguros', 'Seguros y convenios', 'aseguradoras.manage'], ['listas', 'Listas de precios', 'listas_precios.manage'], ['cierre', 'Cerrar meses', 'clinica.config.manage']] },
     { grupo: 'reportes', ruta: 'informes', label: 'Informes', permiso: 'reportes.view',
       subs: [['dia', 'Del día'], ['semana', 'De la semana'], ['mes', 'Del mes'], ['anio', 'Del año'], ['detalle', 'Reportes detallados']] },
@@ -379,6 +380,10 @@ const DovaApp = (() => {
         case 'catalogo':
           elMain.innerHTML = '<div></div>';
           await DovaOperativo.catalogo(elMain.firstElementChild);
+          break;
+        case 'ortodoncia':
+          elMain.innerHTML = '<div></div>';
+          await DovaOrtodoncia.seccion(elMain.firstElementChild, navegar);
           break;
         case 'plataforma':
           elMain.innerHTML = '<div></div>';

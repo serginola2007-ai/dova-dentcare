@@ -566,6 +566,7 @@ const DovaSecciones = (() => {
     X.subPestanas(root.querySelector('[data-subs]'), [
       { id: 'deuda', texto: 'Quién debe y desde cuándo', visible: puede('cuenta_corriente.view', 'reportes.view'), render: subDeuda },
       { id: 'cobro', texto: 'Avisos de cobro', visible: puede('cobranza.manage'), render: subCobro },
+      { id: 'online', texto: 'Cobro online', visible: puede('cobro_online.manage'), render: (c) => DovaPlataforma.cobroOnline(c) },
       { id: 'comisiones', texto: 'Comisiones', visible: puede('comisiones.view', 'comisiones.manage'), render: subComisiones },
       { id: 'metas', texto: 'Metas', visible: puede('metas.manage', 'kpis.view', 'comisiones.view'), render: subMetas },
       { id: 'seguros', texto: 'Seguros y convenios', visible: puede('aseguradoras.manage'), render: subSeguros },

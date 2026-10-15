@@ -149,7 +149,7 @@ const PERMISOS_POR_ROL = {
     'plantillas_clinicas.view', 'plantillas_clinicas.manage',
     'pacientes_revision.manage', 'controles_postoperatorios.manage', 'derivaciones.manage',
     'salud.view', 'salud.edit', 'recalls.view', 'recalls.manage', 'seguimiento.view', 'seguimiento.manage',
-    'periodoncia.edit', 'especialidades.edit', 'tareas.manage', 'esterilizacion.manage',
+    'periodoncia.edit', 'especialidades.edit', 'ortodoncia.view', 'ortodoncia.manage', 'tareas.manage', 'esterilizacion.manage',
     'fichaje.use', 'comisiones.view', 'kpis.view', 'laboratorio.manage',
     'recordatorios.propios',
   ],
@@ -169,6 +169,7 @@ const PERMISOS_POR_ROL = {
     'seguimiento.view',
     'salud.view', 'recalls.view', 'recalls.manage', 'seguimiento.manage', 'tareas.manage',
     'agenda.config', 'fichaje.use', 'aseguradoras.manage', 'cuenta_corriente.view', 'laboratorio.manage',
+    'ortodoncia.view', 'ortodoncia.manage',
   ],
   asistente: [
     'pacientes.view',

@@ -899,7 +899,7 @@
         <p class="saludo-pago">Hola, ${esc(e.nombre)}</p>
         ${deudas.length ? `<h2>Tus cuotas pendientes</h2>
           <ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}</span></div>
-            <div class="turno-acc"><strong class="monto">${gs(d.monto)}</strong>${d.enRevision ? '<span class="estado">En revisión</span>' : e.puedeInformar ? `<button type="button" class="boton boton-chico" data-pagar="${i}">Pagar</button>` : ''}</div></li>`).join('')}</ul>
+            <div class="turno-acc"><strong class="monto">${gs(d.monto)}</strong>${d.enRevision ? '<span class="estado">En revisión</span>' : `${e.pagoOnline ? `<button type="button" class="boton boton-chico" data-pagar-ahora="${d.id}">Pagar ahora</button>` : ''}${e.puedeInformar ? `<button type="button" class="${e.pagoOnline ? 'boton-texto' : 'boton boton-chico'}" data-pagar="${i}">${e.pagoOnline ? 'Ya transferí' : 'Pagar'}</button>` : ''}`}</div></li>`).join('')}</ul>
           ${total ? `<p class="total-pago">Total pendiente: <strong>${gs(total)}</strong></p>` : ''}` : (e.presupuestos.length ? '' : '<h2>¡Estás al día!</h2><p>No tenés cuotas pendientes. Gracias.</p>')}
         <div data-form-pago></div>
         ${e.presupuestos.map((p) => `<section class="presu-pago" data-presu="${p.id}"><h2>Presupuesto del ${esc(fechaCorta(p.fecha))}</h2>
@@ -911,6 +911,14 @@
         <div class="acciones-turno" style="margin-top:20px">${wa ? `<a class="boton boton-claro" href="${esc(wa)}" target="_blank" rel="noopener">Escribir a la clínica</a>` : ''}<a href="index.html" class="boton-texto">Ir a la página</a></div>
         <p class="ayuda" style="margin-top:16px">Este enlace es personal: no lo compartas.</p>
       </div>`;
+      $$('[data-pagar-ahora]', v).forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true; const texto = b.textContent; b.textContent = 'Abriendo el pago…';
+        try {
+          const r = await apiPago(`${encodeURIComponent(token)}/online`, { method: 'POST', body: { cuotaId: Number(b.dataset.pagarAhora) } });
+          if (!r || !/^https:\/\//.test(r.url || '')) throw new Error('No se pudo abrir el pago. Probá de nuevo.');
+          location.href = r.url;
+        } catch (ex) { aviso(ex.message); b.disabled = false; b.textContent = texto; }
+      }));
       $$('[data-pagar]', v).forEach((b) => b.addEventListener('click', () => formPago($('[data-form-pago]', v), e, deudas[Number(b.dataset.pagar)], cargar,
         (fd) => apiPago(`${encodeURIComponent(token)}/comprobante`, { method: 'POST', form: fd }))));
       $$('[data-presu]', v).forEach((s) => $$('[data-resp]', s).forEach((b) => b.addEventListener('click', async () => {

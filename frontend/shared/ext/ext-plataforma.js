@@ -156,6 +156,37 @@ const DovaPlataforma = (() => {
     elMain.appendChild(cont);
   }
 
-  return { seccion, tarjetaMiPlan };
+  // Finanzas → Cobro online: estado de la pasarela y los cobros (para volver a consultar los que no avisaron).
+  const EST_COBRO = { creado: ['Esperando el pago', 'info'], pagado: ['Pagado', 'ok'], cancelado: ['Cancelado', 'info'], vencido: ['Venció', 'info'], revisar: ['Para revisar', 'critica'] };
+  async function cobroOnline(c) {
+    const [est, lista] = await Promise.all([DOVA.get('/cobro-online/estado'), DOVA.get('/cobro-online')]);
+    const aviso = `${location.origin}/api/cobro-online/aviso/pagopar`;
+    c.innerHTML = `<div class="dova-cobro-online">
+      <p>El paciente toca <strong>Pagar ahora</strong> en su enlace de pago y paga con tarjeta o QR por la pasarela (${esc(est.proveedor === 'pagopar' ? 'Pagopar' : est.proveedor)}). Cuando la pasarela confirma, DOVA registra el pago en su cuenta y en la caja, solo.</p>
+      <p>${est.configurado ? X.badge('Pasarela conectada', 'ok') : X.badge('Pasarela sin conectar', 'atencion')}
+        ${est.activo ? X.badge('Activado', 'ok') : X.badge('Apagado', 'info')}
+        <button type="button" class="dova-btn-secundario" data-co-toggle ${!est.configurado && !est.activo ? 'disabled' : ''}>${est.activo ? 'Apagar' : 'Activar'}</button></p>
+      ${est.configurado ? `<p class="dova-nota">En el panel de Pagopar, la URL de respuesta tiene que ser: <code>${esc(aviso)}</code></p>`
+    : '<p class="dova-nota">Para conectarla hace falta una cuenta de comercio en la pasarela y cargar sus claves en el servidor (las claves no se guardan en la base). Pedile ayuda al proveedor de DOVA.</p>'}
+      <h3 class="dova-section-title">Cobros</h3>
+      ${lista.length ? `<div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Paciente</th><th>Cuota</th><th>Monto</th><th>Estado</th><th>Cuándo</th><th></th></tr></thead><tbody>
+        ${lista.map((o) => `<tr><td>${esc(o.paciente)}</td><td>${esc(o.cuota)}</td><td>${gs(o.monto)}</td>
+          <td>${X.badge(...EST_COBRO[o.estado] || [o.estado, 'info'])}${o.error ? `<div class="dova-nota">${esc(o.error)}</div>` : ''}</td>
+          <td>${esc(X.fmtFechaHora(o.pagado || o.creado))}</td>
+          <td>${['creado', 'revisar'].includes(o.estado) && est.configurado ? `<button type="button" class="dova-btn-link" data-co-reconsultar="${o.id}">Volver a consultar</button>` : ''}</td></tr>`).join('')}
+        </tbody></table></div>` : '<p class="dova-vacio">Todavía no hay cobros online.</p>'}
+      <p class="dova-nota">"Para revisar" = la pasarela cobró pero DOVA no pudo registrar el pago solo (por ejemplo, la cuota ya figuraba pagada). Hay que aplicarlo o devolverlo a mano.</p>
+    </div>`;
+    const recargar = () => cobroOnline(c);
+    c.querySelector('[data-co-toggle]').addEventListener('click', async () => {
+      try { await DOVA.put('/cobro-online/estado', { activo: !est.activo }); toast(est.activo ? 'Cobro online apagado' : 'Cobro online activado', 'ok'); recargar(); } catch (e) { toast(e.message, 'error'); }
+    });
+    c.querySelectorAll('[data-co-reconsultar]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try { const r = await DOVA.post(`/cobro-online/${b.dataset.coReconsultar}/reconsultar`, {}); toast(r.estado === 'pagado' ? 'Pago registrado' : 'Consultado: todavía no hay pago', r.estado === 'pagado' ? 'ok' : undefined); recargar(); } catch (e) { toast(e.message, 'error'); b.disabled = false; }
+    }));
+  }
+
+  return { seccion, tarjetaMiPlan, cobroOnline };
 })();
 window.DovaPlataforma = DovaPlataforma;

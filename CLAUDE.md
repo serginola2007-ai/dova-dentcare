@@ -141,6 +141,20 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Límite conocido: la página web pública atiende UNA clínica por instalación (`WEB_CLINICA_ID`).
 - Pantallas: `shared/ext/ext-plataforma.js`. Pruebas: `tests/plataforma.test.js`, `tests/ui-plataforma.js`.
 
+## Cobro online (0055)
+- `modules/cobro-online/` + `proveedores/pagopar.js`. El paciente toca "Pagar ahora" en Mi pago (`POST /api/web/publico/pago/:token/online`) → `cobros_online` + pedido en Pagopar. La pasarela avisa a `POST /api/cobro-online/aviso/pagopar` (público): se valida la firma y SIEMPRE se reconsulta el pedido a Pagopar (pagado y monto exacto) antes de registrar el pago con `pagos.service.crear` (cuota + caja + historial). Idempotente (candado + estado).
+- Casos raros quedan en estado `revisar` y avisan a quien tiene `cobranza.manage` (monto distinto, cuota ya pagada a mano). Panel: Finanzas → Cobro online (`cobro_online.manage`, módulo del plan Completo): encender/apagar, lista y "Volver a consultar".
+- Claves SOLO por entorno: `PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY` (y opcionales `PAGOPAR_API_URL`, `PAGOPAR_PAGOS_URL`). Una pasarela por instalación. La URL de respuesta en el panel de Pagopar: `<PUBLIC_URL>/api/cobro-online/aviso/pagopar`.
+- Adaptador escrito según la documentación de Pagopar y probado contra una pasarela falsa local; falta probarlo con una cuenta real (sandbox/producción) antes de ofrecerlo.
+- Pruebas: `tests/cobro-online.test.js` (levanta la pasarela falsa en :4700; el servidor de prueba necesita `PAGOPAR_PUBLIC_KEY=pub-prueba PAGOPAR_PRIVATE_KEY=priv-prueba PAGOPAR_API_URL=http://localhost:4700`), `tests/ui-cobro-online.js`.
+
+## Ortodoncia: tablero y cuotas (0056)
+- Casos y visitas siguen en `/api/especialidades/orto-casos|orto-visitas` (ficha → Especialidades → Ortodoncia); ahora exigen el módulo `ortodoncia` del plan (`middlewares/modulo.middleware.js` → `exigirModulo`).
+- `modules/ortodoncia/` (`/api/ortodoncia`, permisos `ortodoncia.view|manage`, dados a odontólogo y recepción): `GET /panel` (en tratamiento, controles atrasados, cuotas vencidas), `GET|POST /casos/:id/cuotas` (genera el plan de cuotas mensuales con el `planes-pago` de siempre y lo liga en `orto_casos.plan_pago_id`; así entran solas a Mi pago, cobro online, avisos de cobro y "quién debe").
+- Pantalla: `shared/ext/ext-ortodoncia.js` (menú Ortodoncia y acción "Cuotas" en la ficha). Pruebas: `tests/ortodoncia.test.js`, `tests/ui-ortodoncia.js`.
+- Comparador de fotos: `ext-clinica.js` (`comparar`, `DovaClinica.compararPaciente(pacienteId)`); lado a lado y descarga como JPG (canvas, sin datos del paciente). Prueba: `tests/ui-fotos-comparar.js`.
+- El seed ahora reparte los permisos nuevos de cada versión a los roles de sistema de TODAS las clínicas (antes solo la primera).
+
 ## Consentimientos
 - Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.
 - Disparadores en la base impiden modificar o borrar firmados (para borrar un paciente de prueba: `SET dova.borrando_paciente='on'`).

@@ -118,6 +118,7 @@ funcione de una.
 
 - `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
 - `DOVA_CLINICA_POR_DEFECTO` (opcional): código de la clínica a la que entra el login cuando no se indica otra (por defecto `dentcarerc`).
+- `PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY` (opcionales): conectan el cobro online (Pagopar). En Pagopar, la URL de respuesta es `<PUBLIC_URL>/api/cobro-online/aviso/pagopar`. Sin estas claves, el cobro online no se ofrece.
 - `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
 - **Tiempo real**: no necesita configuración. DOVA escucha la base (LISTEN/NOTIFY) y avisa a las pantallas abiertas por `GET /api/eventos` (Server-Sent Events). Ver CORRECCIONES.md → Tiempo real.
 - **Cuentas de pacientes en la web**: no necesitan email. Las personas nuevas se registran solas; los pacientes con ficha entran con un código que se genera en DOVA → Página web → "Cuentas de pacientes" y se manda por WhatsApp.

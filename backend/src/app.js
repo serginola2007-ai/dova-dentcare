@@ -150,6 +150,8 @@ app.get('/api/health', (req, res) => res.json({ ok: true, producto: 'DOVA', vers
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clinica', clinicaRoutes);
+app.use('/api/cobro-online', require('./modules/cobro-online/cobro-online.routes'));
+app.use('/api/ortodoncia', require('./modules/ortodoncia/ortodoncia.routes'));
 app.use('/api/plataforma', require('./modules/plataforma/plataforma.routes'));
 app.use('/api/pacientes', pacientesRoutes);
 app.use('/api/odontologos', odontologosRoutes);

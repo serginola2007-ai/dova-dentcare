@@ -31,6 +31,7 @@ publico.get('/:token', limitar('mi-pago', 60, 10), h((req) => s.miPago(req.param
 publico.post('/:token/comprobante', limitar('mi-pago-enviar', 6, 30), subir, async (req, res, next) => {
   try { res.status(201).json(await s.informarPagoConEnlace(req.params.token, req.body || {}, req.file)); } catch (e) { next(e); }
 });
+publico.post('/:token/online', limitar('mi-pago-online', 20, 30), h((req) => require('../cobro-online/cobro-online.service').iniciarConEnlace(req.params.token, req.body || {})));
 publico.post('/:token/presupuesto/:id', limitar('mi-pago-responder', 10, 30), h((req) => s.responderPresupuesto(req.params.token, req.params.id, req.body || {})));
 
 module.exports = { interno, publico };

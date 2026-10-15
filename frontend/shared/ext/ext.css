@@ -690,3 +690,11 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-plan-lista li.no-incluido { color: var(--ink-soft); }
 .dova-login-clinica { margin: 10px 0 4px; }
 .dova-login-clinica summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
+
+/* Comparador antes / después: lado a lado y botones */
+.dova-cli-cmp-modos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
+.dova-cli-cmp-modos .dova-btn-secundario.activo { border-color: var(--terracotta, #b5654a); font-weight: 700; }
+.dova-cli-comparar.lado { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #111; }
+.dova-cli-comparar.lado > img { order: 2; } .dova-cli-comparar.lado .dova-cli-comparar-antes { position: static; clip-path: none; order: 1; }
+.dova-cli-comparar.lado .dova-cli-cmp-linea { display: none; }
+.dova-cli-comparar.lado .dova-cli-cmp-et.izq { left: 10px; } .dova-cli-comparar.lado .dova-cli-cmp-et.der { right: 10px; }

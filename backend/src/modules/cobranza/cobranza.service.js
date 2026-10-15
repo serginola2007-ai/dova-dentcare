@@ -328,6 +328,7 @@ async function miPago(token) {
     whatsappClinica: normalizarTelefonoPy(cfg.whatsapp || clin.whatsapp || clin.telefono) || null,
     cuotas: cuotas.rows.map((c) => ({ id: c.id, numero: c.numero, de: c.cantidad_cuotas, monto: Number(c.monto), vencimiento: c.vencimiento, vencida: c.vencimiento < hoy, enRevision: c.en_revision })),
     presupuestos: press.rows.map((p) => ({ id: p.id, fecha: p.fecha, total: Number(p.total), items: items.filter((i) => i.presupuesto_id === p.id).map((i) => ({ descripcion: i.descripcion, pieza: i.pieza, cantidad: Number(i.cantidad), subtotal: Number(i.cantidad) * Number(i.precio_unitario) })) })),
+    pagoOnline: await require('../cobro-online/cobro-online.service').disponible(pt.clinica_id),
     puedeInformar: !!cfg.pagos_activos && pt.web_verificado !== false,
     datosPago: cfg.pagos_activos ? { banco: cfg.banco, titular: cfg.titular, cuenta: cfg.numero_cuenta, documento: cfg.documento_titular, alias: cfg.alias_pago, instrucciones: cfg.instrucciones_pago, tieneQr: !!cfg.qr_mime } : null,
   };
@@ -381,6 +382,6 @@ async function registrarRespuesta(env, texto) {
 
 module.exports = {
   configuracion, guardarConfiguracion, listar, enviarAhora, enlaceManual, ejecutarAutomaticos,
-  miPago, informarPagoConEnlace, responderPresupuesto, actualizarEstadoMeta, ultimoAvisoA, registrarRespuesta,
+  miPago, pacientePorToken, avisar, informarPagoConEnlace, responderPresupuesto, actualizarEstadoMeta, ultimoAvisoA, registrarRespuesta,
   _internos: { etapaCuota, etapaPresupuesto, textoCuota, textoPresupuesto },
 };

@@ -182,6 +182,8 @@ extra.put('/endodoncias/:id/conductos', requirePermiso(...EDITAR), async (req, r
 
 // ================================ ORTODONCIA ================================
 const CLASES = ['I', 'II', 'II_1', 'II_2', 'III', 'no_evaluable'];
+const planOrto = [authMiddleware, resolverClinicaMiddleware, require('../../middlewares/modulo.middleware').exigirModulo('ortodoncia')];
+router.use(['/orto-casos', '/orto-visitas'], ...planOrto); // el plan tiene que incluir ortodoncia
 router.use('/orto-casos', crearRecurso({
   tabla: 'orto_casos', modulo: 'ortodoncia', porPaciente: true, permisos: P, actualizadoEn: true, borrado: 'fisico', joinPaciente: true,
   orden: "(t.fase IN ('finalizada','abandonada')), t.fecha_instalacion DESC NULLS FIRST",

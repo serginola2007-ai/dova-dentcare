@@ -55,40 +55,46 @@ async function run() {
       { codigo: 'asistente', nombre: 'Asistente' },
       { codigo: 'helpdesk', nombre: 'Soporte técnico' },
     ];
-    const rolIdPorCodigo = {};
-    for (const r of rolesDefinidos) {
-      const res = await client.query(
-        `INSERT INTO roles (clinica_id, codigo, nombre, es_sistema) VALUES ($1,$2,$3,true)
-         ON CONFLICT (clinica_id, codigo) DO UPDATE SET nombre = EXCLUDED.nombre
-         RETURNING id, (xmax = 0) AS recien_creado`,
-        [clinicaId, r.codigo, r.nombre]
-      );
-      rolIdPorCodigo[r.codigo] = res.rows[0].id;
-      const rolRecienCreado = res.rows[0].recien_creado;
-
-      // Nunca se borran asignaciones: el seed corre en cada deploy y no debe
-      // deshacer cambios hechos por el admin. Cada par (rol, permiso) por
-      // defecto se otorga UNA sola vez en la vida de la instalación y queda
-      // anotado en seed_historial: si después el admin lo quita, no vuelve.
-      // El admin siempre recibe todo.
-      const porDefecto = PERMISOS_POR_ROL[r.codigo] === '*'
-        ? PERMISOS.map(p => p.codigo)
-        : (PERMISOS_POR_ROL[r.codigo] || []);
-      void rolRecienCreado; void codigosPrevios;
-
-      for (const codigo of [...new Set(porDefecto)]) {
-        const permisoId = permisoIdPorCodigo[codigo];
-        if (!permisoId) continue;
-        const clave = `rol:${res.rows[0].id}:${codigo}`;
-        const yaOtorgado = await client.query('SELECT 1 FROM seed_historial WHERE clave=$1', [clave]);
-        if (yaOtorgado.rowCount && PERMISOS_POR_ROL[r.codigo] !== '*') continue;
-        await client.query(
-          'INSERT INTO rol_permisos (rol_id, permiso_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-          [res.rows[0].id, permisoId]
+    const sembrarRoles = async (clinicaId) => {
+      const rolIdPorCodigo = {};
+      for (const r of rolesDefinidos) {
+        const res = await client.query(
+          `INSERT INTO roles (clinica_id, codigo, nombre, es_sistema) VALUES ($1,$2,$3,true)
+           ON CONFLICT (clinica_id, codigo) DO UPDATE SET nombre = EXCLUDED.nombre
+           RETURNING id, (xmax = 0) AS recien_creado`,
+          [clinicaId, r.codigo, r.nombre]
         );
-        await client.query('INSERT INTO seed_historial (clave) VALUES ($1) ON CONFLICT DO NOTHING', [clave]);
+        rolIdPorCodigo[r.codigo] = res.rows[0].id;
+        const rolRecienCreado = res.rows[0].recien_creado;
+
+        // Nunca se borran asignaciones: el seed corre en cada deploy y no debe
+        // deshacer cambios hechos por el admin. Cada par (rol, permiso) por
+        // defecto se otorga UNA sola vez en la vida de la instalación y queda
+        // anotado en seed_historial: si después el admin lo quita, no vuelve.
+        // El admin siempre recibe todo.
+        const porDefecto = PERMISOS_POR_ROL[r.codigo] === '*'
+          ? PERMISOS.map(p => p.codigo)
+          : (PERMISOS_POR_ROL[r.codigo] || []);
+        void rolRecienCreado; void codigosPrevios;
+
+        for (const codigo of [...new Set(porDefecto)]) {
+          const permisoId = permisoIdPorCodigo[codigo];
+          if (!permisoId) continue;
+          const clave = `rol:${res.rows[0].id}:${codigo}`;
+          const yaOtorgado = await client.query('SELECT 1 FROM seed_historial WHERE clave=$1', [clave]);
+          if (yaOtorgado.rowCount && PERMISOS_POR_ROL[r.codigo] !== '*') continue;
+          await client.query(
+            'INSERT INTO rol_permisos (rol_id, permiso_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+            [res.rows[0].id, permisoId]
+          );
+          await client.query('INSERT INTO seed_historial (clave) VALUES ($1) ON CONFLICT DO NOTHING', [clave]);
+        }
       }
-    }
+      return rolIdPorCodigo;
+    };
+    const rolIdPorCodigo = await sembrarRoles(clinicaId);
+    // Las demás clínicas (alquiler) reciben también los permisos nuevos de cada versión en sus roles de sistema.
+    for (const o of (await client.query('SELECT id FROM clinicas WHERE id <> $1', [clinicaId])).rows) await sembrarRoles(o.id);
 
     // 3b) Tipos de recall por defecto (controles periódicos). El intervalo
     // es editable por la clínica y por paciente; acá solo se crean si faltan.

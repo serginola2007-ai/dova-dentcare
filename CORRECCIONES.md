@@ -832,3 +832,27 @@ Se probó todo DOVA como un QA:
 - Los envíos automáticos de WhatsApp y la página web respetan el plan de cada clínica.
 - Migración `0054`. Variable nueva opcional: `DOVA_CLINICA_POR_DEFECTO`.
 - **Pruebas:** nuevas `plataforma.test` 37/37 y `ui-plataforma` 13/13.
+
+## Tanda: cobro online de cuotas (15/10/2026)
+
+- **Pagar ahora** en la página "Mi pago" del paciente (el enlace de los avisos de cobro): tarjeta o QR por la pasarela (Pagopar). Si ya había un cobro abierto de esa cuota, se reutiliza.
+- Cuando la pasarela confirma, DOVA registra el pago solo: cuota pagada, caja e historial, igual que un cobro a mano. **El aviso de la pasarela no se toma como prueba**: se valida la firma y se vuelve a consultar el pedido (pagado y por el monto exacto).
+- Si algo no cierra (monto distinto, la cuota ya estaba pagada), queda **Para revisar** y suena la campanita; nunca se registra un pago dudoso.
+- Finanzas → **Cobro online** (plan Completo): encender/apagar, ver los cobros y "Volver a consultar" si un aviso no llegó.
+- Las claves de la pasarela van solo en variables de entorno del servidor (`PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY`), nunca en la base ni en pantalla.
+- Migración `0055`. **Pendiente para activarlo de verdad:** cuenta de comercio en Pagopar, cargar las claves, poner la URL de respuesta y probar un pago real chico.
+- **Pruebas:** `cobro-online.test` 33/33 y `ui-cobro-online` 6/6 (con pasarela falsa).
+
+## Tanda: ortodoncia, tablero y cuotas mensuales (15/10/2026)
+
+- **Menú Ortodoncia** (odontólogo y recepción): casos en tratamiento, quién tiene el **control atrasado** (y hace cuántos días), quién debe cuotas y cuánto, y quién está en contención.
+- **Cuotas mensuales del tratamiento:** desde el caso se generan las cuotas a partir del honorario, la entrega inicial y la cantidad de meses (o la cuota mensual). Son cuotas normales: aparecen en Mi pago del paciente, se pueden pagar online, entran a los avisos de cobro y a "quién debe".
+- La ortodoncia es parte del plan Completo; con otro plan la pestaña y el menú no aparecen y la API la rechaza.
+- **Arreglo de fondo:** las clínicas dadas de alta desde el panel de plataforma no recibían los permisos nuevos de cada versión; ahora el seed los reparte a todas.
+- Migración `0056`. **Pruebas:** `ortodoncia.test` 22/22 y `ui-ortodoncia` 6/6.
+
+## Tanda: comparador de fotos antes / después (15/10/2026)
+
+- El comparador deslizable ya existía en la ficha (Fotos y estudios). Ahora también: **Lado a lado**, y **Descargar imagen** (las dos fotos con su fecha y el nombre de la clínica, sin datos del paciente) para mandársela al paciente.
+- El tablero de **Ortodoncia** tiene el botón **Comparar fotos** de cada caso.
+- **Pruebas:** `ui-fotos-comparar` 7/7.

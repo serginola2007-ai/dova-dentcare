@@ -413,7 +413,7 @@ const DovaFicha = (() => {
     X.subPestanas(root, [
       { id: 'implantes', texto: 'Implantes', render: (c) => subImplantes(c, pid, ed, ods) },
       { id: 'endo', texto: 'Endodoncia', render: (c) => subEndo(c, pid, ed, ods) },
-      { id: 'orto', texto: 'Ortodoncia', render: (c) => subOrto(c, pid, ed, ods) },
+      { id: 'orto', texto: 'Ortodoncia', visible: puede('ortodoncia.view', 'ortodoncia.manage'), render: (c) => subOrto(c, pid, ed, ods) },
       { id: 'prev', texto: 'Prevención', render: (c) => subPrevencion(c, pid, ed, ods) },
       { id: 'eval', texto: 'Evaluaciones', render: (c) => subEvaluaciones(c, pid, ed, ods) },
       { id: 'biopsias', texto: 'Biopsias', render: (c) => subBiopsias(c, pid, ed, ods) },
@@ -549,7 +549,7 @@ const DovaFicha = (() => {
         { k: 'contencionSuperior', label: 'Contención superior' }, { k: 'contencionInferior', label: 'Contención inferior' },
         { k: 'diagnostico', label: 'Diagnóstico', tipo: 'textarea' }, { k: 'objetivos', label: 'Objetivos del tratamiento', tipo: 'textarea' }, { k: 'notas', label: 'Notas', tipo: 'textarea' },
       ],
-      acciones: [{ texto: 'Visitas', fn: (r) => visitasOrto(c.querySelector('[data-visitas]'), r, ed, ods) }],
+      acciones: [{ texto: 'Visitas', fn: (r) => visitasOrto(c.querySelector('[data-visitas]'), r, ed, ods) }, { texto: 'Cuotas', fn: (r) => DovaOrtodoncia.cuotas(r.id, { paciente: r.paciente_nombre }) }],
     });
   }
 
