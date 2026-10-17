@@ -33,8 +33,12 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
 frontend/           JavaScript puro, sin build
-  mecanico/   el ÚNICO diseño: index.html + skin.css con modo claro y oscuro (colores de la clínica, más shared/mecanico.js)
-  shared/           TODO el código común (app.js = SPA, views.js, ext/*.js, ventanas.js, seguridad.js, bloqueo.js, base.css, sobrio.css, iconos.js)
+  mecanico/         index.html: entrada de la app del personal (el ÚNICO diseño)
+  app/core/         motor: api.js (DOVA), router.js (DovaApp: menú, permisos, navegar), ventanas.js, escritorio.js, tiempo-real.js, bloqueo.js, comandos.js, iconos.js, pwa.js
+  app/components/   kit.js (DovaExt: formularios, tablas CRUD, pestañas, modales), visor, importar, mi-dia, accesos rápidos
+  app/pages/        pantallas (vistas.js, operativo.js, secciones.js, clinica.js, ficha.js, facturacion.js…)
+  app/styles/       base.css, componentes.css, tema-mecanico.css (claro/oscuro), sobrio.css (último)
+  README.md         guía corta del front: carpetas, reglas y cómo agregar una pantalla
   web/              página pública + portal del paciente
   sw.js             service worker (precache con VERSION)
 ```
@@ -69,7 +73,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
   - cada login es una fila de `sesiones`; el token de acceso lleva `sid` y el middleware corta al instante una sesión cerrada (401) o bloqueada (423);
   - **sin verificación en dos pasos** (decisión de la clínica; columnas `totp_*` sin uso);
   - usuario y contraseña se aceptan solo como texto plano (sin listas, objetos ni caracteres de control);
-  - bloqueo de pantalla por inactividad (`shared/bloqueo.js`, minutos en `clinicas.bloqueo_inactividad_min`);
+  - bloqueo de pantalla por inactividad (`app/core/bloqueo.js`, minutos en `clinicas.bloqueo_inactividad_min`);
   - avisos de seguridad a los admins con `utils/alertas.js`.
 - CSP `script-src 'self'`: **nada de scripts en línea** ni `onclick=` en el HTML. Todo JS va en archivos.
 - Texto de usuario siempre escapado (`esc(...)`) antes de ponerlo en `innerHTML`.
@@ -77,15 +81,15 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - No commitear `backend/.env`, `node_modules` ni `uploads`. No imprimir secretos.
 
 **Interfaz:**
-- **Sin emojis.** Íconos solo con `DovaIcono('nombre')` (`shared/iconos.js`, trazo lineal).
-- Estilo sobrio (`shared/sobrio.css`, se carga después de cada skin):
+- **Sin emojis.** Íconos solo con `DovaIcono('nombre')` (`app/core/iconos.js`, trazo lineal).
+- Estilo sobrio (`app/styles/sobrio.css`, se carga último):
   - esquinas de 2px y sin sombras decorativas;
   - indicadores en franja con divisiones, no una tarjeta por número;
   - tablas sin caja alrededor;
   - pestañas subrayadas;
   - no anidar bordes.
-- Un cambio visual común va en `shared/`; lo del diseño va en `mecanico/skin.css`, siempre con variables para que funcionen el modo claro y el oscuro.
-- Pestañas de una sección: `X.subPestanas(...)` en `shared/ext/*.js`. Si una sección del menú tiene pestañas, el menú de `shared/app.js` las lista en `subs` con los **mismos id y permisos**.
+- Un cambio visual común va en `app/`; lo del diseño va en `app/styles/tema-mecanico.css`, siempre con variables para que funcionen el modo claro y el oscuro.
+- Pestañas de una sección: `X.subPestanas(...)` en `app/pages/*.js`. Si una sección del menú tiene pestañas, el menú de `app/core/router.js` las lista en `subs` con los **mismos id y permisos**.
 - Al cambiar archivos del frontend, subir `VERSION` en `frontend/sw.js` (`dova-vNN`) y agregar al precache los archivos nuevos.
 - Textos en español rioplatense, claros para personal no técnico ("Guardar", "No se pudo…", sin jerga).
 
@@ -110,27 +114,27 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Reserva online: `calcularLibres` en `web.service.js` usa `odontologos.horarios` (o el horario de la clínica) y la cantidad de sillones activos.
 - Pruebas: `tests/cobranza.test.js`, `tests/ui-cobranza.js`, `tests/reserva-horarios.test.js`.
 - Mensajes automáticos (`backend/src/modules/mensajes/`): turno liberado (`ofertas_turno`, lo llama la cancelación en agenda/web/portal), controles con enlace `reservar.html#c=`, encuesta `encuesta.html#t=`. Envíos en `avisos_envios` (clave única), enlaces en `avisos_enlaces`. Pruebas: `tests/mensajes.test.js`, `tests/ui-mensajes.js`.
-- Visor de radiografías: `shared/ext/ext-visor.js` (`DovaVisor.abrir`). Presupuesto desde el odontograma: `presupuestoDesdeOdontograma` en `ext-operativo.js`.
+- Visor de radiografías: `app/components/visor.js` (`DovaVisor.abrir`). Presupuesto desde el odontograma: `presupuestoDesdeOdontograma` en `app/pages/operativo.js`.
 - Guías por rol: `docs/generar-guias.py` → `frontend/docs/guias/*.pdf`.
-- Mi día del odontólogo: `GET /api/pendientes/mi-dia` (`modules/pendientes/pendientes.midia.js`) + `shared/ext/ext-midia.js`. Pruebas: `tests/mi-dia.test.js`, `tests/ui-mi-dia.js`.
+- Mi día del odontólogo: `GET /api/pendientes/mi-dia` (`modules/pendientes/pendientes.midia.js`) + `app/components/mi-dia.js`. Pruebas: `tests/mi-dia.test.js`, `tests/ui-mi-dia.js`.
 
 ## Escritorio con ventanas
-- `shared/ventanas.js` (`DovaVentanas`): Inicio queda siempre de fondo y cada sección se abre en una ventana (un `<iframe>` con la misma app en `?ventana=1`). Tamaño fijo, se mueven, zoom, minimizar, cerrar, barra de tareas; en celular a pantalla completa. Se restauran al recargar (`sessionStorage dova-ventanas`).
-- En `app.js`: `ESCRITORIO` (página principal: `navegar()` abre ventanas) y `MODO_VENTANA` (adentro: renderiza la sección y avisa título/historial con `DovaVentanas.alNavegar`).
+- `app/core/ventanas.js` (`DovaVentanas`): Inicio queda siempre de fondo y cada sección se abre en una ventana (un `<iframe>` con la misma app en `?ventana=1`). Tamaño fijo, se mueven, zoom, minimizar, cerrar, barra de tareas; en celular a pantalla completa. Se restauran al recargar (`sessionStorage dova-ventanas`).
+- En `app/core/router.js`: `ESCRITORIO` (página principal: `navegar()` abre ventanas) y `MODO_VENTANA` (adentro: renderiza la sección y avisa título/historial con `DovaVentanas.alNavegar`).
 - La sesión es una sola: la ventana pide el token a la página principal (`window.DovaCompartido` en `api.js`), comparte el bloqueo y escucha el tiempo real de la principal (`tiempo-real.js`).
-- Diseño mecánico: la tira de íconos (`shared/mecanico.js`, `ACCESOS`) tiene accesos directos: Nuevo turno y Pacientes (`shared/ext/ext-rapido.js`, `DovaRapido`), Nueva factura (`facturacion/nueva`) y Nuevo presupuesto (`presupuestos/nuevo`). El turno rápido usa `modalTurno({ soloDisponibles: true })` + `GET /api/agenda/disponibles` (`agenda/agenda.disponibles.js`); al crear con `soloDisponible: true` el servidor exige que el odontólogo esté en horario y libre. Pruebas: `tests/ui-accesos-mecanico.js`.
+- Diseño mecánico: la tira de íconos (`app/core/escritorio.js`, `ACCESOS`) tiene accesos directos: Nuevo turno y Pacientes (`app/components/accesos-rapidos.js`, `DovaRapido`), Nueva factura (`facturacion/nueva`) y Nuevo presupuesto (`presupuestos/nuevo`). El turno rápido usa `modalTurno({ soloDisponibles: true })` + `GET /api/agenda/disponibles` (`agenda/agenda.disponibles.js`); al crear con `soloDisponible: true` el servidor exige que el odontólogo esté en horario y libre. Pruebas: `tests/ui-accesos-mecanico.js`.
 - Pruebas: `tests/ui-ventanas.js`. Para probar el contenido de una sección sin ventanas, una prueba puede abrir `/mecanico/index.html?ventana=1#<ruta>` en la misma pestaña después de entrar.
 
 ## Presupuestos e Informes
-- Sección Presupuestos (`shared/ext/ext-presupuestos.js`, `GET /api/presupuestos`). El servidor exige la C.I. del paciente (o `pacienteCi` para cargarla) y al menos un ítem; valida odontólogo y tratamientos contra la clínica.
-- Informes (`shared/ext/ext-informes.js`, `GET /api/reportes/informes/periodo?tipo=dia|semana|mes|anio`): resumen comparado con el período anterior (si está en curso, con el mismo tramo). Los reportes detallados quedaron como pestaña de Informes.
+- Sección Presupuestos (`app/pages/presupuestos.js`, `GET /api/presupuestos`). El servidor exige la C.I. del paciente (o `pacienteCi` para cargarla) y al menos un ítem; valida odontólogo y tratamientos contra la clínica.
+- Informes (`app/pages/informes.js`, `GET /api/reportes/informes/periodo?tipo=dia|semana|mes|anio`): resumen comparado con el período anterior (si está en curso, con el mismo tramo). Los reportes detallados quedaron como pestaña de Informes.
 - Pruebas: `tests/informes-presupuestos.test.js`.
 
 ## Resumen del día, indicaciones y archivo de pendientes (0053)
 - Resumen del día al dueño: `modules/resumen/` (`/api/resumen/config|vista|enviar`), uno por clínica y día en `resumenes_diarios`; corre con el cron de recordatorios. Correo con `utils/correo.js`, WhatsApp con la plantilla `resumen_diario`.
 - Indicaciones después del tratamiento: `tratamientos.indicaciones`, `clinicas.indicaciones_auto`; envío en `mensajes.service` (tipo `indicaciones`, página `web/indicaciones.html#t=`), a mano con `POST /api/mensajes/indicaciones/:turnoId/enviar`.
 - Archivar pendientes viejos: `modules/seguimiento/archivo.js`; estado `archivado` en `paciente_recalls` y `controles_programados` (no se borra nada, se restaura).
-- Pantallas: `shared/ext/ext-avisos.js`. Pruebas: `tests/resumen-indicaciones.test.js`, `tests/ui-avisos.js`.
+- Pantallas: `app/pages/avisos.js`. Pruebas: `tests/resumen-indicaciones.test.js`, `tests/ui-avisos.js`.
 
 ## Planes por clínica y panel de plataforma (0054)
 - Plan de cada clínica: `clinicas.plan` (esencial/base/completo/premium), `modulos_extra`, `modulos_quitar`. Catálogo de módulos y plan mínimo en `config/planes.js`.
@@ -139,7 +143,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Suspensión: `clinicas.activa=false`; el login responde 403 `CLINICA_SUSPENDIDA` solo con la clave correcta y el middleware corta los tokens abiertos (el proveedor queda exento).
 - Login por clínica: `clinicaSlug` en el cuerpo (por defecto `DOVA_CLINICA_POR_DEFECTO` o `dentcarerc`); la pantalla de ingreso tiene "Entro a otra clínica" (también `?clinica=`).
 - Límite conocido: la página web pública atiende UNA clínica por instalación (`WEB_CLINICA_ID`).
-- Pantallas: `shared/ext/ext-plataforma.js`. Pruebas: `tests/plataforma.test.js`, `tests/ui-plataforma.js`.
+- Pantallas: `app/pages/plataforma.js`. Pruebas: `tests/plataforma.test.js`, `tests/ui-plataforma.js`.
 
 ## Cobro online (0055)
 - `modules/cobro-online/` + `proveedores/pagopar.js`. El paciente toca "Pagar ahora" en Mi pago (`POST /api/web/publico/pago/:token/online`) → `cobros_online` + pedido en Pagopar. La pasarela avisa a `POST /api/cobro-online/aviso/pagopar` (público): se valida la firma y SIEMPRE se reconsulta el pedido a Pagopar (pagado y monto exacto) antes de registrar el pago con `pagos.service.crear` (cuota + caja + historial). Idempotente (candado + estado).
@@ -151,12 +155,12 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 ## Ortodoncia: tablero y cuotas (0056)
 - Casos y visitas siguen en `/api/especialidades/orto-casos|orto-visitas` (ficha → Especialidades → Ortodoncia); ahora exigen el módulo `ortodoncia` del plan (`middlewares/modulo.middleware.js` → `exigirModulo`).
 - `modules/ortodoncia/` (`/api/ortodoncia`, permisos `ortodoncia.view|manage`, dados a odontólogo y recepción): `GET /panel` (en tratamiento, controles atrasados, cuotas vencidas), `GET|POST /casos/:id/cuotas` (genera el plan de cuotas mensuales con el `planes-pago` de siempre y lo liga en `orto_casos.plan_pago_id`; así entran solas a Mi pago, cobro online, avisos de cobro y "quién debe").
-- Pantalla: `shared/ext/ext-ortodoncia.js` (menú Ortodoncia y acción "Cuotas" en la ficha). Pruebas: `tests/ortodoncia.test.js`, `tests/ui-ortodoncia.js`.
-- Comparador de fotos: `ext-clinica.js` (`comparar`, `DovaClinica.compararPaciente(pacienteId)`); lado a lado y descarga como JPG (canvas, sin datos del paciente). Prueba: `tests/ui-fotos-comparar.js`.
+- Pantalla: `app/pages/ortodoncia.js` (menú Ortodoncia y acción "Cuotas" en la ficha). Pruebas: `tests/ortodoncia.test.js`, `tests/ui-ortodoncia.js`.
+- Comparador de fotos: `app/pages/clinica.js` (`comparar`, `DovaClinica.compararPaciente(pacienteId)`); lado a lado y descarga como JPG (canvas, sin datos del paciente). Prueba: `tests/ui-fotos-comparar.js`.
 - El seed ahora reparte los permisos nuevos de cada versión a los roles de sistema de TODAS las clínicas (antes solo la primera).
 
 ## Consentimientos
-- Firma en tablet (`modoFirma` en `shared/ext/ext-operativo.js`). Huella SHA-256 en `extras.service.js`.
+- Firma en tablet (`modoFirma` en `app/pages/operativo.js`). Huella SHA-256 en `extras.service.js`.
 - Disparadores en la base impiden modificar o borrar firmados (para borrar un paciente de prueba: `SET dova.borrando_paciente='on'`).
 
 ## Copias de seguridad
@@ -195,17 +199,17 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 
 
 ## Rentabilidad (Finanzas)
-- `GET /api/finanzas/rentabilidad?desde&hasta&odontologoId` (permiso `rentabilidad.view`, módulo `comisiones` del plan; solo admin por defecto). `cuentas.service.rentabilidad`: producción por sesión realizada (como comisiones) − insumos de la sesión (`sesion_materiales` × `precio_compra`) − laboratorio (por odontólogo) − comisión. Por tratamiento no incluye laboratorio. Pantalla: Finanzas → Rentabilidad (`ext-secciones.js`). Pruebas: `tests/rentabilidad.test.js`, `tests/ui-rentabilidad.js`.
+- `GET /api/finanzas/rentabilidad?desde&hasta&odontologoId` (permiso `rentabilidad.view`, módulo `comisiones` del plan; solo admin por defecto). `cuentas.service.rentabilidad`: producción por sesión realizada (como comisiones) − insumos de la sesión (`sesion_materiales` × `precio_compra`) − laboratorio (por odontólogo) − comisión. Por tratamiento no incluye laboratorio. Pantalla: Finanzas → Rentabilidad (`app/pages/secciones.js`). Pruebas: `tests/rentabilidad.test.js`, `tests/ui-rentabilidad.js`.
 - Producción, comisiones y rentabilidad se basan en **sesiones** (`sesiones_tratamiento`), que ahora se registran desde el plan (ficha → plan → "Registrar sesión"); completar etapas no cuenta como sesión.
 
 ## Kits de insumos por tratamiento (0059)
 - `tratamiento_kits` (insumo + cantidad por sesión) y `sesiones_tratamiento.kit_aplicado`. `modules/inventario/kits.service.js`; rutas `GET /api/inventario/kits`, `GET|PUT /api/inventario/kits/:tratamientoId` (ver: `inventario.view`; guardar: `inventario.manage`; valida insumo y tratamiento contra la clínica).
 - `planes.service.registrarSesion` valida fecha y odontólogo, y llama a `kits.aplicarASesion` (salvo `descontarKit: false`): descuenta con `registrarConsumoProcedimiento` (movimiento + auditoría), nunca dos veces la misma sesión, nunca deja stock negativo; si falta stock registra la sesión igual y devuelve `kit.faltantes`; avisa a los admins (`alertas.alertarAdmins`, tipo `inventario`) cuando algo llega al mínimo o faltó.
-- Pantallas: Inventario → Kits por tratamiento (`ext-operativo.js`) y bloque de sesiones del plan (`ext-clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).
+- Pantallas: Inventario → Kits por tratamiento (`app/pages/operativo.js`) y bloque de sesiones del plan (`app/pages/clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).
 
 ## Inicio, celular y apariencia
-- Inicio (recepción/admin): `seccionHoy`/`cargarHoy` en `views.js` (`GET /api/agenda?desde=hoy&hasta=hoy`) y `filaAtender(..., nivel)` con `data-nivel` urgente/aviso; `Vistas.ordenarAtender` ordena después de que la extensión suma sus filas.
-- `shared/mecanico.js`: barra de estado con caja y próximo turno (se refresca cada 2 min) y barra de accesos del celular (`#mec-movil`, ≤768px).
+- Inicio (recepción/admin): `seccionHoy`/`cargarHoy` en `app/pages/vistas.js` (`GET /api/agenda?desde=hoy&hasta=hoy`) y `filaAtender(..., nivel)` con `data-nivel` urgente/aviso; `Vistas.ordenarAtender` ordena después de que la extensión suma sus filas.
+- `app/core/escritorio.js`: barra de estado con caja y próximo turno (se refresca cada 2 min) y barra de accesos del celular (`#mec-movil`, ≤768px).
 - Letra: `usuarios.letra_preferida` (0060), `DOVA.actualizarLetra`, `DovaApp.aplicarLetra` (`data-letra` en `<html>` y ventanas; `zoom` sobre el contenido de `.dova-main`). Igual que el modo, solo en Configuración → Apariencia.
 - Dentro de una ventana (`html.dova-modo-ventana`) el título de la sección se oculta: ya está en la barra de la ventana.
 - Formatos: montos con espacio duro (`Gs.\u00a0`), horas con `hour12: false`.

@@ -1,13 +1,13 @@
 [build]
-  # Publica la carpeta frontend/ completa: mecanico/ (el único diseño) y shared/.
+  # Publica la carpeta frontend/ completa: mecanico/ (entrada) y app/ (todo el código).
   publish = "frontend"
-  # Genera shared/config.js con la URL real del backend a partir de la
+  # Genera app/core/config.js con la URL real del backend a partir de la
   # variable de entorno DOVA_API_URL (configurala en Netlify > Site
   # settings > Environment variables, ej: https://dova-backend.onrender.com/api
   # si el backend está desplegado en Render — ver README > Deploy backend
   # en Render). Si no está seteada, cae al localhost de desarrollo (no
   # rompe un build de prueba, pero en producción real hay que configurarla).
-  command = "sed \"s#__DOVA_API_URL__#${DOVA_API_URL:-http://localhost:4000/api}#\" frontend/shared/config.template.js > frontend/shared/config.js"
+  command = "sed \"s#__DOVA_API_URL__#${DOVA_API_URL:-http://localhost:4000/api}#\" frontend/app/core/config.template.js > frontend/app/core/config.js"
 
 # Raíz del sitio -> DOVA (único diseño: mecánico). Los enlaces viejos a los otros diseños llevan al actual.
 [[redirects]]

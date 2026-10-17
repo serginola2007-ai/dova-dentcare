@@ -181,7 +181,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 /* ---- Fase 6 — Responsive (desktop/tablet/mobile) ---- */
 
 /* Botón hamburguesa: invisible en desktop, cada skin lo muestra en su
-   propio breakpoint de mobile/tablet (ver skin.css de cada diseño). */
+   propio breakpoint de mobile/tablet (ver styles/tema-mecanico.css). */
 .dova-menu-toggle {
   display: none; background: none; border: none; font-size: 20px; line-height: 1;
   color: inherit; padding: 4px 8px; margin-right: 4px; cursor: pointer;
@@ -189,7 +189,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 
 /* Overlay para cerrar el menú tocando afuera en mobile. Se activa solo
    cuando <body> tiene la clase dova-menu-abierto (ver dova-menu-toggle en
-   app.js) y el propio breakpoint de mobile lo muestra. */
+   core/router.js) y el propio breakpoint de mobile lo muestra. */
 .dova-menu-overlay { display: none; }
 body.dova-menu-abierto .dova-menu-overlay {
   display: block; position: fixed; inset: 0; background: rgba(43,36,32,0.4); z-index: 900;

@@ -5,7 +5,7 @@
    - el recuadro "Parámetros activos" (usuario, clínica, caja, fecha y reloj);
    - la lista "Ventanas abiertas recientemente";
    - la barra de estado de abajo.
-   El contenido de cada pantalla es el mismo de siempre (shared/). */
+   El contenido de cada pantalla es el mismo de siempre (app/pages). */
 (function () {
   'use strict';
   // Accesos directos: [id, título, ícono, permiso, acción]. Los de acción abren directo

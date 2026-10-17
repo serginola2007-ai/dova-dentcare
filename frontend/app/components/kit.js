@@ -6,7 +6,7 @@
      accesibles (una serie por gráfico, tooltip, tabla alternativa).
    Nada acá conoce reglas clínicas: esas viven en el backend. */
 const DovaExt = (() => {
-  const V = () => Vistas; // global léxico de views.js (script clásico)
+  const V = () => Vistas; // global léxico de pages/vistas.js (script clásico)
   const esc = (s) => V().esc(s);
   const fmtFecha = (f) => V().fmtFecha(f);
   const fmtGs = (n) => V().fmtGs(n);
@@ -212,7 +212,7 @@ const DovaExt = (() => {
   // pestanas: [{ id, texto, visible(bool), render(contenedor) }]
   function subPestanas(root, pestanas, { inicial } = {}) {
     const vis = pestanas.filter((p) => p.visible !== false);
-    // Pestaña elegida desde el segundo panel del menú (app.js): la primera
+    // Pestaña elegida desde el segundo panel del menú (core/router.js): la primera
     // tanda de pestañas que se dibuja la usa una sola vez.
     if (window.DovaSubPendiente) {
       if (!inicial && vis.some((p) => p.id === window.DovaSubPendiente)) inicial = window.DovaSubPendiente;

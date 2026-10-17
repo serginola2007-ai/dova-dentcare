@@ -7,12 +7,43 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v63';
+const VERSION = 'dova-v64';
 const PRECARGA = [
   '/mecanico/',
-  '/shared/base.css', '/shared/ext/ext.css', '/shared/sobrio.css', '/shared/config.js', '/shared/api.js', '/shared/tiempo-real.js', '/shared/iconos.js', '/shared/comandos.js', '/shared/pre-diseno.js', '/shared/arranque.js', '/shared/views.js', '/shared/app.js', '/shared/pwa.js', '/shared/seguridad.js', '/shared/bloqueo.js',
-  '/shared/ext/ext-core.js', '/shared/ext/ext-ficha.js', '/shared/ext/ext-secciones.js', '/shared/ext/ext-operativo.js', '/shared/ext/ext-facturacion.js', '/shared/ext/ext-web.js', '/shared/ext/ext-clinica.js', '/shared/ext/ext-importar.js', '/shared/ext/ext-visor.js', '/shared/ext/ext-midia.js', '/shared/ventanas.js', '/shared/ext/ext-informes.js', '/shared/ext/ext-presupuestos.js', '/shared/ext/ext-rapido.js', '/shared/ext/ext-plataforma.js', '/shared/ext/ext-ortodoncia.js', '/shared/ext/ext-avisos.js',
-  '/mecanico/skin.css', '/shared/mecanico.js',
+  '/app/styles/base.css',
+  '/app/styles/componentes.css',
+  '/app/styles/tema-mecanico.css',
+  '/app/styles/sobrio.css',
+  '/app/core/pre-carga.js',
+  '/app/core/config.js',
+  '/app/core/api.js',
+  '/app/core/tiempo-real.js',
+  '/app/core/iconos.js',
+  '/app/core/comandos.js',
+  '/app/pages/vistas.js',
+  '/app/components/kit.js',
+  '/app/pages/ficha.js',
+  '/app/pages/secciones.js',
+  '/app/pages/operativo.js',
+  '/app/pages/facturacion.js',
+  '/app/pages/pagina-web.js',
+  '/app/pages/clinica.js',
+  '/app/components/importar-pacientes.js',
+  '/app/components/visor.js',
+  '/app/components/mi-dia.js',
+  '/app/pages/informes.js',
+  '/app/pages/presupuestos.js',
+  '/app/components/accesos-rapidos.js',
+  '/app/pages/plataforma.js',
+  '/app/pages/ortodoncia.js',
+  '/app/pages/avisos.js',
+  '/app/core/pwa.js',
+  '/app/components/seguridad-cuenta.js',
+  '/app/core/bloqueo.js',
+  '/app/core/ventanas.js',
+  '/app/core/router.js',
+  '/app/core/escritorio.js',
+  '/app/core/arranque.js',
   '/manifest.webmanifest', '/iconos/icono-192.png', '/iconos/icono-512.png',
 ];
 

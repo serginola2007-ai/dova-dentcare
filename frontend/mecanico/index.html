@@ -1,9 +1,17 @@
 <!doctype html>
+<!-- DOVA — página de entrada de la aplicación del personal.
+     Toda la lógica está en /app (ver frontend/README.md):
+       app/core        motor: servidor, rutas, ventanas, tiempo real, bloqueo
+       app/components  piezas reutilizables (kit, visor, importar…)
+       app/pages       pantallas
+       app/styles      estilos (base, componentes, tema mecánico, estilo sobrio)
+     El orden de los <script> importa: cada archivo usa lo que cargó antes. -->
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script src="../shared/pre-diseno.js"></script>
+<!-- Modo claro/oscuro y tamaño de letra antes de pintar (evita el parpadeo) -->
+<script src="/app/core/pre-carga.js"></script>
 <title>DOVA — DentCareRC</title>
 <!-- App instalable (PWA): ícono, pantalla completa y apertura sin internet -->
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -14,10 +22,11 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="DOVA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="stylesheet" href="../shared/base.css" />
-<link rel="stylesheet" href="../shared/ext/ext.css" />
-<link rel="stylesheet" href="/mecanico/skin.css" />
-<link rel="stylesheet" href="../shared/sobrio.css" />
+<!-- Estilos, en este orden: base → componentes → tema → estilo sobrio (siempre último) -->
+<link rel="stylesheet" href="/app/styles/base.css" />
+<link rel="stylesheet" href="/app/styles/componentes.css" />
+<link rel="stylesheet" href="/app/styles/tema-mecanico.css" />
+<link rel="stylesheet" href="/app/styles/sobrio.css" />
 </head>
 <body>
   <div id="login-root"></div>
@@ -38,34 +47,43 @@
     <footer class="mec-estado" id="mec-estado" aria-live="off"></footer>
   </div>
 
-  <script src="../shared/config.js"></script>
-  <script src="../shared/api.js"></script>
-  <script src="../shared/tiempo-real.js"></script>
-  <script src="../shared/iconos.js"></script>
-  <script src="../shared/comandos.js"></script>
-  <script src="../shared/views.js"></script>
-  <script src="../shared/ext/ext-core.js"></script>
-  <script src="../shared/ext/ext-ficha.js"></script>
-  <script src="../shared/ext/ext-secciones.js"></script>
-  <script src="../shared/ext/ext-operativo.js"></script>
-  <script src="../shared/ext/ext-facturacion.js"></script>
-  <script src="../shared/ext/ext-web.js"></script>
-  <script src="../shared/ext/ext-clinica.js"></script>
-  <script src="../shared/ext/ext-importar.js"></script>
-  <script src="../shared/ext/ext-visor.js"></script>
-  <script src="../shared/ext/ext-midia.js"></script>
-  <script src="../shared/ext/ext-informes.js"></script>
-  <script src="../shared/ext/ext-presupuestos.js"></script>
-  <script src="../shared/ext/ext-rapido.js"></script>
-  <script src="../shared/ext/ext-plataforma.js"></script>
-  <script src="../shared/ext/ext-ortodoncia.js"></script>
-  <script src="../shared/ext/ext-avisos.js"></script>
-  <script src="../shared/pwa.js"></script>
-  <script src="../shared/seguridad.js"></script>
-  <script src="../shared/bloqueo.js"></script>
-  <script src="../shared/ventanas.js"></script>
-  <script src="../shared/app.js"></script>
-  <script src="../shared/mecanico.js"></script>
-  <script src="../shared/arranque.js"></script>
+  <!-- NÚCLEO: configuración, conexión con el servidor y utilidades globales -->
+  <script src="/app/core/config.js"></script>
+  <script src="/app/core/api.js"></script>
+  <script src="/app/core/tiempo-real.js"></script>
+  <script src="/app/core/iconos.js"></script>
+  <script src="/app/core/comandos.js"></script>
+  <!-- PANTALLAS BASE (ingreso, inicio, pacientes, ficha, usuarios, configuración) -->
+  <script src="/app/pages/vistas.js"></script>
+  <!-- KIT DE COMPONENTES (formularios, tablas, pestañas, modales) — antes de las pantallas que lo usan -->
+  <script src="/app/components/kit.js"></script>
+  <!-- PANTALLAS (una sección del menú o un grupo de secciones por archivo) -->
+  <script src="/app/pages/ficha.js"></script>
+  <script src="/app/pages/secciones.js"></script>
+  <script src="/app/pages/operativo.js"></script>
+  <script src="/app/pages/facturacion.js"></script>
+  <script src="/app/pages/pagina-web.js"></script>
+  <script src="/app/pages/clinica.js"></script>
+  <!-- COMPONENTES SUELTOS -->
+  <script src="/app/components/importar-pacientes.js"></script>
+  <script src="/app/components/visor.js"></script>
+  <script src="/app/components/mi-dia.js"></script>
+  <!-- MÁS PANTALLAS -->
+  <script src="/app/pages/informes.js"></script>
+  <script src="/app/pages/presupuestos.js"></script>
+  <!-- ACCESOS RÁPIDOS Y PANTALLAS CHICAS -->
+  <script src="/app/components/accesos-rapidos.js"></script>
+  <script src="/app/pages/plataforma.js"></script>
+  <script src="/app/pages/ortodoncia.js"></script>
+  <script src="/app/pages/avisos.js"></script>
+  <!-- APP INSTALABLE, SEGURIDAD Y BLOQUEO -->
+  <script src="/app/core/pwa.js"></script>
+  <script src="/app/components/seguridad-cuenta.js"></script>
+  <script src="/app/core/bloqueo.js"></script>
+  <!-- MOTOR: ventanas, rutas/menú, escritorio del diseño y arranque (siempre al final) -->
+  <script src="/app/core/ventanas.js"></script>
+  <script src="/app/core/router.js"></script>
+  <script src="/app/core/escritorio.js"></script>
+  <script src="/app/core/arranque.js"></script>
 </body>
 </html>

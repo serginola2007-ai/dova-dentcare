@@ -14,19 +14,19 @@ dova/
 ├── netlify.toml        Config de deploy del frontend en Netlify
 ├── backend/             API REST (Node.js + Express + PostgreSQL) — ÚNICA, la usan los 3 diseños
 └── frontend/
-    ├── shared/           Motor común: cliente API, vistas, router SPA (#hash), CSS base
+    ├── app/              Todo el código del front: core/ (motor), components/, pages/, styles/ — ver frontend/README.md
     │   ├── app.js         Boot de la SPA + selector/redirección de diseño
     │   ├── api.js         Cliente HTTP (sesión, tokens, endpoints)
-    │   ├── views.js       Todas las pantallas (HTML + listeners)
-    │   ├── base.css       Variables de marca y estilos base compartidos
+    │   ├── app/pages/vistas.js       Todas las pantallas (HTML + listeners)
+    │   ├── app/styles/base.css       Variables de marca y estilos base compartidos
     │   ├── config.js      URL del backend para desarrollo local (ver Netlify más abajo)
     │   └── config.template.js  Plantilla que Netlify usa para generar config.js en el build
-    ├── mecanico/         El único diseño (index.html + skin.css, claro y oscuro)
+    ├── mecanico/         index.html de entrada (el único diseño, claro y oscuro)
     └── mecanico/         Diseño 4: sistema de escritorio clásico con los colores de la clínica, íconos y parámetros activos
 ```
 
-El diseño comparte el 100% de la lógica (`shared/*.js`) y solo cambian
-`index.html` (fuentes/estructura mínima) y `skin.css` (colores/layout). Esto
+El diseño comparte el 100% de la lógica (`app/`) y solo cambian
+`index.html` (fuentes/estructura mínima) y `app/styles/tema-mecanico.css` (colores/layout). Esto
 significa que corregir un bug o agregar una función se hace **una sola vez**
 y se refleja automáticamente en los tres.
 
@@ -105,12 +105,12 @@ backend NO se hardcodea en el HTML: se inyecta en el build de Netlify.
 | `DOVA_API_URL` | URL pública del backend desplegado, ej. `https://dova-api.onrender.com/api` |
 
 El build de Netlify (definido en `netlify.toml`) genera
-`frontend/shared/config.js` a partir de `frontend/shared/config.template.js`,
+`frontend/app/core/config.js` a partir de `frontend/app/core/config.template.js`,
 reemplazando el placeholder por el valor de `DOVA_API_URL`. Si la variable no
 está seteada, cae al `localhost:4000` de desarrollo (útil para un build de
 prueba, pero hay que configurarla para producción real).
 
-Para desarrollo local no hace falta tocar nada: `frontend/shared/config.js`
+Para desarrollo local no hace falta tocar nada: `frontend/app/core/config.js`
 ya viene versionado con `http://localhost:4000/api` para que `Iniciar DOVA.bat`
 funcione de una.
 
@@ -128,8 +128,8 @@ funcione de una.
 DOVA tiene **un solo diseño** (el mecánico: menú en mayúsculas, íconos a la izquierda, ventanas, parámetros activos y colores de la clínica). Lo único que cada usuario elige es el **modo claro u oscuro**, y solo se cambia en **Configuración → Apariencia** (no hay botones de modo en otro lado ni en el ingreso).
 
 - Se guarda en el usuario (`usuarios.tema_preferido`: `claro` por defecto u `oscuro`), así lo acompaña en cualquier dispositivo. `PATCH /api/usuarios/me/preferencias` con `{ "tema": "claro" | "oscuro" }`.
-- El navegador guarda además `dova-tema` para pintar bien la pantalla de ingreso; `shared/pre-diseno.js` lo aplica antes de pintar (sin parpadeo). Sin elección guardada, claro (no se usa la preferencia del sistema operativo).
-- Los dos modos están en `frontend/mecanico/skin.css` (variables `--mec-*`). Las ventanas abiertas reciben el cambio al instante.
+- El navegador guarda además `dova-tema` para pintar bien la pantalla de ingreso; `app/core/pre-carga.js` lo aplica antes de pintar (sin parpadeo). Sin elección guardada, claro (no se usa la preferencia del sistema operativo).
+- Los dos modos están en `frontend/app/styles/tema-mecanico.css` (variables `--mec-*`). Las ventanas abiertas reciben el cambio al instante.
 - Las direcciones viejas (`/moderno/`, `/minimalista/`, `/tecnico/`) redirigen a `/mecanico/`. La carpeta se llama `mecanico` por historia.
 
 ## Deployment
@@ -212,7 +212,7 @@ Las correcciones hechas después de la simulación de un año de uso están en [
   entre carpetas de tema preservando la sesión, y el script anti-parpadeo
   en cada `index.html`.
 - **Deploy**: `netlify.toml` nuevo (publica los 3 diseños desde un solo
-  sitio), `shared/config.template.js` + `shared/config.js` para no
+  sitio), `app/core/config.template.js` + `app/core/config.js` para no
   hardcodear la URL del backend.
 - **Ningún módulo, permiso, rol ni dato existente se tocó** — ver la
   sección de pruebas realizadas más abajo.

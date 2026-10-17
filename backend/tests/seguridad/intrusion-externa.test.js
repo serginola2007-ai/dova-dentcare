@@ -20,10 +20,10 @@ const FILTRA = /DATABASE_URL|JWT_SECRET|password_hash|BEGIN [A-Z ]*PRIVATE KEY|n
   await db.query('DELETE FROM login_intentos');
 
   // 1) Archivos del servidor que no deben poder bajarse
-  const rutasSecretas = ['/.env', '/backend/.env', '/../backend/.env', '/%2e%2e/backend/.env', '/shared/..%2f..%2fbackend%2f.env', '/shared/%2e%2e/%2e%2e/backend/.env',
+  const rutasSecretas = ['/.env', '/backend/.env', '/../backend/.env', '/%2e%2e/backend/.env', '/app/..%2f..%2fbackend%2f.env', '/shared/%2e%2e/%2e%2e/backend/.env',
     '/.git/config', '/.git/HEAD', '/package.json', '/backend/package.json', '/src/app.js', '/backend/src/app.js', '/render.yaml', '/CLAUDE.md', '/SECURITY-AUDIT.md',
     '/README.md', '/backend/src/config/env.js', '/node_modules/express/package.json', '/uploads/', '/shared/', '/mecanico/../../backend/.env', '/web/..%5c..%5cbackend%5c.env',
-    '/api/../backend/.env', '/%2e/%2e/etc/passwd', '/shared/..%252f..%252fbackend%252f.env'];
+    '/api/../backend/.env', '/%2e/%2e/etc/passwd', '/app/..%252f..%252fbackend%252f.env'];
   let expuestos = [];
   for (const r of rutasSecretas) {
     const x = await pedir('GET', r);

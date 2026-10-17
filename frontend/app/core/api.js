@@ -100,7 +100,7 @@ const DOVA = (() => {
   }
   function errorBloqueo() { const e = new Error('La pantalla está bloqueada'); e.status = 423; return e; }
 
-  // Aviso de pedido en curso (app.js muestra la barra de progreso y el botón "ocupado").
+  // Aviso de pedido en curso (core/router.js muestra la barra de progreso y el botón "ocupado").
   function avisar(delta) { try { window.dispatchEvent(new CustomEvent('dova:pedido', { detail: delta })); } catch (_e) { /* sin DOM */ } }
   async function request(path, opciones) {
     avisar(1);

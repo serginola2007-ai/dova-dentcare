@@ -1,8 +1,10 @@
-/* DOVA — motor de la SPA, compartido por los 3 diseños.
-   El único diseño (mecánico) trae su index.html en frontend/mecanico y comparte todo este código (shared/).
-   la estructura del layout (sidebar, topbar, etc.) y llama a DovaApp.iniciar()
-   pasándole los IDs de sus contenedores. El contenido de cada vista es
-   idéntico entre skins; solo cambia el CSS alrededor. */
+/* DOVA — router: el motor de la aplicación (objeto global DovaApp).
+   - Arma el menú según los permisos del usuario.
+   - navegar(ruta, params): verifica el permiso y dibuja la pantalla de esa ruta.
+   - Decide si corre como escritorio (la página principal, cada sección en una ventana)
+     o como "modo ventana" (adentro de una ventana: solo la pantalla de la sección).
+   - Aplica las preferencias del usuario: modo claro/oscuro y tamaño de letra.
+   Lo llama core/arranque.js con DovaApp.iniciar({ ids de los contenedores del index.html }). */
 
 const DovaApp = (() => {
   let elMain, elMenu, elMarca;
@@ -336,13 +338,13 @@ const DovaApp = (() => {
           Vistas.initFichaPaciente(params, () => navegar('pacientes'), (pacienteId) => navegar('consulta', pacienteId));
           break;
         case 'consulta':
-          // Modo Consulta (ext-clinica.js): consulta guardada en la base, con
+          // Modo Consulta (pages/clinica.js): consulta guardada en la base, con
           // el turno (consulta/<paciente>/t<turno>) y accesos rápidos reales.
           elMain.innerHTML = '<div></div>';
           await DovaClinica.consulta(elMain.firstElementChild, params, navegar);
           break;
         // Agenda, caja, inventario y catálogo con todas las operaciones del
-        // día (ver shared/ext/ext-operativo.js).
+        // día (ver app/pages/operativo.js).
         case 'agenda':
           elMain.innerHTML = '<div></div>';
           await DovaOperativo.agenda(elMain.firstElementChild, navegar);

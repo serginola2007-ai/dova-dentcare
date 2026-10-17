@@ -137,7 +137,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-ext-kpi-valor { font-size: 20px; }
 }
 
-/* ===== Operación diaria (ext-operativo.js) ===== */
+/* ===== Operación diaria (pages/operativo.js) ===== */
 .dova-op-toolbar { flex-wrap: wrap; gap: 10px; }
 .dova-op-nav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .dova-op-nav input, .dova-op-nav select { width: auto; min-width: 0; }
@@ -202,7 +202,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-cal-vistas button { flex: 1; }
 }
 
-/* ---------------- Facturación (ext-facturacion.js) ---------------- */
+/* ---------------- Facturación (pages/facturacion.js) ---------------- */
 .dova-fac-aviso { font-size: 12px; margin: 0 0 6px; }
 .dova-fac-aviso-box { border: 1px solid var(--terracotta); background: var(--dova-ext-atencion-bg); border-radius: var(--radius-m); padding: 10px 14px; margin: 8px 0 14px; font-size: 14px; color: var(--ink); }
 .dova-fac-vacio { text-align: center; padding: 32px 16px; border: 1px dashed var(--border); border-radius: var(--radius-m); background: var(--white); margin: 12px 0; }
@@ -304,7 +304,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-ext-color input[type=radio]:focus-visible + span { outline: 2px solid var(--terracotta); outline-offset: 2px; }
 .dova-ext-punto-color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 
-/* ---------------- Página web (ext-web.js) ---------------- */
+/* ---------------- Página web (pages/pagina-web.js) ---------------- */
 .dova-web-filtros { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 14px; }
 .dova-web-sep { width: 1px; height: 22px; background: var(--border); margin: 0 6px; }
 .dova-web-lista { display: grid; gap: 10px; }
@@ -323,7 +323,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-web-codigo { font: 700 40px/1.1 ui-monospace, monospace; letter-spacing: 6px; text-align: center; margin: 8px 0 14px; padding: 14px; border-radius: var(--radius-m); background: var(--bg, #f6f3ee); }
 .dova-modal-actions a.dova-btn-primary { text-decoration: none; display: inline-flex; align-items: center; }
 
-/* ===== Clínica integral: Modo Consulta y Ficha 360° (ext-clinica.js) ===== */
+/* ===== Clínica integral: Modo Consulta y Ficha 360° (pages/clinica.js) ===== */
 .dova-cli-barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .dova-cli-guardado { font-size: 13px; color: var(--ink-soft); }
 .dova-cli-guardado.error { color: var(--rust); font-weight: 600; }
@@ -587,7 +587,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
   .dova-inicio-marca-nombre { font-size: 27px; }
 }
 
-/* ===== Escritorio con ventanas (shared/ventanas.js) ===== */
+/* ===== Escritorio con ventanas (app/core/ventanas.js) ===== */
 body.dova-escritorio .dova-topbar { z-index: 901; }
 @media (min-width: 769px) { body.dova-escritorio .dova-topbar { position: relative; } }
 body.dova-con-ventanas .dova-main { padding-bottom: 64px; }

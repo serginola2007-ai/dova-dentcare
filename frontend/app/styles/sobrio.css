@@ -72,7 +72,7 @@
   .dova-card-valor, .dova-ext-kpi-valor { white-space: normal; font-size: 19px; overflow-wrap: anywhere; }
 }
 
-/* ---------- Íconos lineales (shared/iconos.js) en lugar de emojis ---------- */
+/* ---------- Íconos lineales (app/core/iconos.js) en lugar de emojis ---------- */
 .dova-ico { display: inline-block; vertical-align: -0.18em; flex-shrink: 0; }
 .dova-cmd-ic { color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; }
 .dova-cmd-barra .dova-ico { color: var(--ink-soft); }

@@ -396,7 +396,7 @@ const Vistas = (() => {
   }
   function initDashboardSinReportes(irA) { initInicio(irA); }
 
-  // Inicio del odontólogo: su agenda (ext-midia.js) y, debajo, sus pendientes
+  // Inicio del odontólogo: su agenda (components/mi-dia.js) y, debajo, sus pendientes
   // agrupados en filas que se despliegan solo si se tocan.
   const CATEGORIAS_PENDIENTES = [
     { key: 'evolucionesSinFirmar', label: 'Evoluciones sin firmar' },
