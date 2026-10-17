@@ -7,7 +7,7 @@
    Uso: DovaVisor.abrir({ items: [{ id, titulo, fecha, ruta }], inicial: id, urlArchivo }) */
 (function () {
   'use strict';
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { esc } = DovaAyudantes;
   const NS = 'http://www.w3.org/2000/svg';
 
   function abrir({ items, inicial, urlArchivo }) {

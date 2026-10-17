@@ -891,3 +891,15 @@ Se probó todo DOVA como un QA:
 - **Campanita:** el número está en rojo solo con avisos nuevos desde la última vez que se abrió; lo ya visto queda en gris.
 - **Letra grande:** en Configuración → Apariencia (guardada en la cuenta, migración `0060`). Agranda el contenido de las pantallas, no las barras.
 - **Pruebas:** `ui-visual` 20/20, más la regresión de pantallas.
+
+## Tanda: código más fácil de entender y mantener (17/10/2026)
+
+Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el código.
+
+- **Front ordenado en carpetas:** `frontend/app/core` (el motor), `components` (piezas reutilizables), `pages` (una pantalla por archivo) y `styles`. Guía en `frontend/README.md`.
+- **Cada pantalla se registra sola** (`DovaPantallas.registrar(...)`): el router ya no tiene una lista gigante de casos. Agregar una pantalla = un archivo nuevo más una línea en el menú.
+- Se partieron los archivos grandes (`operativo.js`, `secciones.js`, el viejo `app.js` del front) en pantallas con nombres claros: agenda, caja, inventario, catálogo, seguimiento, finanzas, estadísticas, etc. Los ayudantes comunes (formatos de Gs., fechas, avisos, modales) están en un solo lugar (`ayudantes.js`).
+- **Back:** `app.js` arma el servidor en 5 pasos (`arranque/seguridad.js`, `arranque/limites.js`, `rutas.js`, `arranque/frontend.js`, errores). `rutas.js` es el mapa de la API: una fila por módulo. Guía en `backend/README.md`.
+- **Revisión automática del front** (`npm run lint:front` desde `backend/`): encontró un error real que ya estaba: **Inventario → Registrar compra** fallaba al abrir el formulario. Corregido.
+- El barrido de seguridad ahora lee `rutas.js` y prueba **600 direcciones** (17 que antes no barría).
+- **Pruebas:** regresión completa de pantallas (19 archivos), pruebas de API y suites de seguridad.

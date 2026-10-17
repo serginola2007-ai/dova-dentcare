@@ -5,7 +5,7 @@
 const DovaOrtodoncia = (() => {
   const X = DovaExt;
   const { esc, toast, puede } = X;
-  const gs = (n) => Vistas.fmtGs(n);
+  const { fmtGs } = DovaAyudantes;
   const FASE = { diagnostico: ['Diagnóstico', 'info'], activa: ['En tratamiento', 'ok'], contencion: ['Contención', 'info'] };
 
   async function seccion(root, navegar) {
@@ -18,7 +18,7 @@ const DovaOrtodoncia = (() => {
       <div class="dova-plat-resumen">
         <div><strong>${r.activos}</strong><span>en tratamiento</span></div>
         <div><strong>${r.controlesAtrasados}</strong><span>con el control atrasado</span></div>
-        <div><strong>${r.conCuotasVencidas}</strong><span>con cuotas vencidas (${gs(r.montoVencido)})</span></div>
+        <div><strong>${r.conCuotasVencidas}</strong><span>con cuotas vencidas (${fmtGs(r.montoVencido)})</span></div>
         <div><strong>${r.enContencion}</strong><span>en contención</span></div>
       </div>
       ${r.sinPlanDeCuotas ? `<p class="dova-nota">${r.sinPlanDeCuotas} ${r.sinPlanDeCuotas === 1 ? 'caso tiene' : 'casos tienen'} honorario pero todavía no tiene las cuotas generadas.</p>` : ''}
@@ -47,10 +47,10 @@ const DovaOrtodoncia = (() => {
       const cont = box.querySelector('[data-oc]');
       let d;
       try { d = await DOVA.get(`/ortodoncia/casos/${casoId}/cuotas`); } catch (e) { cont.innerHTML = `<p class="dova-error-text">${esc(e.message)}</p>`; return; }
-      const resumen = `<p>Honorario: <strong>${gs(d.honorario)}</strong> · Entrega inicial: <strong>${gs(d.entrega)}</strong>${d.cuotaMensual ? ` · Cuota mensual: <strong>${gs(d.cuotaMensual)}</strong>` : ''}</p>`;
+      const resumen = `<p>Honorario: <strong>${fmtGs(d.honorario)}</strong> · Entrega inicial: <strong>${fmtGs(d.entrega)}</strong>${d.cuotaMensual ? ` · Cuota mensual: <strong>${fmtGs(d.cuotaMensual)}</strong>` : ''}</p>`;
       if (d.tienePlan) {
         cont.innerHTML = `${resumen}<table class="dova-tabla"><thead><tr><th>N°</th><th>Vence</th><th>Monto</th><th>Estado</th></tr></thead><tbody>
-          ${d.cuotas.map((q) => `<tr><td>${q.numero}</td><td>${esc(X.fmtFecha(q.vencimiento))}</td><td>${gs(q.monto)}</td><td>${q.estado === 'pagada' ? X.badge('Pagada', 'ok') : (q.vencida ? X.badge('Vencida', 'critica') : X.badge('Pendiente', 'info'))}</td></tr>`).join('')}</tbody></table>
+          ${d.cuotas.map((q) => `<tr><td>${q.numero}</td><td>${esc(X.fmtFecha(q.vencimiento))}</td><td>${fmtGs(q.monto)}</td><td>${q.estado === 'pagada' ? X.badge('Pagada', 'ok') : (q.vencida ? X.badge('Vencida', 'critica') : X.badge('Pendiente', 'info'))}</td></tr>`).join('')}</tbody></table>
           <p class="dova-nota">La entrega inicial se registra como un cobro normal en la ficha del paciente. Las cuotas se cobran como siempre (caja, Mi pago, cobro online).</p>
           <div class="dova-modal-actions"><button type="button" class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>`;
       } else if (puede('ortodoncia.manage')) {
@@ -58,7 +58,7 @@ const DovaOrtodoncia = (() => {
           ${d.honorario > d.entrega ? `<form class="dova-ext-modal-form"><div class="dova-ext-form-grid">
             <div class="dova-ext-campo"><label for="oc-cant">Cantidad de cuotas mensuales</label><input id="oc-cant" type="number" min="1" max="60" step="1" value="${d.cuotaMensual ? Math.ceil((d.honorario - d.entrega) / d.cuotaMensual) : ''}" required /></div>
             <div class="dova-ext-campo"><label for="oc-ini">Fecha de inicio (la primera vence un mes después)</label><input id="oc-ini" type="date" value="${X.hoy()}" /></div></div>
-            <p class="dova-nota">Saldo a financiar: <strong>${gs(d.honorario - d.entrega)}</strong>. La última cuota absorbe el redondeo.</p>
+            <p class="dova-nota">Saldo a financiar: <strong>${fmtGs(d.honorario - d.entrega)}</strong>. La última cuota absorbe el redondeo.</p>
             <p class="dova-error-text" data-error hidden></p>
             <div class="dova-modal-actions"><button type="button" class="dova-btn-secundario" data-cerrar-modal>Cancelar</button><button type="submit" class="dova-btn-primary">Generar cuotas</button></div></form>`
     : '<p class="dova-vacio">Cargá el honorario total del caso (ficha → Ortodoncia → Editar) para poder generar las cuotas.</p><div class="dova-modal-actions"><button type="button" class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>'}`;
@@ -80,3 +80,5 @@ const DovaOrtodoncia = (() => {
   return { seccion, cuotas };
 })();
 window.DovaOrtodoncia = DovaOrtodoncia;
+
+DovaPantallas.registrar('ortodoncia', { dibujar: (contenedor, { navegar }) => DovaOrtodoncia.seccion(contenedor, navegar) });

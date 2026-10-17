@@ -43,7 +43,6 @@ const DovaInformes = (() => {
     if (!c.isConnected) return;
     fechas[tipo] = r.fecha;
     const a = r.actual; const p = r.previo;
-    const vs = `vs. ${def.ant}`;
     const etiquetaSerie = (k) => (tipo === 'anio' ? cap(MESES[Number(k.slice(5, 7)) - 1]).slice(0, 3) : String(Number(k.slice(8, 10))));
     const etiquetas = r.serie.map((s) => etiquetaSerie(s.k));
     const series = [
@@ -88,10 +87,12 @@ const DovaInformes = (() => {
     root.innerHTML = '<h2 class="dova-view-title">Informes</h2><div data-subs></div>';
     X.subPestanas(root.querySelector('[data-subs]'), [
       ...TIPOS.map((t) => ({ id: t.id, texto: t.texto, render: (c) => periodo(c, t.id) })),
-      { id: 'detalle', texto: 'Reportes detallados', render: (c) => DovaSecciones.reportes(c, navegar, undefined, { sinTitulo: true }) },
+      { id: 'detalle', texto: 'Reportes detallados', render: (c) => DovaReportes.reportes(c, navegar, undefined, { sinTitulo: true }) },
     ], { inicial: subInicial || undefined });
   }
 
   return { seccion };
 })();
 window.DovaInformes = DovaInformes;
+
+DovaPantallas.registrar('informes', { dibujar: (contenedor, { navegar, params }) => DovaInformes.seccion(contenedor, navegar, params) });

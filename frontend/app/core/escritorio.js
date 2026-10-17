@@ -29,11 +29,11 @@
   const enVentana = () => document.documentElement.classList.contains('dova-modo-ventana') || new URLSearchParams(location.search).get('ventana') === '1';
   const escritorio = () => !enVentana() && !!window.DovaVentanas;
 
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { esc } = DovaAyudantes;
   const leer = () => { try { const v = JSON.parse(sessionStorage.getItem(CLAVE) || '[]'); return Array.isArray(v) ? v : []; } catch (_e) { return []; } };
   const guardar = (l) => { try { sessionStorage.setItem(CLAVE, JSON.stringify(l)); } catch (_e) { /* sin almacenamiento */ } };
   const ahoraPy = () => new Date().toLocaleString('es-PY', { timeZone: 'America/Asuncion', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-  const fmtGs = (n) => `Gs.\u00a0${Math.round(Number(n) || 0).toLocaleString('es-PY')}`;
+  const { fmtGs } = DovaAyudantes;
   const etiquetaMenu = (ruta) => {
     const b = document.querySelector(`#menu-root [data-ruta="${ruta}"]:not([data-sub])`);
     return b ? b.textContent.replace(/[^\p{L}\p{N} .,()/-]+/gu, '').trim() : (NOMBRES[ruta] || null);

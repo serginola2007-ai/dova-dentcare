@@ -3,8 +3,7 @@
    Paso 2: ver qué columnas reconoció, los errores y los que ya existen → "Importar". */
 (function () {
   'use strict';
-  const esc = (s) => Vistas.esc(s);
-  const toast = (m, t) => Vistas.toast(m, t);
+  const { esc, toast } = DovaAyudantes;
   const lista = (items, fn) => `<ul class="dova-imp-lista">${items.map(fn).join('')}</ul>`;
 
   function abrir(alTerminar) {

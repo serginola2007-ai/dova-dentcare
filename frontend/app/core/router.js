@@ -241,11 +241,6 @@ const DovaApp = (() => {
   // Permiso mínimo para entrar a una ruta que no es un ítem de MENU (se
   // llega por botón, no por click de menú, pero igual hay que evitar que
   // alguien la teclee directo en el hash sin tener el permiso).
-  const PERMISO_RUTA_EXTRA = {
-    consulta: 'historia_clinica.edit',
-    // Los reportes detallados ahora están dentro de Informes; la dirección vieja sigue andando.
-    reportes: 'reportes.view',
-  };
 
   // Título de una ventana: el nombre de la sección en el menú.
   const TITULOS_EXTRA = { paciente: 'Ficha del paciente', consulta: 'Consulta', dashboard: 'Inicio', reportes: 'Reportes detallados' };
@@ -262,7 +257,8 @@ const DovaApp = (() => {
   function permisoRequerido(ruta) {
     const enMenu = MENU.find((m) => m.ruta === ruta);
     if (enMenu) return enMenu.permiso;
-    return PERMISO_RUTA_EXTRA[ruta] || null;
+    const pantalla = DovaPantallas.obtener(ruta);
+    return pantalla ? pantalla.permiso : null;
   }
 
   async function dibujarInicio() {
@@ -275,7 +271,7 @@ const DovaApp = (() => {
     }
     // Cuando la extensión terminó de sumar sus filas, se decide si Inicio está vacío (muestra la marca).
     const atender = elMain.querySelector('[data-para-atender]');
-    Promise.resolve().then(() => DovaSecciones.extenderDashboard(elMain, navegar))
+    Promise.resolve().then(() => DovaInicioExtras.extenderDashboard(elMain, navegar))
       .catch((e) => console.error('[DOVA ext]', e))
       .finally(() => { if (atender) atender.dataset.listo = '1'; Vistas.ordenarAtender(elMain); Vistas.revisarInicioVacio(elMain); });
     aplicarDataThATablas();
@@ -318,112 +314,20 @@ const DovaApp = (() => {
     document.dispatchEvent(new CustomEvent('dova:navegar', { detail: { ruta, params } }));
     elMain.innerHTML = '<div class="dova-cargando">Cargando…</div>';
     try {
-      switch (ruta) {
-        case 'dashboard':
-          await dibujarInicio();
-          // Inicio en vivo: turnos del día, cobros y lo que llega de la web.
-          if (window.DovaVivo) DovaVivo.vivo(elMain, ['turnos', 'pagos', 'caja_movimientos', 'caja_aperturas', 'web_solicitudes', 'web_pagos', 'pacientes', 'cuotas'], () => (location.hash.replace('#', '').split('/')[0] || 'dashboard') === 'dashboard' && dibujarInicio());
-          break;
-        case 'pacientes':
-          elMain.innerHTML = await Vistas.vistaPacientes();
-          Vistas.initPacientes((id) => navegar('paciente', id));
-          break;
-        case 'paciente':
-          elMain.innerHTML = await Vistas.vistaFichaPaciente(params);
-          // Las pestañas nuevas se agregan ANTES de iniciar la ficha, así el
-          // manejador de pestañas existente también las controla.
-          conExtension(() => DovaFicha.extender(params));
-          conExtension(() => DovaOperativo.extenderFicha(params, navegar));
-          conExtension(() => DovaClinica.extenderFicha(params));
-          Vistas.initFichaPaciente(params, () => navegar('pacientes'), (pacienteId) => navegar('consulta', pacienteId));
-          break;
-        case 'consulta':
-          // Modo Consulta (pages/clinica.js): consulta guardada en la base, con
-          // el turno (consulta/<paciente>/t<turno>) y accesos rápidos reales.
-          elMain.innerHTML = '<div></div>';
-          await DovaClinica.consulta(elMain.firstElementChild, params, navegar);
-          break;
-        // Agenda, caja, inventario y catálogo con todas las operaciones del
-        // día (ver app/pages/operativo.js).
-        case 'agenda':
-          elMain.innerHTML = '<div></div>';
-          await DovaOperativo.agenda(elMain.firstElementChild, navegar);
-          break;
-        case 'caja':
-          elMain.innerHTML = '<div></div>';
-          await DovaOperativo.caja(elMain.firstElementChild, navegar);
-          break;
-        case 'web':
-          elMain.innerHTML = '<div></div>';
-          await DovaWeb.seccion(elMain.firstElementChild, navegar, params);
-          break;
-        case 'facturacion':
-          elMain.innerHTML = '<div></div>';
-          await DovaFacturacion.seccion(elMain.firstElementChild, navegar, params);
-          break;
-        case 'inventario':
-          elMain.innerHTML = '<div></div>';
-          await DovaOperativo.inventario(elMain.firstElementChild);
-          break;
-        case 'catalogo':
-          elMain.innerHTML = '<div></div>';
-          await DovaOperativo.catalogo(elMain.firstElementChild);
-          break;
-        case 'ortodoncia':
-          elMain.innerHTML = '<div></div>';
-          await DovaOrtodoncia.seccion(elMain.firstElementChild, navegar);
-          break;
-        case 'plataforma':
-          elMain.innerHTML = '<div></div>';
-          await DovaPlataforma.seccion(elMain.firstElementChild);
-          break;
-        case 'helpdesk':
-          elMain.innerHTML = await Vistas.vistaHelpdesk();
-          Vistas.initHelpdesk();
-          break;
-        case 'usuarios':
-          elMain.innerHTML = await Vistas.vistaUsuariosAdmin();
-          Vistas.initUsuariosAdmin(() => navegar('usuarios'));
-          break;
-        case 'informes':
-          elMain.innerHTML = '<div></div>';
-          await DovaInformes.seccion(elMain.firstElementChild, navegar, params);
-          break;
-        case 'presupuestos':
-          elMain.innerHTML = '<div></div>';
-          await DovaPresupuestos.seccion(elMain.firstElementChild, navegar, params);
-          break;
-        case 'reportes':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.reportes(elMain.firstElementChild, navegar, params);
-          break;
-        case 'configuracion':
-          elMain.innerHTML = await Vistas.vistaConfiguracion();
-          Vistas.initConfiguracion();
-          conExtension(() => DovaSecciones.extenderConfiguracion(elMain));
-          break;
-        case 'seguimiento':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.seguimiento(elMain.firstElementChild, navegar, params);
-          break;
-        case 'operaciones':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.operaciones(elMain.firstElementChild, navegar);
-          break;
-        case 'finanzas':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.finanzas(elMain.firstElementChild, navegar);
-          break;
-        case 'indicadores':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.indicadores(elMain.firstElementChild, navegar);
-          break;
-        case 'auditoria':
-          elMain.innerHTML = '<div></div>';
-          await DovaSecciones.auditoria(elMain.firstElementChild, navegar);
-          break;
-        default:
-          elMain.innerHTML = await Vistas.vistaDashboard();
+      if (ruta === 'dashboard') {
+        await dibujarInicio();
+        // Inicio en vivo: turnos del día, cobros y lo que llega de la web.
+        if (window.DovaVivo) DovaVivo.vivo(elMain, ['turnos', 'pagos', 'caja_movimientos', 'caja_aperturas', 'web_solicitudes', 'web_pagos', 'pacientes', 'cuotas'], () => (location.hash.replace('#', '').split('/')[0] || 'dashboard') === 'dashboard' && dibujarInicio());
+      } else {
+        // Cada pantalla se registra sola en su archivo de app/pages (ver core/pantallas.js).
+        const pantalla = DovaPantallas.obtener(ruta);
+        if (pantalla) {
+          const contenedor = document.createElement('div');
+          elMain.replaceChildren(contenedor);
+          await pantalla.dibujar(contenedor, { navegar, params });
+        } else {
+          await dibujarInicio(); // ruta desconocida: Inicio
+        }
       }
       aplicarDataThATablas();
     } catch (e) {
@@ -437,14 +341,6 @@ const DovaApp = (() => {
     }
   }
 
-  // Las extensiones del seguimiento integral nunca deben romper la vista
-  // principal: si algo falla, se registra en consola y la vista sigue.
-  function conExtension(fn) {
-    try {
-      const r = fn();
-      if (r && typeof r.catch === 'function') r.catch((e) => console.error('[DOVA ext]', e));
-    } catch (e) { console.error('[DOVA ext]', e); }
-  }
 
   // Fase 6 — Responsive: en mobile las tablas se muestran como tarjetas
   // apiladas (ver base.css), y cada celda necesita saber a qué columna

@@ -94,7 +94,7 @@ const DovaPWA = (() => {
   }
   function activarAvisosUI(scope) {
     const box = (scope || document).querySelector('[data-avisos-box]'); if (!box) return;
-    const toast = (m, t) => { if (window.Vistas) Vistas.toast(m, t); };
+    const { toast } = DovaAyudantes;
     box.querySelector('[data-avisos-toggle]').addEventListener('click', async (ev) => {
       const b = ev.currentTarget; b.disabled = true;
       try { if (b.dataset.activo === '1') await desactivarAvisos(); else await activarAvisos(); } catch (e) { toast(e.message || 'No se pudo cambiar el aviso', 'error'); }

@@ -3,6 +3,7 @@
    localStorage se usa SOLO para persistir el par de tokens JWT entre
    recargas de página (comportamiento normal de cualquier SPA). */
 
+/* exported DOVA */
 const DOVA = (() => {
   /* Sesión (auditoría de seguridad):
      - El token de ACCESO vive solo en memoria (se pierde al cerrar la pestaña y

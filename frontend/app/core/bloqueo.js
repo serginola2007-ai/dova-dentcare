@@ -18,7 +18,7 @@ const DovaBloqueo = (() => {
 
   const leer = (k) => { try { return Number(localStorage.getItem(k)) || 0; } catch (_e) { return 0; } };
   const escribir = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (_e) { /* sin almacenamiento */ } };
-  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { esc } = DovaAyudantes;
 
   function actividad() {
     if (visible) return;

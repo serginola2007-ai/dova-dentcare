@@ -135,7 +135,7 @@ const DovaVivo = (() => {
   const alCambiar = (fn) => { oyentes.add(fn); return () => oyentes.delete(fn); };
 
   // ---------- campanita de avisos ----------
-  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { esc } = DovaAyudantes;
   const hace = (iso) => {
     const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
     if (m < 1) return 'recién'; if (m < 60) return `hace ${m} min`;

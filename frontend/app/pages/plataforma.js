@@ -5,7 +5,7 @@
 const DovaPlataforma = (() => {
   const X = DovaExt;
   const { esc, toast } = X;
-  const gs = (n) => Vistas.fmtGs(n);
+  const { fmtGs } = DovaAyudantes;
   const mesActual = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date()).slice(0, 7);
 
   function estadoDe(c) {
@@ -22,13 +22,13 @@ const DovaPlataforma = (() => {
     root.innerHTML = `<div class="dova-plat">
       <div class="dova-view-header"><h2 class="dova-view-title">Plataforma</h2><button type="button" class="dova-btn-primary" data-plat-nueva>+ Nueva clínica</button></div>
       <p class="dova-nota">Las clínicas que usan DOVA. Acá cambiás su plan, las suspendés o anotás sus pagos. Nunca ves datos de sus pacientes.</p>
-      <div class="dova-plat-resumen"><div><strong>${clinicas.length}</strong><span>clínicas</span></div><div><strong>${activas.length}</strong><span>activas</span></div><div><strong>${gs(mensual)}</strong><span>por mes (activas)</span></div></div>
+      <div class="dova-plat-resumen"><div><strong>${clinicas.length}</strong><span>clínicas</span></div><div><strong>${activas.length}</strong><span>activas</span></div><div><strong>${fmtGs(mensual)}</strong><span>por mes (activas)</span></div></div>
       <div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Clínica</th><th>Código</th><th>Plan</th><th>Mensualidad</th><th>Último mes pagado</th><th>Estado</th><th></th></tr></thead><tbody>
       ${clinicas.map((c) => `<tr>
         <td><strong>${esc(c.nombre)}</strong><div class="dova-nota">${c.usuarios} usuarios</div></td>
         <td><code>${esc(c.slug)}</code></td>
         <td>${esc(c.nombrePlan)}${c.modulosExtra.length || c.modulosQuitar.length ? ' <span class="dova-nota">(ajustado)</span>' : ''}</td>
-        <td>${c.mensualidad ? gs(c.mensualidad) : '-'}</td>
+        <td>${c.mensualidad ? fmtGs(c.mensualidad) : '-'}</td>
         <td>${esc(c.ultimoPeriodoPagado || '-')}</td>
         <td>${estadoDe(c)}</td>
         <td class="dova-plat-acc">
@@ -129,7 +129,7 @@ const DovaPlataforma = (() => {
           <p class="dova-error-text" data-error hidden></p>
           <div class="dova-modal-actions"><button type="submit" class="dova-btn-primary">Anotar pago</button></div>
         </form>
-        ${lista.length ? `<table class="dova-tabla"><thead><tr><th>Mes</th><th>Monto</th><th>Pagó el</th><th>Nota</th><th></th></tr></thead><tbody>${lista.map((p) => `<tr><td>${esc(p.periodo)}</td><td>${gs(p.monto)}</td><td>${esc(Vistas.fmtFecha(p.fecha_pago))}</td><td>${esc(p.nota || '')}</td><td><button type="button" class="dova-btn-link" data-pg-del="${p.id}">Borrar</button></td></tr>`).join('')}</tbody></table>` : '<p class="dova-vacio">Todavía no hay pagos anotados.</p>'}
+        ${lista.length ? `<table class="dova-tabla"><thead><tr><th>Mes</th><th>Monto</th><th>Pagó el</th><th>Nota</th><th></th></tr></thead><tbody>${lista.map((p) => `<tr><td>${esc(p.periodo)}</td><td>${fmtGs(p.monto)}</td><td>${esc(Vistas.fmtFecha(p.fecha_pago))}</td><td>${esc(p.nota || '')}</td><td><button type="button" class="dova-btn-link" data-pg-del="${p.id}">Borrar</button></td></tr>`).join('')}</tbody></table>` : '<p class="dova-vacio">Todavía no hay pagos anotados.</p>'}
         <div class="dova-modal-actions"><button type="button" class="dova-btn-secundario" data-cerrar-modal>Cerrar</button></div>`;
       const form = box.querySelector('form'); const err = form.querySelector('[data-error]');
       form.addEventListener('submit', async (e) => {
@@ -170,7 +170,7 @@ const DovaPlataforma = (() => {
     : '<p class="dova-nota">Para conectarla hace falta una cuenta de comercio en la pasarela y cargar sus claves en el servidor (las claves no se guardan en la base). Pedile ayuda al proveedor de DOVA.</p>'}
       <h3 class="dova-section-title">Cobros</h3>
       ${lista.length ? `<div class="dova-ext-tabla-wrap"><table class="dova-tabla"><thead><tr><th>Paciente</th><th>Cuota</th><th>Monto</th><th>Estado</th><th>Cuándo</th><th></th></tr></thead><tbody>
-        ${lista.map((o) => `<tr><td>${esc(o.paciente)}</td><td>${esc(o.cuota)}</td><td>${gs(o.monto)}</td>
+        ${lista.map((o) => `<tr><td>${esc(o.paciente)}</td><td>${esc(o.cuota)}</td><td>${fmtGs(o.monto)}</td>
           <td>${X.badge(...EST_COBRO[o.estado] || [o.estado, 'info'])}${o.error ? `<div class="dova-nota">${esc(o.error)}</div>` : ''}</td>
           <td>${esc(X.fmtFechaHora(o.pagado || o.creado))}</td>
           <td>${['creado', 'revisar'].includes(o.estado) && est.configurado ? `<button type="button" class="dova-btn-link" data-co-reconsultar="${o.id}">Volver a consultar</button>` : ''}</td></tr>`).join('')}
@@ -190,3 +190,5 @@ const DovaPlataforma = (() => {
   return { seccion, tarjetaMiPlan, cobroOnline };
 })();
 window.DovaPlataforma = DovaPlataforma;
+
+DovaPantallas.registrar('plataforma', { dibujar: (contenedor) => DovaPlataforma.seccion(contenedor) });

@@ -725,3 +725,5 @@ const DovaFacturacion = (() => {
   };
 })();
 window.DovaFacturacion = DovaFacturacion;
+
+DovaPantallas.registrar('facturacion', { dibujar: (contenedor, { navegar, params }) => DovaFacturacion.seccion(contenedor, navegar, params) });

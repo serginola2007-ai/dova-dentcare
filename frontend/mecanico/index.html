@@ -5,7 +5,7 @@
        app/components  piezas reutilizables (kit, visor, importar…)
        app/pages       pantallas
        app/styles      estilos (base, componentes, tema mecánico, estilo sobrio)
-     El orden de los <script> importa: cada archivo usa lo que cargó antes. -->
+     El orden de los scripts importa: cada archivo usa lo que cargó antes. -->
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8" />
@@ -49,18 +49,40 @@
 
   <!-- NÚCLEO: configuración, conexión con el servidor y utilidades globales -->
   <script src="/app/core/config.js"></script>
+  <script src="/app/components/ayudantes.js"></script>
   <script src="/app/core/api.js"></script>
   <script src="/app/core/tiempo-real.js"></script>
   <script src="/app/core/iconos.js"></script>
   <script src="/app/core/comandos.js"></script>
-  <!-- PANTALLAS BASE (ingreso, inicio, pacientes, ficha, usuarios, configuración) -->
+  <script src="/app/core/pantallas.js"></script>
+  <!-- AYUDANTES Y PANTALLAS BASE (ingreso, inicio, pacientes, ficha, usuarios, configuración) -->
+  <script src="/app/pages/ingreso.js"></script>
+  <script src="/app/pages/configuracion.js"></script>
+  <script src="/app/pages/inicio.js"></script>
+  <script src="/app/pages/pacientes.js"></script>
+  <script src="/app/pages/ficha-paciente.js"></script>
+  <script src="/app/pages/consulta-paneles.js"></script>
+  <script src="/app/pages/ayuda-tecnica.js"></script>
+  <script src="/app/pages/usuarios.js"></script>
+  <script src="/app/components/buscador-global.js"></script>
   <script src="/app/pages/vistas.js"></script>
   <!-- KIT DE COMPONENTES (formularios, tablas, pestañas, modales) — antes de las pantallas que lo usan -->
   <script src="/app/components/kit.js"></script>
+  <script src="/app/components/turnos.js"></script>
+  <script src="/app/components/seccion-base.js"></script>
   <!-- PANTALLAS (una sección del menú o un grupo de secciones por archivo) -->
   <script src="/app/pages/ficha.js"></script>
-  <script src="/app/pages/secciones.js"></script>
-  <script src="/app/pages/operativo.js"></script>
+  <script src="/app/pages/seguimiento.js"></script>
+  <script src="/app/pages/clinica-operaciones.js"></script>
+  <script src="/app/pages/finanzas.js"></script>
+  <script src="/app/pages/estadisticas.js"></script>
+  <script src="/app/pages/reportes-auditoria.js"></script>
+  <script src="/app/pages/inicio-extras.js"></script>
+  <script src="/app/pages/agenda.js"></script>
+  <script src="/app/pages/caja.js"></script>
+  <script src="/app/pages/ficha-operativa.js"></script>
+  <script src="/app/pages/inventario.js"></script>
+  <script src="/app/pages/catalogo.js"></script>
   <script src="/app/pages/facturacion.js"></script>
   <script src="/app/pages/pagina-web.js"></script>
   <script src="/app/pages/clinica.js"></script>

@@ -332,3 +332,5 @@ const DovaWeb = (() => {
   return { seccion };
 })();
 window.DovaWeb = DovaWeb;
+
+DovaPantallas.registrar('web', { dibujar: (contenedor, { navegar, params }) => DovaWeb.seccion(contenedor, navegar, params) });

@@ -11,7 +11,7 @@ const DovaRapido = (() => {
 
   async function turno() {
     if (!puede('agenda.create')) { toast('No tenés permiso para reservar turnos', 'error'); return; }
-    await DovaOperativo.modalTurno({ soloDisponibles: true });
+    await DovaTurnos.modalTurno({ soloDisponibles: true });
   }
 
   function paciente(navegar) {
@@ -100,7 +100,7 @@ const DovaRapido = (() => {
           </div></div>`;
         const ver = box.querySelector('[data-rap-ver]'); if (ver) ver.addEventListener('click', () => ir(id));
         const tb = box.querySelector('[data-rap-turno]');
-        if (tb) tb.addEventListener('click', () => DovaOperativo.modalTurno({ soloDisponibles: true, fijo: { pacienteId: id, pacienteNombre: `${v('#rap-nombre') || ''} ${v('#rap-apellido') || ''}`.trim() } }));
+        if (tb) tb.addEventListener('click', () => DovaTurnos.modalTurno({ soloDisponibles: true, fijo: { pacienteId: id, pacienteNombre: `${v('#rap-nombre') || ''} ${v('#rap-apellido') || ''}`.trim() } }));
       } catch (ex) {
         err.textContent = ex.message || 'No se pudo guardar el paciente'; err.hidden = false; btn.disabled = false;
       }

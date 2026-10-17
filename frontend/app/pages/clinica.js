@@ -271,8 +271,8 @@ const DovaClinica = (() => {
       X.modal('Consulta finalizada', `<p>¿Qué querés hacer ahora?</p><div class="dova-cli-siguiente">${acc}</div>`);
       document.querySelectorAll('.dova-modal-box [data-sig]').forEach((b) => b.addEventListener('click', () => {
         const s = b.dataset.sig; X.cerrarModal();
-        if (s === 'proxima') return DovaOperativo.modalTurno({ fijo: { pacienteId: pid, pacienteNombre: nombre }, alGuardar: () => consulta(root, params, navegar) });
-        if (s === 'pago') return DovaOperativo.modalCobro(pid, { alGuardar: () => toast('Pago registrado', 'ok') });
+        if (s === 'proxima') return DovaTurnos.modalTurno({ fijo: { pacienteId: pid, pacienteNombre: nombre }, alGuardar: () => consulta(root, params, navegar) });
+        if (s === 'pago') return DovaFichaOperativa.modalCobro(pid, { alGuardar: () => toast('Pago registrado', 'ok') });
         if (s === 'receta') { consulta(root, params, navegar).then(() => abrirAccion('receta')); return null; }
         return salir();
       }));
@@ -283,13 +283,13 @@ const DovaClinica = (() => {
     async function abrirAccion(a) {
       const pn = root.querySelector('[data-panel]');
       root.querySelectorAll('[data-accion]').forEach((b) => b.classList.toggle('activo', b.dataset.accion === a));
-      if (a === 'pago') return DovaOperativo.modalCobro(pid, { alGuardar: () => toast('Pago registrado', 'ok') });
-      if (a === 'proxima') return DovaOperativo.modalTurno({ fijo: { pacienteId: pid, pacienteNombre: nombre }, alGuardar: () => toast('Próxima cita agendada', 'ok') });
+      if (a === 'pago') return DovaFichaOperativa.modalCobro(pid, { alGuardar: () => toast('Pago registrado', 'ok') });
+      if (a === 'proxima') return DovaTurnos.modalTurno({ fijo: { pacienteId: pid, pacienteNombre: nombre }, alGuardar: () => toast('Próxima cita agendada', 'ok') });
       pn.innerHTML = cargando;
       try {
         if (a === 'foto') return formFoto(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; } });
         if (a === 'estudio') return formEstudio(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; } });
-        if (a === 'presupuesto') { pn.innerHTML = '<div></div>'; return DovaOperativo.presupuestos(pn.firstElementChild, pid); }
+        if (a === 'presupuesto') { pn.innerHTML = '<div></div>'; return DovaFichaOperativa.presupuestos(pn.firstElementChild, pid); }
         if (a === 'receta') return formReceta(pn, pid, { hcId: () => hc && hc.id, asegurar: async () => { sucio = true; await guardarYa(); return hc && hc.id; }, medicacionSugerida: form && form.elements.medicacion.value.trim() });
         if (a === 'historial') return historialCompacto(pn, pid);
         pn.innerHTML = await Vistas.renderPanelConsulta(a, pid);
@@ -989,3 +989,9 @@ const DovaClinica = (() => {
   return { consulta, extenderFicha, compararPaciente, panelFotosEstudios, formFoto, formEstudio, formReceta, verPdf, planDetalle };
 })();
 window.DovaClinica = DovaClinica;
+
+// Modo consulta: consulta/<idPaciente> o consulta/<idPaciente>/t<idTurno>.
+DovaPantallas.registrar('consulta', {
+  permiso: 'historia_clinica.edit',
+  dibujar: (contenedor, { navegar, params }) => DovaClinica.consulta(contenedor, params, navegar),
+});

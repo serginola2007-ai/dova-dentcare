@@ -1,12 +1,11 @@
 import re, os, json
 import os.path as _p
 base=_p.abspath(_p.join(_p.dirname(_p.abspath(__file__)), '..', '..', 'src'))
-app=open(base+'/app.js').read()
-# map var -> require path
-req={m.group(1):m.group(2) for m in re.finditer(r"const (\w+) = require\('(\./modules/[^']+)'\)", app)}
-mounts=[]
-for m in re.finditer(r"app\.use\('(/api[^']*)', (\w+)(?:\.(\w+))?\)", app):
-    mounts.append((m.group(1), m.group(2), m.group(3)))
+# Las rutas de la API están listadas en src/rutas.js: [dirección, archivo, parte exportada?]
+tabla=open(base+'/rutas.js').read()
+req={}; mounts=[]
+for i,m in enumerate(re.finditer(r"\['(/api[^']*)', '(\./modules/[^']+)'(?:, '(\w+)')?\]", tabla)):
+    var=f'm{i}'; req[var]=m.group(2); mounts.append((m.group(1), var, m.group(3)))
 rutas=[]
 def parse_file(path, prefix, export=None, visited=None):
     visited = visited or set()

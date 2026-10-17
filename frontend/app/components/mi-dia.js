@@ -6,10 +6,8 @@
    Uso: DovaMiDia.montar(contenedor, { navegarAConsulta, navegarAFicha }) */
 (function () {
   'use strict';
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const gs = (n) => 'Gs. ' + Number(n || 0).toLocaleString('es-PY', { maximumFractionDigits: 0 });
+  const { esc, fmtGs, fmtFecha } = DovaAyudantes;
   const fechaLocal = (dias) => { const d = new Date(); d.setDate(d.getDate() + dias); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
-  const fmtFecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
   const fechaTexto = (iso) => { const t = new Date(`${iso}T12:00:00`).toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long' }); return t.charAt(0).toUpperCase() + t.slice(1); };
   const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '');
   const DIAS = [{ id: 0, label: 'Hoy' }, { id: 1, label: 'Mañana' }];
@@ -26,7 +24,7 @@
     for (const a of alertas) if (a.nivel === 'critica') out.push(chip('critica', a.titulo, a.detalle));
     const que = (l) => [l.trabajo, l.pieza ? `pieza ${l.pieza}` : ''].filter(Boolean).join(' ');
     for (const l of p.laboratorio || []) if (!l.llego) out.push(chip('critica', `Laboratorio sin llegar: ${que(l)}`, l.fechaEstimada ? `Fecha estimada: ${fmtFecha(l.fechaEstimada)}` : ''));
-    if (p.pagos && p.pagos.atrasado) out.push(chip('atencion', p.pagos.montoVencido !== undefined ? `Pagos atrasados: ${gs(p.pagos.montoVencido)}` : 'Pagos atrasados', 'Coordinar con recepción'));
+    if (p.pagos && p.pagos.atrasado) out.push(chip('atencion', p.pagos.montoVencido !== undefined ? `Pagos atrasados: ${fmtGs(p.pagos.montoVencido)}` : 'Pagos atrasados', 'Coordinar con recepción'));
     for (const c of p.consentimientos || []) out.push(chip('atencion', `Falta firmar: ${c}`));
     for (const a of alertas) if (a.nivel !== 'critica') out.push(chip('atencion', a.titulo, a.detalle));
     if (p.primeraVez) out.push(chip('info', 'Primera vez'));
@@ -48,7 +46,7 @@
     } else partes.push('<div>Sin consultas anteriores registradas.</div>');
     if ((p.planes || []).length) partes.push(`<div><strong>En curso:</strong> ${p.planes.map((pl) => esc(pl.nombre) + (pl.sesiones ? ` (sesión ${esc(pl.sesiones)})` : '')).join(' · ')}</div>`);
     if ((p.alertas || []).length) partes.push(`<div><strong>Salud:</strong><ul class="dova-midia-alertas">${p.alertas.map((a) => `<li class="${a.nivel === 'critica' ? 'critica' : ''}">${esc(a.titulo)}${a.detalle ? ` — ${esc(a.detalle)}` : ''}</li>`).join('')}</ul></div>`);
-    if (p.pagos && p.pagos.saldo !== undefined && p.pagos.saldo > 0) partes.push(`<div><strong>Saldo de cuenta:</strong> ${gs(p.pagos.saldo)}${p.pagos.cuotasVencidas ? ` · ${p.pagos.cuotasVencidas} cuota(s) vencida(s)` : ''}</div>`);
+    if (p.pagos && p.pagos.saldo !== undefined && p.pagos.saldo > 0) partes.push(`<div><strong>Saldo de cuenta:</strong> ${fmtGs(p.pagos.saldo)}${p.pagos.cuotasVencidas ? ` · ${p.pagos.cuotasVencidas} cuota(s) vencida(s)` : ''}</div>`);
     return partes.join('');
   }
 

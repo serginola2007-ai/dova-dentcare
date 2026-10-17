@@ -13,7 +13,7 @@ const DovaVentanas = (() => {
   const CLAVE = 'dova-ventanas';
   const CLAVE_ZOOM = 'dova-ventana-zoom';
   const ZMIN = 0.5; const ZMAX = 2; const ZPASO = 0.1;
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { esc } = DovaAyudantes;
   const movil = () => window.matchMedia('(max-width: 768px)').matches;
 
   let capa = null; let barra = null; let opciones = {};

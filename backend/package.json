@@ -13,7 +13,8 @@
     "seed": "node src/db/seed.js",
     "helpdesk:limpieza": "node src/jobs/limpiezaRetencionAdjuntos.js",
     "lint": "eslint .",
-    "build": "node scripts/verificar-sintaxis.js"
+    "build": "node scripts/verificar-sintaxis.js",
+    "lint:front": "cd ../frontend && eslint -c eslint.config.js app"
   },
   "license": "UNLICENSED",
   "dependencies": {

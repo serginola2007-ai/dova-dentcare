@@ -1,4 +1,4 @@
-/* global document, DovaApp, navigator */
+/* global document, DovaApp, location */
 // Avisos en el dispositivo: tarjeta en Configuración, service worker con push y navegación al tocar un aviso.
 const os = require('os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');

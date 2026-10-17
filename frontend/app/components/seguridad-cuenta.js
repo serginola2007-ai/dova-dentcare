@@ -3,8 +3,7 @@
    - política de la clínica (minutos sin uso hasta bloquear la pantalla),
      solo para quien administra la clínica. */
 const DovaSeguridad = (() => {
-  const esc = (t) => Vistas.esc(t);
-  const toast = (m, t) => Vistas.toast(m, t);
+  const { esc, toast } = DovaAyudantes;
   const fecha = (f) => (f ? new Date(f).toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' }) : '-');
 
   function seccionHtml() {

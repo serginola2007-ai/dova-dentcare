@@ -7,10 +7,7 @@
    Nada acá conoce reglas clínicas: esas viven en el backend. */
 const DovaExt = (() => {
   const V = () => Vistas; // global léxico de pages/vistas.js (script clásico)
-  const esc = (s) => V().esc(s);
-  const fmtFecha = (f) => V().fmtFecha(f);
-  const fmtGs = (n) => V().fmtGs(n);
-  const toast = (m, t) => V().toast(m, t);
+  const { esc, fmtFecha, fmtGs, toast } = DovaAyudantes;
   const puede = (...c) => c.some((x) => DOVA.tienePermiso(x));
   const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
   const sumarDias = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };

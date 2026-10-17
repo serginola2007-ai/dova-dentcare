@@ -120,7 +120,7 @@ const DovaPresupuestos = (() => {
       <form data-pres-form novalidate>
         <h3 class="dova-section-title">1. Paciente</h3>
         <div class="dova-ext-form-grid">
-          ${DovaOperativo.campoPacienteHtml('pacienteId')}
+          ${DovaTurnos.campoPacienteHtml('pacienteId')}
           <div class="dova-ext-campo" data-ci-campo hidden><label for="pres-ci">C.I. del paciente *</label><input id="pres-ci" name="pacienteCi" maxlength="20" autocomplete="off" placeholder="Ej.: 4.123.456"/>
             <p class="dova-ext-ayuda">Este paciente no tiene la C.I. cargada. Es obligatoria para presupuestar y queda guardada en su ficha.</p></div>
           <p class="dova-nota" data-ci-actual hidden></p>
@@ -179,7 +179,7 @@ const DovaPresupuestos = (() => {
       form.querySelector('[data-guardar]').disabled = falta.length > 0;
       return falta;
     }
-    DovaOperativo.activarBuscadorPaciente(form, async (id) => {
+    DovaTurnos.activarBuscadorPaciente(form, async (id) => {
       st.pacienteId = id; st.tieneCi = false;
       campoCi.hidden = true; ciActual.hidden = true;
       try {
@@ -215,3 +215,5 @@ const DovaPresupuestos = (() => {
   return { seccion };
 })();
 window.DovaPresupuestos = DovaPresupuestos;
+
+DovaPantallas.registrar('presupuestos', { dibujar: (contenedor, { navegar, params }) => DovaPresupuestos.seccion(contenedor, navegar, params) });
