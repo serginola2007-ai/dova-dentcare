@@ -903,3 +903,9 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - **Revisión automática del front** (`npm run lint:front` desde `backend/`): encontró un error real que ya estaba: **Inventario → Registrar compra** fallaba al abrir el formulario. Corregido.
 - El barrido de seguridad ahora lee `rutas.js` y prueba **600 direcciones** (17 que antes no barría).
 - **Pruebas:** regresión completa de pantallas (19 archivos), pruebas de API y suites de seguridad.
+
+## Tanda: bordes de ventana más marcados (19/10/2026)
+
+- Las ventanas tienen un marco de 2px con una línea oscura por fuera y más sombra. La ventana de adelante lleva el color de la marca; las de atrás, un tono apagado, así se distingue cuál está activa. Lo mismo para los cuadros que se abren encima (formularios, confirmaciones).
+- Funciona en modo claro y oscuro (en oscuro el marco es terracota claro para que resalte). En el celular la ventana sigue a pantalla completa, sin marco.
+- **Pruebas:** `ui-ventanas` 46/46, `ui-mecanico` 33/33, `ui-visual` 20/20.

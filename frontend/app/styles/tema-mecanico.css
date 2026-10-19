@@ -14,6 +14,7 @@
   --mec-escritorio: #9A5536; --mec-luz: #FFFFFF; --mec-sombra: #6E5A48; --mec-hundido: #B49C82; --mec-activo: #E6D3BA;
   --mec-linea: #EADCC8; --mec-fila-par: #FBF4EA; --mec-hover: #F6E2D3; --mec-in-osc: #9C866F; --mec-in-luz: #E3D2BC;
   --mec-trazo: #2B241E; --mec-enlace: #5E3322; --mec-marca: #9A5536; --mec-inact1: #8a7a6e; --mec-inact2: #b5a698;
+  --mec-marco: #5E3322; --mec-marco-inact: #7A685B;   /* borde de ventanas y cuadros (activo / atrás) */
   --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(60,30,15,0.30);
 }
 /* Modo oscuro: mismos tonos de la marca (terracota, crema, salvia) sobre marrones muy oscuros. */
@@ -27,6 +28,7 @@
   --mec-escritorio: #17100C; --mec-luz: #54433A; --mec-sombra: #0E0906; --mec-hundido: #6A5646; --mec-activo: #46352A;
   --mec-linea: #3A2D24; --mec-fila-par: #2C221B; --mec-hover: #4A3226; --mec-in-osc: #0E0906; --mec-in-luz: #54433A;
   --mec-trazo: #000000; --mec-enlace: #E8A57C; --mec-marca: #E8A57C; --mec-inact1: #3A3029; --mec-inact2: #54453A;
+  --mec-marco: #D98159; --mec-marco-inact: #7A6558;
   --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(0,0,0,0.6);
 }
 body { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; font-size: 12px; background: var(--mec-escritorio); color: var(--ink); }
@@ -85,7 +87,7 @@ label { font-size: 11px; color: var(--ink); }
 .dova-btn-secundario { background: var(--gris); color: var(--ink); }
 .dova-btn-primary:active, .dova-btn-primario:active, .dova-btn-secundario:active { box-shadow: none; transform: translate(1px, 1px); }
 .dova-tabs, .dova-ext-subtabs { border-bottom: 1px solid var(--mec-hundido); }
-.dova-modal { border-radius: 0; border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); }
+.dova-modal, .dova-modal-box { border-radius: 0; border: 2px solid var(--mec-marco); box-shadow: 0 0 0 1px var(--mec-trazo), 6px 6px 0 rgba(0,0,0,0.40); }
 
 /* Columna derecha: parámetros y ventanas recientes */
 .mec-lateral { flex: 0 0 250px; margin: 10px 10px 10px 0; display: flex; flex-direction: column; gap: 10px; }
@@ -141,8 +143,11 @@ label { font-size: 11px; color: var(--ink); }
 
 /* ---- Ventanas (escritorio con ventanas): marco clásico con los colores de la clínica ---- */
 .mec-shell ~ .dova-ventanas .dova-ventana, .dova-ventana { border-radius: 0; }
-body .dova-ventana { border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); background: var(--gris-claro); }
-body .dova-ventana.activa { box-shadow: 4px 4px 0 rgba(60,30,15,0.45); }
+/* Borde de ventana bien marcado: marco de 2px + línea oscura por fuera + sombra.
+   La ventana de adelante lleva el color de la marca; las de atrás, uno apagado. */
+body .dova-ventana { border: 2px solid var(--mec-marco-inact); box-shadow: 0 0 0 1px var(--mec-trazo), 4px 4px 0 rgba(0,0,0,0.30); background: var(--gris-claro); }
+body .dova-ventana.activa { border-color: var(--mec-marco); box-shadow: 0 0 0 1px var(--mec-trazo), 6px 6px 0 rgba(0,0,0,0.40); }
+@media (max-width: 768px) { body .dova-ventana, body .dova-ventana.activa { border: 0; box-shadow: none; } }   /* en el celular la ventana ocupa toda la pantalla */
 body .dova-ventana-barra { height: 26px; padding: 0 3px 0 8px; background: linear-gradient(90deg, var(--mec-inact1), var(--mec-inact2)); color: #FFFFFF; border-bottom: 1px solid var(--bordo-osc); }
 body .dova-ventana.activa .dova-ventana-barra { background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
 body .dova-ventana:not(.activa) .dova-ventana-titulo { color: #F3ECE3; }
