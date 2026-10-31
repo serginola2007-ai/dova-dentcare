@@ -260,16 +260,8 @@ const DovaFichaPaciente = (() => {
 
       <div class="dova-tab-panel" data-panel="odontograma" style="display:none;">
         <h3 class="dova-section-title">Odontograma</h3>
-        <p class="dova-nota">Seleccioná una pieza para ver su expediente histórico completo.</p>
-        <div class="dova-odontograma-grid">
-          ${['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
-             '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38']
-            .map((p) => {
-              const estado = (odontograma || []).find((o) => o.pieza === p);
-              const clase = estado ? `pieza-${estado.estado}` : 'pieza-sano';
-              return `<button class="dova-pieza ${clase}" data-ver-pieza="${p}" title="Pieza ${p}${estado ? ' — ' + estado.estado : ''}">${p}</button>`;
-            }).join('')}
-        </div>
+        <p class="dova-nota">Tocá una pieza para ver su expediente histórico completo.</p>
+        ${DovaOdontograma.html(odontograma)}
         <div id="pieza-expediente-root"></div>
       </div>
 
@@ -329,6 +321,8 @@ const DovaFichaPaciente = (() => {
         if (panel) panel.style.display = '';
       });
     });
+
+    DovaOdontograma.activar(document);
 
     // Ver expediente de pieza
     document.querySelectorAll('[data-ver-pieza]').forEach((btn) => {

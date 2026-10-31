@@ -738,3 +738,51 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-atender-fila[data-nivel="aviso"] { box-shadow: inset 3px 0 0 var(--terracotta); padding-left: 10px; }
 .dova-campana-num.vista { background: var(--mec-hundido, #B49C82); color: var(--ink); font-weight: 600; }
 .dova-apariencia-sub { margin: 14px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-soft); }
+
+/* ===== Odontograma dibujado (components/odontograma.js) =====
+   Dibujo en línea, sin colores: trazo del color del texto sobre el fondo de la ficha.
+   Cambiar de vista mueve cada pieza (left/top/giro) con una transición escalonada
+   desde los incisivos hacia los molares, así la boca "se abre" en filas. */
+.dova-odonto { margin: 12px 0 16px; }
+.odo-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.odo-vista-texto { font-size: 12px; color: var(--ink-soft); }
+.odo-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.odo-lienzo.dova-odontograma-grid { display: block; position: relative; max-width: 760px; margin: 0 auto; height: 420px;
+  transition: height 700ms cubic-bezier(.65, 0, .35, 1); }
+.dova-odonto .dova-pieza[class] { position: absolute; left: 50%; top: 50%; width: 30px; height: 60px; padding: 0; margin: 0;
+  aspect-ratio: auto; border: 0; border-radius: 0; background: transparent; color: var(--ink); text-decoration: none; font-weight: 400; cursor: pointer;
+  transform: translate(-50%, -50%) rotate(var(--giro, 0deg)); transform-origin: 50% 50%;
+  transition: left 760ms cubic-bezier(.65, 0, .35, 1), top 760ms cubic-bezier(.65, 0, .35, 1), width 760ms ease, height 760ms ease, transform 760ms cubic-bezier(.65, 0, .35, 1);
+  transition-delay: var(--demora, 0ms); }
+.odo-lienzo.odo-sin-animacion, .odo-lienzo.odo-sin-animacion .dova-pieza[class], .odo-lienzo.odo-sin-animacion .odo-numero { transition: none !important; }
+.odo-dibujo { display: block; width: 100%; height: 100%; overflow: visible; }
+.odo-raiz, .odo-corona { fill: var(--white); stroke: var(--ink); stroke-width: 0.9; stroke-linejoin: round; }
+.odo-detalle { fill: none; stroke: var(--ink); stroke-width: 0.5; stroke-opacity: 0.45; stroke-linecap: round; }
+.odo-patron { stroke: var(--ink); stroke-width: 0.55; }
+.odo-marca, .odo-marca-relleno { stroke: var(--ink); stroke-width: 0.8; }
+.odo-marca { fill: none; }
+.odo-marca-llena { fill: var(--ink); stroke: none; }
+.odo-marca-fuerte { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.odo-marca-x { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.odo-conducto { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; }
+.odo-ausente { opacity: 0.28; }
+.odo-ausente .odo-raiz, .odo-ausente .odo-corona { stroke-dasharray: 2 1.6; }
+/* Número de la pieza: siempre derecho, del lado de afuera (raíces). */
+.odo-numero { position: absolute; left: 50%; font-size: 11px; line-height: 1; color: var(--ink-soft); white-space: nowrap; pointer-events: none;
+  transform: translateX(-50%) rotate(calc(-1 * var(--giro, 0deg)));
+  transition: transform 760ms cubic-bezier(.65, 0, .35, 1); transition-delay: var(--demora, 0ms); }
+.odo-arriba .odo-numero { bottom: calc(100% + 3px); }
+.odo-abajo .odo-numero { top: calc(100% + 3px); }
+.dova-odonto .dova-pieza:hover .odo-corona, .dova-odonto .dova-pieza:hover .odo-raiz { stroke-width: 1.6; }
+.dova-odonto .dova-pieza:hover .odo-numero { color: var(--ink); font-weight: 700; }
+.dova-odonto .dova-pieza:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* Presupuesto desde el odontograma: la pieza elegida se marca con un recuadro de línea. */
+.dova-odonto .dova-pieza.dova-pieza-elegida { outline: 2px dashed var(--ink); outline-offset: 3px; background: transparent; color: var(--ink); }
+.dova-odonto .dova-pieza.dova-pieza-elegida .odo-numero { color: var(--ink); font-weight: 700; }
+.odo-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 0 0; margin: 8px 0 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--ink-soft); }
+.odo-leyenda li { display: flex; align-items: center; gap: 5px; }
+.odo-leyenda .odo-dibujo { width: 15px; height: 44px; }
+.odo-leyenda .odo-ausente { opacity: 0.45; }
+@media (prefers-reduced-motion: reduce) {
+  .odo-lienzo.dova-odontograma-grid, .dova-odonto .dova-pieza[class], .odo-numero { transition: none !important; }
+}

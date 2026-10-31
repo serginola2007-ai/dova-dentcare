@@ -221,3 +221,8 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Dentro de una ventana (`html.dova-modo-ventana`) el título de la sección se oculta: ya está en la barra de la ventana.
 - Formatos: montos con espacio duro (`Gs.\u00a0`), horas con `hour12: false`.
 - Pruebas: `tests/ui-visual.js`.
+
+## Odontograma dibujado
+- `app/components/odontograma.js` (`DovaOdontograma.html(filas)` + `activar(raiz)`): dibujo SVG en línea de cada pieza (`FORMAS` sup1..sup8 / inf1..inf8, se espeja para el lado izquierdo y se da vuelta para abajo), sin colores; estados como marcas de trazo. Vistas `boca` (arcadas en elipse, piezas giradas al centro) y `filas`; el cambio anima `left/top/transform` con demora escalonada (`--demora`). Vista recordada en `localStorage('dova-odonto-vista')`.
+- Cada pieza sigue siendo `<button class="dova-pieza pieza-<estado>" data-ver-pieza>` dentro de `.dova-odontograma-grid` (expediente y `presupuestoDesdeOdontograma` no cambian). Estilos al final de `componentes.css`. Prueba: `tests/ui-odontograma.js` (21).
+

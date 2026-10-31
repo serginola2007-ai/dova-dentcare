@@ -909,3 +909,27 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Las ventanas tienen un marco de 2px con una línea oscura por fuera y más sombra. La ventana de adelante lleva el color de la marca; las de atrás, un tono apagado, así se distingue cuál está activa. Lo mismo para los cuadros que se abren encima (formularios, confirmaciones).
 - Funciona en modo claro y oscuro (en oscuro el marco es terracota claro para que resalte). En el celular la ventana sigue a pantalla completa, sin marco.
 - **Pruebas:** `ui-ventanas` 46/46, `ui-mecanico` 33/33, `ui-visual` 20/20.
+
+## Tanda: odontograma dibujado con dos vistas (31/10/2026)
+
+- Cada pieza es un **dibujo en línea de su forma real** (corona y raíces vistas de frente), sin colores. Arriba y abajo son distintas, y cada tipo tiene su forma:
+  - incisivos y caninos, con una raíz;
+  - el primer premolar de arriba, con raíz bifurcada;
+  - los molares de arriba, con tres raíces; los de abajo, con dos;
+  - los terceros molares, con raíces fusionadas.
+- **Hallazgos marcados con trazo:**
+  - caries: punto lleno;
+  - restauración, sellante y corona: rayado;
+  - prótesis: cuadriculado;
+  - endodoncia: conductos;
+  - implante: tornillo en lugar de raíz;
+  - fractura: zigzag;
+  - extracción indicada: X;
+  - ausente: pieza punteada y apagada.
+  Leyenda abajo.
+- **Dos vistas:**
+  - **como en la boca**: las arcadas de arriba y de abajo, con cada pieza girada hacia el centro;
+  - **en fila**: las 16 de arriba una al lado de la otra y las 16 de abajo debajo.
+- El botón **Cambiar de vista** pasa de una a otra con una animación: la boca "se abre" desde los incisivos hacia los molares. Se recuerda la vista elegida.
+- Tocar una pieza sigue abriendo su expediente y el presupuesto desde el odontograma funciona igual.
+- **Pruebas:** `ui-odontograma` 21/21 (escritorio claro y oscuro, celular sin desbordes).
