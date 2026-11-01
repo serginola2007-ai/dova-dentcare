@@ -786,3 +786,13 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 @media (prefers-reduced-motion: reduce) {
   .odo-lienzo.dova-odontograma-grid, .dova-odonto .dova-pieza[class], .odo-numero { transition: none !important; }
 }
+/* Opción B (oclusal): en la boca se ve cada pieza desde arriba; en fila, de frente. Se cruzan con un fundido. */
+.dova-odonto[data-estilo="oclusal"] .odo-lienzo .odo-dibujo { position: absolute; inset: 0; transition: opacity 520ms ease; transition-delay: var(--demora, 0ms); }
+.dova-odonto[data-estilo="oclusal"][data-vista="boca"] .odo-lienzo .odo-dibujo-lat,
+.dova-odonto[data-estilo="oclusal"]:not([data-vista="boca"]) .odo-lienzo .odo-dibujo-ocl { opacity: 0; }
+.odo-surco { stroke-opacity: 0.6; stroke-width: 0.6; }
+/* Opción C (grabado): sombreado con líneas finas, trazo más fino. */
+.odo-patron-fino { stroke: var(--ink); stroke-width: 0.32; }
+.dova-odonto[data-estilo="grabado"] .odo-raiz, .dova-odonto[data-estilo="grabado"] .odo-corona { stroke-width: 0.75; }
+.dova-odonto[data-estilo="grabado"] .odo-detalle { stroke-opacity: 0.6; }
+.odo-sombra { opacity: 0.85; }

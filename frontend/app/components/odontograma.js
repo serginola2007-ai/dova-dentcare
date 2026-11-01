@@ -164,6 +164,63 @@ const DovaOdontograma = (() => {
     return esIzquierdo(pieza) ? [40 - x - w, w] : [x, w];
   }
 
+
+  /* ---------- Vista oclusal (desde arriba): opción B ----------
+     Mismo ancho que la vista de frente; alto 40. Vestibular arriba (y≈4), lingual/palatino abajo. */
+  const OCLUSAL = {
+    sup1: { contorno: 'M7 12Q20 5 33 12Q35 17 30 25Q25 33 20 33Q15 33 10 25Q5 17 7 12Z', detalles: ['M9 13Q20 8.5 31 13', 'M15 27Q20 31 25 27', 'M12 15Q14 21 17 26', 'M28 15Q26 21 23 26'] },
+    sup2: { contorno: 'M10 13Q20 7 30 13Q32 18 28 25Q24 31 20 31Q16 31 12 25Q8 18 10 13Z', detalles: ['M11.5 14Q20 9.5 28.5 14', 'M16.5 26Q20 29 23.5 26'] },
+    sup3: { contorno: 'M9 16Q13 7 20.5 6Q28 7 32 16Q33 23 27 29Q20.5 34 14 29Q8 23 9 16Z', detalles: ['M10 16L20.5 12.5L31 16', 'M20.5 12.5L20.5 27', 'M15 25Q20.5 30 26 25'] },
+    sup4: { contorno: 'M8 11Q20 4 32 11Q35 20 32 29Q20 36 8 29Q5 20 8 11Z', detalles: ['M10 20Q20 17.5 30 20', 'M13 12Q20 9 27 12', 'M13 28Q20 31 27 28'] },
+    sup5: { contorno: 'M9 11Q20 5 31 11Q34 20 31 29Q20 35 9 29Q6 20 9 11Z', detalles: ['M11 20Q20 18.5 29 20', 'M14 12Q20 10 26 12', 'M14 28Q20 30 26 28'] },
+    sup6: { contorno: 'M5 8Q13 3.5 22 4.5Q33 5.5 36 11Q38.5 21 35 31Q28 37 17 36Q6 35 4 27Q2 17 5 8Z', detalles: ['M10 11Q16 16 20 20Q24 16 30 11', 'M20 20Q17 26 12 31', 'M20 20Q25 24 31 27', 'M28 27Q23 32 19 33'] },
+    sup7: { contorno: 'M6 9Q14 4.5 22 5Q31 6 34 11Q36.5 20 33 29Q27 35 18 34Q8 33 6 26Q4 17 6 9Z', detalles: ['M11 11Q16 16 20 19Q24 16 29 11', 'M20 19Q17 25 13 29', 'M20 19Q25 23 30 25'] },
+    sup8: { contorno: 'M8 11Q15 6 21 6.5Q29 7.5 32 13Q34 21 30 28Q24 33 17 32Q10 30 8 24Q6 17 8 11Z', detalles: ['M12 13Q17 17 20 19Q24 16 28 13', 'M20 19Q18 24 15 28'] },
+    inf1: { contorno: 'M11.5 14Q20 10.5 28.5 14Q30 20 26 26Q20 30 14 26Q10 20 11.5 14Z', detalles: ['M12.5 15Q20 12 27.5 15'] },
+    inf2: { contorno: 'M10.5 14Q20 10 29.5 14Q31 20 27 26Q20 30.5 13 26Q9 20 10.5 14Z', detalles: ['M11.5 15Q20 11.5 28.5 15'] },
+    inf3: { contorno: 'M10 15Q14 8 20.5 7.5Q27 8 31 15Q32 22 27 28Q20.5 32 14 28Q9 22 10 15Z', detalles: ['M11 15L20.5 12L30 15', 'M20.5 12L20.5 26'] },
+    inf4: { contorno: 'M9 13Q20 6 31 13Q33 21 29 28Q20 33 11 28Q7 21 9 13Z', detalles: ['M11 22Q20 20 29 22', 'M20 9Q19.5 15 20 21'] },
+    inf5: { contorno: 'M8.5 12Q20 5 31.5 12Q34 20 31 28Q20 34 9 28Q6 20 8.5 12Z', detalles: ['M11 19Q16 19 20 21.5Q24 19 29 19', 'M20 21.5L20 30'] },
+    inf6: { contorno: 'M4 10Q12 5.5 22 6Q32 6.5 36 11Q38.5 20 36 29Q30 34.5 20 34.5Q9 34.5 4 29Q1.5 20 4 10Z', detalles: ['M7 20Q14 18 20 20Q27 22 34 19', 'M14 8Q15 14 14 19', 'M26 8Q25 14 26.5 21', 'M20 20L20 32'] },
+    inf7: { contorno: 'M5 10Q20 5 35 10Q37.5 20 35 30Q20 35 5 30Q2.5 20 5 10Z', detalles: ['M7.5 20Q20 18 32.5 20', 'M20 8L20 32'] },
+    inf8: { contorno: 'M7 12Q20 6 33 12Q35 20 32 28Q20 33.5 9 28Q5.5 20 7 12Z', detalles: ['M10 20Q20 18.5 30 20', 'M18 10Q20 15 20 19.5Q21 25 19 30'] },
+  };
+  const oclusalDe = (pieza) => OCLUSAL[(esArriba(pieza) ? 'sup' : 'inf') + pieza[1]];
+
+  function marcasOclusal(estados, f, contorno, idPatron) {
+    const cx = f.cx; const [x0, w] = f.vb; const x1 = x0 + w;
+    const m = [];
+    if (estados.has('corona')) m.push(`<path class="odo-marca-relleno" d="${contorno}" fill="url(#${idPatron}-rayado)"/>`);
+    if (estados.has('protesis')) m.push(`<path class="odo-marca-relleno" d="${contorno}" fill="url(#${idPatron}-cuadros)"/>`);
+    if (estados.has('restauracion')) m.push(`<ellipse class="odo-marca-relleno" cx="${cx}" cy="20" rx="${Math.min(6, w / 4)}" ry="4.5" fill="url(#${idPatron}-rayado)"/>`);
+    if (estados.has('sellante')) m.push(`<path class="odo-marca-relleno" d="M${cx - 7} 18.5h14v3h-14Z" fill="url(#${idPatron}-rayado)"/>`);
+    if (estados.has('caries')) m.push(`<path class="odo-marca-llena" d="M${cx - 2} 16.5q2.2-3.4 5.4-1.4q2.6 1.8.6 5.2q-2.4 2.8-5.2.8q-2.4-1.8-.8-4.6Z"/>`);
+    if (estados.has('endodoncia')) m.push(`<circle class="odo-marca" cx="${cx}" cy="20" r="3.2"/><circle class="odo-marca-llena" cx="${cx}" cy="20" r="1.2"/>`);
+    if (estados.has('implante')) m.push(`<circle class="odo-marca" cx="${cx}" cy="20" r="6"/><path class="odo-marca" d="M${cx - 2.6} 18.5L${cx} 17L${cx + 2.6} 18.5V21.5L${cx} 23L${cx - 2.6} 21.5Z"/>`);
+    if (estados.has('fractura')) {
+      const pasos = []; let x = x0 + 3; let arriba = true;
+      while (x < x1 - 3) { pasos.push(`${x} ${arriba ? 17 : 23}`); x += 3.6; arriba = !arriba; }
+      m.push(`<path class="odo-marca-fuerte" d="M${pasos.join('L')}"/>`);
+    }
+    if (estados.has('tratamiento_realizado')) m.push(`<path class="odo-marca-fuerte" d="M${cx - 4.5} 20l3.2 3.6l6.5-7.5"/>`);
+    if (estados.has('otro')) m.push(`<path class="odo-marca-fuerte" d="M${cx} 16v8M${cx - 3.5} 18l7 4M${cx + 3.5} 18l-7 4"/>`);
+    if (estados.has('extraccion_indicada')) m.push(`<path class="odo-marca-x" d="M${x0 + 3} 4L${x1 - 3} 36M${x1 - 3} 4L${x0 + 3} 36"/>`);
+    return m.join('');
+  }
+
+  function dibujoOclusal(pieza, estados, idPatron) {
+    const f = formaDe(pieza); const o = oclusalDe(pieza);
+    const [vx, vw] = viewBox(pieza);
+    const sx = esIzquierdo(pieza) ? -1 : 1; const sy = esArriba(pieza) ? 1 : -1;
+    const transformacion = `matrix(${sx} 0 0 ${sy} ${sx < 0 ? 40 : 0} ${sy < 0 ? 40 : 0})`;
+    return `<svg class="odo-dibujo odo-dibujo-ocl" viewBox="${vx} 0 ${vw} 40" aria-hidden="true" focusable="false">
+      <g transform="${transformacion}" class="${estados.has('ausente') ? 'odo-ausente' : ''}">
+        <path class="odo-corona" d="${o.contorno}"/>
+        ${o.detalles.map((d) => `<path class="odo-detalle odo-surco" d="${d}"/>`).join('')}
+        ${marcasOclusal(estados, f, o.contorno, idPatron)}
+      </g></svg>`;
+  }
+
   /* ---------- Marcas de cada estado (en el mismo marco que la forma) ---------- */
   function marcas(estados, f, idPatron) {
     const cx = f.cx; const [x0, w] = f.vb; const x1 = x0 + w;
@@ -190,17 +247,27 @@ const DovaOdontograma = (() => {
   }
 
   // SVG de una pieza (sin el número). estados: Set con los estados registrados.
-  function dibujo(pieza, estados, idPatron) {
+  // grabado: suma sombreado con líneas del lado distal (opción C).
+  function dibujo(pieza, estados, idPatron, grabado = false) {
     const f = formaDe(pieza);
     const [vx, vw] = viewBox(pieza);
     const sx = esIzquierdo(pieza) ? -1 : 1; const sy = esArriba(pieza) ? 1 : -1;
     const transformacion = `matrix(${sx} 0 0 ${sy} ${sx < 0 ? 40 : 0} ${sy < 0 ? 80 : 0})`;
     const ausente = estados.has('ausente');
     const implante = estados.has('implante');
-    return `<svg class="odo-dibujo" viewBox="${vx} 0 ${vw} 80" aria-hidden="true" focusable="false">
+    const raices = implante ? [] : f.raices;
+    const idClip = `${idPatron}-c${pieza}`;
+    const [x0, w] = f.vb;
+    const sombra = grabado && !ausente ? `<clipPath id="${idClip}">${[...raices, f.corona].map((d) => `<path d="${d}"/>`).join('')}</clipPath>
+        <g clip-path="url(#${idClip})" class="odo-sombra">
+          <rect x="${x0}" y="0" width="${w * 0.36}" height="80" fill="url(#${idPatron}-sombra)"/>
+          <rect x="${x0}" y="0" width="${w}" height="44" fill="url(#${idPatron}-sombra-suave)"/>
+        </g>` : '';
+    return `<svg class="odo-dibujo odo-dibujo-lat" viewBox="${vx} 0 ${vw} 80" aria-hidden="true" focusable="false">
       <g transform="${transformacion}" class="${ausente ? 'odo-ausente' : ''}">
-        ${implante ? '' : f.raices.map((d) => `<path class="odo-raiz" d="${d}"/>`).join('')}
+        ${raices.map((d) => `<path class="odo-raiz" d="${d}"/>`).join('')}
         <path class="odo-corona" d="${f.corona}"/>
+        ${sombra}
         ${f.detalles.map((d) => `<path class="odo-detalle" d="${d}"/>`).join('')}
         ${marcas(estados, f, idPatron)}
       </g></svg>`;
@@ -210,6 +277,8 @@ const DovaOdontograma = (() => {
   const patrones = (id) => `<svg class="odo-defs" aria-hidden="true" focusable="false" width="0" height="0"><defs>
     <pattern id="${id}-rayado" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V3" class="odo-patron"/></pattern>
     <pattern id="${id}-cuadros" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><path d="M0 0H3.4M0 0V3.4" class="odo-patron"/></pattern>
+    <pattern id="${id}-sombra" width="1.6" height="1.6" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)"><path d="M0 0V1.6" class="odo-patron-fino"/></pattern>
+    <pattern id="${id}-sombra-suave" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)"><path d="M0 0V3.2" class="odo-patron-fino"/></pattern>
   </defs></svg>`;
 
   // Leyenda con la marca de cada estado, dibujada sobre un premolar.
@@ -218,8 +287,12 @@ const DovaOdontograma = (() => {
     return `<ul class="odo-leyenda">${lista.map((e) => `<li>${dibujo('15', new Set([e]), idPatron)}<span>${esc(NOMBRE_ESTADO[e])}</span></li>`).join('')}</ul>`;
   }
 
+  // Estilo del dibujo: linea (A), oclusal (B) o grabado (C).
+  const ESTILOS = ['linea', 'oclusal', 'grabado'];
+  const leerEstilo = () => { try { const e = localStorage.getItem('dova-odonto-estilo'); return ESTILOS.includes(e) ? e : 'linea'; } catch (_e) { return 'linea'; } };
+
   let contador = 0;
-  function html(filas) {
+  function html(filas, estilo = leerEstilo()) {
     const id = `odo${++contador}`;
     const porPieza = new Map();
     (filas || []).forEach((f) => { if (!porPieza.has(f.pieza)) porPieza.set(f.pieza, new Set()); porPieza.get(f.pieza).add(f.estado); });
@@ -228,9 +301,9 @@ const DovaOdontograma = (() => {
       const principal = PRIORIDAD.find((e) => estados.has(e)) || 'sano';
       const nombres = [...estados].filter((e) => e !== 'sano').map((e) => NOMBRE_ESTADO[e] || e);
       return `<button type="button" class="dova-pieza pieza-${principal} ${esArriba(p) ? 'odo-arriba' : 'odo-abajo'}" data-ver-pieza="${p}"
-        title="Pieza ${p}${nombres.length ? ' — ' + esc(nombres.join(', ')) : ''}">${dibujo(p, estados, id)}<span class="odo-numero">${p}</span></button>`;
+        title="Pieza ${p}${nombres.length ? ' — ' + esc(nombres.join(', ')) : ''}">${dibujo(p, estados, id, estilo === 'grabado')}${estilo === 'oclusal' ? dibujoOclusal(p, estados, id) : ''}<span class="odo-numero">${p}</span></button>`;
     };
-    return `<div class="dova-odonto" data-odonto="${id}">
+    return `<div class="dova-odonto" data-odonto="${id}" data-estilo="${estilo}">
       <div class="odo-barra">
         <span class="odo-vista-texto" data-odo-texto>Vista: como en la boca</span>
         <button type="button" class="dova-btn-secundario" data-odo-cambiar aria-pressed="false">Cambiar de vista</button>
@@ -264,15 +337,28 @@ const DovaOdontograma = (() => {
     return { pos, alto: yAbajo + alto / 2 + numero + 8, escala, piezas };
   }
 
-  function posicionesBoca(ancho) {
+  // Forma de la arcada por estilo: a = mitad del ancho, b = profundidad, barrido = cuánto baja a los costados.
+  const ARCADA = {
+    linea: { a: 0.30, aMax: 215, b: 0.92, barrido: Math.PI / 12, altoUnidades: 80 },
+    oclusal: { a: 0.25, aMax: 175, b: 1.28, barrido: Math.PI / 30, altoUnidades: 40, llenar: true },
+    grabado: { a: 0.27, aMax: 195, b: 1.12, barrido: Math.PI / 18, altoUnidades: 80 },
+  };
+
+  function posicionesBoca(ancho, estilo = 'linea', abierta = 0) {
     // Cada arcada es media elipse; las piezas se reparten según su ancho y miran al centro.
-    const escala = Math.min(ancho / 560, 1.15);
-    const a = Math.min(ancho * 0.30, 215); const b = a * 0.92; // forma de herradura
-    const alto = 80 * escala; const numero = 16;
-    const cyArriba = numero + alto / 2 + b + 6;
-    const cyAbajo = cyArriba + 2 * b * Math.sin(Math.PI / 12) + alto * 0.4 + 16;
+    const forma = ARCADA[estilo] || ARCADA.linea;
+    const a = Math.min(ancho * forma.a, forma.aMax); const b = a * forma.b;
+    let escala = Math.min(ancho / 560, 1.15);
+    const numero = 16;
+    const t0 = Math.PI + forma.barrido; const t1 = -forma.barrido;
+    const totalUnidades = ARRIBA.reduce((s, p) => s + viewBox(p)[1] + SEP, 0);
+    // Largo de la media elipse (para que las piezas oclusales se toquen, como en la boca).
+    const largoArco = (() => { let l = 0; let ant = null; for (let i = 0; i <= 400; i++) { const t = t0 + (t1 - t0) * (i / 400); const q = [a * Math.cos(t), b * Math.sin(t)]; if (ant) l += Math.hypot(q[0] - ant[0], q[1] - ant[1]); ant = q; } return l; })();
+    if (forma.llenar) escala = (largoArco * 0.98) / totalUnidades;
+    const alto = forma.altoUnidades * escala;
+    const cyArriba = numero + alto / 2 + b + 6 - abierta;
+    const cyAbajo = cyArriba + abierta + 2 * b * Math.sin(forma.barrido) + alto * (forma.llenar ? 0.5 : 0.4) + 16 + abierta;
     const pos = {};
-    const t0 = Math.PI + Math.PI / 12; const t1 = -Math.PI / 12; // de 195° a -15°
     const arco = (lista, cy, signo) => {
       // Largo de arco acumulado para repartir por ancho de cada pieza.
       const N = 400; const puntos = []; let largo = 0;
@@ -300,12 +386,12 @@ const DovaOdontograma = (() => {
     const largo = arco(ARRIBA, cyArriba, 1);
     arco(ABAJO, cyAbajo, -1);
     // Si el arco es corto para las piezas, se achican (celular).
-    const total = ARRIBA.reduce((s, p) => s + viewBox(p)[1] + SEP, 0) * escala;
-    if (total > largo) {
+    const total = totalUnidades * escala;
+    if (total > largo * 1.001) {
       const f = largo / total;
       Object.values(pos).forEach((p) => { p.w *= f; p.h *= f; });
     }
-    return { pos, alto: cyAbajo + b + alto / 2 + numero + 10 };
+    return { pos, alto: cyAbajo - abierta + b + alto / 2 + numero + 10 };
   }
 
   const leerVista = () => { try { return localStorage.getItem('dova-odonto-vista') === 'filas' ? 'filas' : 'boca'; } catch (_e) { return 'boca'; } };
@@ -317,12 +403,14 @@ const DovaOdontograma = (() => {
       const lienzo = odo.querySelector('.odo-lienzo');
       const boton = odo.querySelector('[data-odo-cambiar]');
       const texto = odo.querySelector('[data-odo-texto]');
-      let vista = leerVista(); let ultimoAncho = 0;
+      const estilo = odo.dataset.estilo || 'linea';
+      let vista = leerVista(); let ultimoAncho = 0; let espera = null;
 
-      const ubicar = (animar) => {
+      // abierta > 0: la boca separada (primer tiempo de la animación del estilo grabado).
+      const ubicar = (animar, abierta = 0) => {
         const ancho = lienzo.clientWidth; if (!ancho) return;
         ultimoAncho = ancho;
-        const { pos, alto } = vista === 'boca' ? posicionesBoca(ancho) : posicionesFilas(ancho);
+        const { pos, alto } = vista === 'boca' || abierta ? posicionesBoca(ancho, estilo, abierta) : posicionesFilas(ancho);
         lienzo.classList.toggle('odo-sin-animacion', !animar);
         // Si el lienzo se achica, espera a que las piezas lleguen para no taparlas con la leyenda.
         const altoActual = parseFloat(lienzo.style.height) || 0;
@@ -335,21 +423,29 @@ const DovaOdontograma = (() => {
           btn.style.left = `${p.x}px`; btn.style.top = `${p.y}px`;
           btn.style.width = `${p.w}px`; btn.style.height = `${p.h}px`;
           btn.style.setProperty('--giro', `${p.giro}deg`);
-          btn.style.setProperty('--demora', `${Math.round(desdeElMedio * 28)}ms`);
+          btn.style.setProperty('--demora', abierta ? '0ms' : `${Math.round(desdeElMedio * 28)}ms`);
         });
+        if (abierta) return;
         odo.dataset.vista = vista;
         texto.textContent = vista === 'boca' ? 'Vista: como en la boca' : 'Vista: piezas en fila';
         boton.setAttribute('aria-pressed', vista === 'filas' ? 'true' : 'false');
         if (!animar) requestAnimationFrame(() => requestAnimationFrame(() => lienzo.classList.remove('odo-sin-animacion')));
       };
 
-      boton.addEventListener('click', () => { vista = vista === 'boca' ? 'filas' : 'boca'; guardarVista(vista); ubicar(true); });
+      boton.addEventListener('click', () => {
+        clearTimeout(espera);
+        vista = vista === 'boca' ? 'filas' : 'boca'; guardarVista(vista);
+        if (estilo !== 'grabado') { ubicar(true); return; }
+        // Grabado: primero se separan las arcadas (se abre la boca) y después se acomodan.
+        if (vista === 'filas') { odo.dataset.vista = 'abriendo'; ubicar(true, 40); espera = setTimeout(() => ubicar(true), 430); }
+        else { ubicar(true, 40); odo.dataset.vista = 'boca'; espera = setTimeout(() => ubicar(true), 900); }
+      });
       // El panel puede estar oculto al dibujarse: se ubica cuando toma ancho (y al cambiar el tamaño).
       if (window.ResizeObserver) new ResizeObserver(() => { if (lienzo.clientWidth && lienzo.clientWidth !== ultimoAncho) ubicar(false); }).observe(lienzo);
       ubicar(false);
     });
   }
 
-  return { html, activar, dibujo, NOMBRE_ESTADO };
+  return { html, activar, dibujo, dibujoOclusal, NOMBRE_ESTADO, ESTILOS };
 })();
 window.DovaOdontograma = DovaOdontograma;
