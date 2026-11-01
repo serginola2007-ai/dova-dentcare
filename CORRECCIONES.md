@@ -933,3 +933,26 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - El botón **Cambiar de vista** pasa de una a otra con una animación: la boca "se abre" desde los incisivos hacia los molares. Se recuerda la vista elegida.
 - Tocar una pieza sigue abriendo su expediente y el presupuesto desde el odontograma funciona igual.
 - **Pruebas:** `ui-odontograma` 21/21 (escritorio claro y oscuro, celular sin desbordes).
+
+## Tanda: odontograma completo, para trabajar en la consulta (01/11/2026)
+
+- **Marcar tocando el diente:** al tocar una pieza se abre su editor. Desde ahí se marcan:
+  - el estado de **toda la pieza** (sana, corona, prótesis, implante, ausente, extracción indicada, tratamiento realizado, otro);
+  - la **endodoncia**, que se guarda aparte, así una pieza puede tener corona y conducto a la vez;
+  - una **nota** opcional.
+  Se guarda en el momento y el dibujo se actualiza sin recargar.
+- **Las 5 caras:** cada pieza tiene debajo el esquema de caras (vestibular, lingual/palatina, mesial, distal, oclusal).
+  - En el editor se toca la cara y se elige caries (lleno), restauración (rayado), sellante (puntos) o fractura (cuadros).
+  - Mesial queda siempre hacia la línea media y vestibular hacia afuera, como en la ficha de papel.
+- **Dientes de leche:** dentición permanente, temporal (51-85) o mixta (las de leche por dentro de la arcada o en filas intermedias).
+  - Sale sola por la edad: menor de 6 años, temporal; de 6 a 12, mixta.
+  - También se puede elegir, y queda guardado en el paciente. Migración `0061`.
+- **Historial:** en "Fecha" se elige un día anterior.
+  - Se ve cómo estaba la boca ese día, con las piezas que cambiaron marcadas con recuadro punteado.
+  - Abajo aparece la lista de qué cambió hasta hoy (por ejemplo: "Pieza 16 · Oclusal: Caries → Restauración").
+  - En una fecha anterior no se puede modificar.
+- **Imprimir:** hoja con el nombre del paciente, la fecha, el dibujo en filas y la tabla de hallazgos. Desde la ventana de impresión se guarda como PDF.
+- **Seguridad:** el odontograma ahora valida que el paciente y el odontólogo sean de la clínica en todas sus rutas. Antes, modificar no lo validaba de forma explícita.
+- **Pruebas:**
+  - `odontograma.test` 28/28 (caras, raíz, dentición por edad, historial, otra clínica 404, auditoría);
+  - `ui-odontograma` 37/37 (editor, caras, dentición, historial, impresión, oscuro y celular).

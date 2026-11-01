@@ -744,7 +744,15 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
    Cambiar de vista mueve cada pieza (left/top/giro) con una transición escalonada
    desde los incisivos hacia los molares, así la boca "se abre" en filas. */
 .dova-odonto { margin: 12px 0 16px; }
-.odo-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.odo-barra { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.odo-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.odo-fecha { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+.odo-fecha select { min-width: 120px; }
+.odo-grupo { display: inline-flex; border: 1px solid var(--border-strong); }
+.odo-segmento { background: transparent; border: 0; border-right: 1px solid var(--border-strong); padding: 5px 10px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.odo-segmento:last-child { border-right: 0; }
+.odo-segmento[aria-pressed="true"] { background: var(--ink); color: var(--white); font-weight: 700; }
+.odo-segmento:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .odo-vista-texto { font-size: 12px; color: var(--ink-soft); }
 .odo-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .odo-lienzo.dova-odontograma-grid { display: block; position: relative; max-width: 760px; margin: 0 auto; height: 420px;
@@ -781,8 +789,57 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-odonto .dova-pieza.dova-pieza-elegida .odo-numero { color: var(--ink); font-weight: 700; }
 .odo-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 0 0; margin: 8px 0 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--ink-soft); }
 .odo-leyenda li { display: flex; align-items: center; gap: 5px; }
-.odo-leyenda .odo-dibujo { width: 15px; height: 44px; }
+.odo-leyenda .odo-dibujo { width: 15px; height: 50px; }
 .odo-leyenda .odo-ausente { opacity: 0.45; }
 @media (prefers-reduced-motion: reduce) {
   .odo-lienzo.dova-odontograma-grid, .dova-odonto .dova-pieza[class], .odo-numero { transition: none !important; }
 }
+
+/* Esquema de 5 caras debajo de cada corona */
+.odo-cara { stroke: var(--ink); stroke-width: 0.5; stroke-linejoin: round; }
+.odo-cara-vacia { fill: var(--white); }
+.odo-cara-llena { fill: var(--ink); }
+.odo-patron-punto { fill: var(--ink); }
+/* Piezas que no son de la dentición elegida: se achican hacia el centro y desaparecen */
+.dova-odonto .dova-pieza.odo-fuera { opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(0.3); }
+.dova-odonto .dova-pieza[class] { transition-property: left, top, width, height, transform, opacity; }
+.dova-odonto .dova-pieza.odo-activa { outline: 2px solid var(--ink); outline-offset: 3px; }
+.dova-odonto .dova-pieza.odo-cambio { outline: 1.5px dashed var(--ink); outline-offset: 3px; }
+/* Historial: viendo una fecha anterior */
+.odo-pasado { border: 1px dashed var(--border-strong); padding: 8px 10px; margin: 4px 0 8px; font-size: 12px; }
+.odo-pasado-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.odo-cambios { margin: 4px 0 0; padding-left: 18px; columns: 2 260px; }
+.odo-viendo-pasado .odo-lienzo { background-image: repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--ink) 4%, transparent) 14px 15px); }
+/* Editor de la pieza */
+.odo-editor { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 10px; }
+.odo-editor.odo-guardando { opacity: 0.6; pointer-events: none; }
+.odo-editor-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.odo-editor-nombre { color: var(--ink-soft); }
+.odo-editor-cuerpo { display: grid; grid-template-columns: minmax(180px, 220px) 1fr; gap: 16px 24px; }
+.odo-editor-titulo { margin: 6px 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-soft); }
+.odo-caras-grande { width: 150px; height: 150px; display: block; overflow: visible; }
+.odo-caras-grande .odo-cara { stroke-width: 0.6; cursor: pointer; }
+.odo-caras-grande .odo-cara:hover { stroke-width: 1.4; }
+.odo-caras-grande .odo-cara:focus-visible, .odo-caras-grande .odo-cara[aria-pressed="true"] { stroke-width: 2.2; outline: none; }
+.odo-caras-letra { font-size: 4.2px; fill: var(--ink-soft); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.odo-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.odo-chip { background: transparent; border: 1px solid var(--border-strong); padding: 4px 9px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.odo-chip:hover:not(:disabled) { border-color: var(--ink); }
+.odo-chip[aria-pressed="true"] { background: var(--ink); color: var(--white); border-color: var(--ink); font-weight: 700; }
+.odo-chip:disabled { opacity: 0.45; cursor: default; }
+.odo-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.odo-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.odo-nota-campo { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+.odo-notas { margin: 8px 0 0; padding-left: 18px; font-size: 12px; }
+/* Leyenda en dos renglones */
+.odo-leyenda { display: flex; flex-direction: column; gap: 4px; }
+.odo-leyenda ul { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0; padding: 0; }
+.odo-leyenda-titulo { font-weight: 700; color: var(--ink); }
+.odo-leyenda-cara { width: 13px; height: 13px; }
+@media (max-width: 640px) {
+  .odo-editor-cuerpo { grid-template-columns: 1fr; }
+  .odo-acciones { margin-left: 0; }
+}
+/* Mixta en la boca: el número de los dientes de leche va del lado de adentro (no pisa a los permanentes). */
+.dova-odonto[data-denticion="mixta"][data-vista="boca"] .odo-temporal.odo-arriba .odo-numero { bottom: auto; top: calc(100% + 2px); }
+.dova-odonto[data-denticion="mixta"][data-vista="boca"] .odo-temporal.odo-abajo .odo-numero { top: auto; bottom: calc(100% + 2px); }

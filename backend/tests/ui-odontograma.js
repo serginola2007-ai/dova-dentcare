@@ -2,6 +2,9 @@
    - 32 piezas dibujadas, cada una con su forma (cantidad de raíces según la pieza).
    - Vista "como en la boca" y "en fila", con animación al cambiar; la vista elegida se recuerda.
    - Tocar una pieza abre su expediente; el presupuesto desde el odontograma sigue andando.
+   - Editor: estado de toda la pieza, endodoncia y las 5 caras (se guarda y se redibuja).
+   - Dentición permanente / temporal / mixta (se guarda para el paciente).
+   - Historial: ver una fecha anterior y qué cambió. Imprimir.
    - Modo oscuro y celular sin desbordes ni errores de consola.
    Uso: DATABASE_URL=… DOVA_URL=http://localhost:4500 [DOVA_USUARIO=admin DOVA_CLAVE=admin] node tests/ui-odontograma.js */
 /* global document, getComputedStyle, window, localStorage */
@@ -34,14 +37,15 @@ const P = (texto, cond, extra) => { if (cond) { ok++; console.log('OK  ', texto)
     await p.waitForSelector('[data-tab="odontograma"]'); await p.click('[data-tab="odontograma"]'); await p.waitForTimeout(700);
     return { ctx, p, err };
   };
-  const posiciones = (p) => p.evaluate(() => [...document.querySelectorAll('.odo-lienzo [data-ver-pieza]')].map((e) => [e.dataset.verPieza, Math.round(parseFloat(e.style.left)), Math.round(parseFloat(e.style.top)), e.style.getPropertyValue('--giro')]));
+  const posiciones = (p) => p.evaluate(() => [...document.querySelectorAll('.odo-lienzo [data-ver-pieza]:not(.odo-fuera)')].map((e) => [e.dataset.verPieza, Math.round(parseFloat(e.style.left)), Math.round(parseFloat(e.style.top)), e.style.getPropertyValue('--giro')]));
 
   try {
     // ---- Escritorio, modo claro
     {
       const { ctx, p, err } = await abrir({ width: 1280, height: 900 }, 'light');
       await p.evaluate(() => { try { localStorage.removeItem('dova-odonto-vista'); } catch (_e) { /* */ } });
-      P('Se dibujan las 32 piezas', await p.locator('.odo-lienzo [data-ver-pieza]').count() === 32);
+      P('Se ven las 32 piezas permanentes (adulto sin fecha de nacimiento)', await p.locator('.odo-lienzo [data-ver-pieza]:not(.odo-fuera)').count() === 32 && await p.getAttribute('.dova-odonto', 'data-denticion') === 'permanente');
+      P('Cada pieza tiene su esquema de 5 caras', await p.locator('[data-ver-pieza="16"] .odo-cara').count() === 5);
       const raices = await p.evaluate(() => Object.fromEntries(['11', '14', '16', '36', '46'].map((x) => [x, document.querySelectorAll(`[data-ver-pieza="${x}"] .odo-raiz`).length])));
       P('Cada pieza con su forma: el 14 y el 16 con raíz bifurcada + palatina, el 36 con dos raíces (un trazo)', raices['11'] === 1 && raices['14'] === 1 && raices['16'] === 2 && raices['36'] === 1, raices);
       P('Sin colores: el trazo usa el color del texto', await p.evaluate(() => getComputedStyle(document.querySelector('.odo-corona')).stroke === getComputedStyle(document.body).color));
@@ -73,6 +77,52 @@ const P = (texto, cond, extra) => { if (cond) { ok++; console.log('OK  ', texto)
       P('Presupuesto desde el odontograma: marca la 16 y la 36', await p.locator('[data-fila-pieza]').count() === 2 && await p.locator('.dova-pieza-elegida').count() === 2);
       await p.click('[data-salir-pres]');
 
+      // ---- Editor de la pieza
+      await p.click('[data-ver-pieza="16"]'); await p.waitForSelector('.odo-editor:not([hidden])');
+      P('Tocar una pieza abre su editor con el nombre de la pieza', /primer molar superior derecho/.test(await p.textContent('.odo-editor')));
+      P('Sin cara elegida, los estados de cara están apagados', await p.locator('[data-odo-estado-cara="caries"]').isDisabled());
+      await p.click('[data-odo-cara="distal"]'); await p.click('[data-odo-estado-cara="caries"]'); await p.waitForTimeout(800);
+      const distal = await db.query("SELECT estado FROM odontograma_piezas WHERE paciente_id=$1 AND pieza='16' AND superficie='distal'", [pac]);
+      P('Cara distal con caries: se guarda', distal.rows[0] && distal.rows[0].estado === 'caries', distal.rows);
+      P('…y la cara queda llena en el dibujo, sin recargar', await p.locator('[data-ver-pieza="16"] .odo-cara-llena').count() === 1);
+      await p.click('[data-odo-pieza="corona"]'); await p.waitForTimeout(800);
+      await p.check('[data-odo-endo]'); await p.waitForTimeout(800);
+      const sup16 = (await db.query("SELECT superficie, estado FROM odontograma_piezas WHERE paciente_id=$1 AND pieza='16' ORDER BY superficie", [pac])).rows.map((x) => `${x.superficie}:${x.estado}`).join(',');
+      P('Toda la pieza: corona, y endodoncia aparte en la raíz', sup16 === 'distal:caries,general:corona,raiz:endodoncia', sup16);
+      P('…el dibujo muestra corona rayada y los conductos', await p.locator('[data-ver-pieza="16"] .odo-marca-relleno').count() === 1 && await p.locator('[data-ver-pieza="16"] .odo-conducto').count() === 3);
+      await p.click('[data-odo-cerrar]');
+
+      // ---- Dentición
+      await p.click('[data-odo-denticion="mixta"]'); await p.waitForTimeout(1600);
+      P('Mixta: se ven 52 piezas (32 permanentes y 20 de leche)', await p.locator('.odo-lienzo [data-ver-pieza]:not(.odo-fuera)').count() === 52);
+      P('…y queda guardada para el paciente', (await db.query('SELECT odontograma_denticion d FROM pacientes WHERE id=$1', [pac])).rows[0].d === 'mixta');
+      await p.click('[data-odo-denticion="temporal"]'); await p.waitForTimeout(1600);
+      P('Temporal: se ven las 20 de leche (51 a 85)', await p.locator('.odo-lienzo [data-ver-pieza]:not(.odo-fuera)').count() === 20
+        && await p.locator('[data-ver-pieza="55"]:not(.odo-fuera)').count() === 1 && await p.locator('[data-ver-pieza="16"].odo-fuera').count() === 1);
+      await p.click('[data-odo-denticion="permanente"]'); await p.waitForTimeout(1600);
+      P('Volver a la automática deja la dentición sin elegir', (await db.query('SELECT odontograma_denticion d FROM pacientes WHERE id=$1', [pac])).rows[0].d === null);
+
+      // ---- Historial (un cambio de hace unos meses)
+      await db.query("INSERT INTO odontograma_historial (paciente_id, pieza, superficie, estado, fecha) VALUES ($1,'21','general','caries','2026-01-10 10:00-03')", [pac]);
+      await p.reload(); await p.waitForSelector('[data-tab="odontograma"]'); await p.click('[data-tab="odontograma"]'); await p.waitForTimeout(900);
+      await p.selectOption('[data-odo-fecha]', '2026-01-10'); await p.waitForTimeout(500);
+      P('Historial: muestra cómo estaba ese día', await p.locator('.dova-odonto.odo-viendo-pasado').count() === 1
+        && await p.locator('[data-ver-pieza="21"] .odo-marca-llena').count() === 1 && await p.locator('[data-ver-pieza="36"] .odo-marca-x').count() === 0);
+      const cambios = await p.textContent('[data-odo-pasado]');
+      P('…y qué cambió desde ese día (21 caries → sano, 36 extracción indicada)', /Pieza 21[^]*Caries → Sano/.test(cambios) && /Pieza 36[^]*Extracción indicada/.test(cambios), cambios.slice(0, 200));
+      await p.click('[data-ver-pieza="21"]');
+      P('…en una fecha anterior no se puede modificar', await p.locator('[data-odo-pieza="corona"]').isDisabled());
+      await p.click('[data-odo-hoy]'); await p.waitForTimeout(300);
+      P('"Volver a hoy" muestra el actual', await p.locator('.dova-odonto.odo-viendo-pasado').count() === 0 && await p.locator('[data-ver-pieza="21"] .odo-marca-llena').count() === 0);
+
+      // ---- Imprimir
+      const [hoja] = await Promise.all([p.waitForEvent('popup'), p.click('[data-odo-imprimir]')]);
+      await hoja.waitForLoadState();
+      const texto = await hoja.textContent('body');
+      P('Imprimir: hoja con el nombre, el dibujo y la lista de hallazgos', /Odontograma/.test(texto) && /Prueba/.test(texto) && /Hallazgos/.test(texto) && /Distal/.test(texto)
+        && await hoja.locator('svg svg.odo-dibujo').count() === 32, texto.slice(0, 120));
+      await hoja.close();
+
       await p.reload(); await p.waitForSelector('[data-tab="odontograma"]'); await p.click('[data-tab="odontograma"]'); await p.waitForTimeout(500);
       P('La vista elegida se recuerda al volver', await p.getAttribute('.dova-odonto', 'data-vista') === 'filas');
       await p.click('[data-odo-cambiar]'); await p.waitForTimeout(1600);
@@ -86,7 +136,7 @@ const P = (texto, cond, extra) => { if (cond) { ok++; console.log('OK  ', texto)
       const { ctx, p, err } = await abrir(vp, tema);
       for (const vista of ['primera', 'segunda']) {
         const desborde = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-        const fuera = await p.evaluate(() => { const l = document.querySelector('.odo-lienzo').getBoundingClientRect(); return [...document.querySelectorAll('.odo-lienzo [data-ver-pieza]')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < l.left - 2 || r.right > l.right + 2; }).length; });
+        const fuera = await p.evaluate(() => { const l = document.querySelector('.odo-lienzo').getBoundingClientRect(); return [...document.querySelectorAll('.odo-lienzo [data-ver-pieza]:not(.odo-fuera)')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < l.left - 2 || r.right > l.right + 2; }).length; });
         P(`[${nombre}, ${vista} vista] Ninguna pieza se sale del ancho y no hay desborde`, !desborde && fuera === 0, { desborde, fuera });
         await p.click('[data-odo-cambiar]'); await p.waitForTimeout(1600);
       }
@@ -95,6 +145,7 @@ const P = (texto, cond, extra) => { if (cond) { ok++; console.log('OK  ', texto)
     }
   } finally {
     await db.query('DELETE FROM odontograma_piezas WHERE paciente_id=$1', [pac]).catch(() => {});
+    await db.query('DELETE FROM odontograma_historial WHERE paciente_id=$1', [pac]).catch(() => {});
     await db.query("SET dova.borrando_paciente='on'").catch(() => {});
     await db.query('DELETE FROM pacientes WHERE id=$1', [pac]).catch(() => {});
     await b.close(); await db.end();

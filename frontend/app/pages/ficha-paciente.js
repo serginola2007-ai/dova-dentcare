@@ -183,7 +183,7 @@ const DovaFichaPaciente = (() => {
       DOVA.tienePermiso('presupuestos.view') ? manejarError(() => DOVA.get(`/presupuestos/paciente/${id}`)).catch(() => []) : [],
       DOVA.tienePermiso('pagos.view') ? manejarError(() => DOVA.get(`/pagos/paciente/${id}/resumen`)).catch(() => null) : null,
       DOVA.tienePermiso('historia_clinica.view') ? manejarError(() => DOVA.get(`/historia-clinica/paciente/${id}/timeline`)).catch(() => []) : [],
-      DOVA.tienePermiso('odontograma.view') ? manejarError(() => DOVA.get(`/odontograma/paciente/${id}`)).catch(() => []) : [],
+      DOVA.tienePermiso('odontograma.view') ? manejarError(() => DOVA.get(`/odontograma/paciente/${id}/datos`)).catch(() => ({ piezas: [] })) : { piezas: [] },
     ]);
 
     const edad = calcularEdad(paciente.fecha_nacimiento);
@@ -260,8 +260,8 @@ const DovaFichaPaciente = (() => {
 
       <div class="dova-tab-panel" data-panel="odontograma" style="display:none;">
         <h3 class="dova-section-title">Odontograma</h3>
-        <p class="dova-nota">Tocá una pieza para ver su expediente histórico completo.</p>
-        ${DovaOdontograma.html(odontograma)}
+        <p class="dova-nota">Tocá una pieza para marcar su estado y sus caras, y ver su expediente.</p>
+        ${DovaOdontograma.html(odontograma, { pacienteId: Number(id), puedeEditar: DOVA.tienePermiso('odontograma.edit'), paciente: `${paciente.nombre} ${paciente.apellido}` })}
         <div id="pieza-expediente-root"></div>
       </div>
 

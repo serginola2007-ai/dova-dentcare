@@ -31,7 +31,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
-  src/db/migrations 0001…0060 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0061 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
@@ -223,6 +223,8 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Pruebas: `tests/ui-visual.js`.
 
 ## Odontograma dibujado
-- `app/components/odontograma.js` (`DovaOdontograma.html(filas)` + `activar(raiz)`): dibujo SVG en línea de cada pieza (`FORMAS` sup1..sup8 / inf1..inf8, se espeja para el lado izquierdo y se da vuelta para abajo), sin colores; estados como marcas de trazo. Vistas `boca` (arcadas en elipse, piezas giradas al centro) y `filas`; el cambio anima `left/top/transform` con demora escalonada (`--demora`). Vista recordada en `localStorage('dova-odonto-vista')`.
-- Cada pieza sigue siendo `<button class="dova-pieza pieza-<estado>" data-ver-pieza>` dentro de `.dova-odontograma-grid` (expediente y `presupuestoDesdeOdontograma` no cambian). Estilos al final de `componentes.css`. Prueba: `tests/ui-odontograma.js` (21).
-
+- `app/components/odontograma.js` (`DovaOdontograma.html(datos, { pacienteId, puedeEditar, paciente })` + `activar(raiz)`; `datos` = `GET /odontograma/paciente/:id/datos` → `{ piezas, denticion, denticionElegida, denticionAutomatica }`). Dibujo SVG en línea de cada pieza (`FORMAS` sup1..sup8 / inf1..inf8; las temporales reusan formas al 74%; se espeja para el lado izquierdo y se da vuelta para abajo), alto 98 = pieza + esquema de 5 caras (`poligonosCaras`). Sin colores: estados como marcas de trazo y patrones (`rayado`, `cuadros`, `puntos`).
+- Datos: una fila por pieza+superficie (`odontograma_piezas`, único). `general` = toda la pieza, `raiz` = endodoncia, y las caras `mesial|distal|vestibular|lingual_palatina|oclusal_incisal` (solo caries/restauración/sellante/fractura/sano; el servicio lo valida). Todo cambio queda en `odontograma_historial` y en auditoría.
+- Vistas `boca` (arcadas en elipse; en mixta la temporal va por dentro) y `filas`; animación por `left/top/transform` con `--demora`. Piezas fuera de la dentición: clase `odo-fuera`. Vista en `localStorage('dova-odonto-vista')`; dentición en `pacientes.odontograma_denticion` (0061, NULL = automática por edad) vía `PUT /odontograma/paciente/:id/denticion`.
+- Editor (`editorHtml`), historial (`GET /odontograma/paciente/:id/historial`, foto del día en el front + lista de cambios) e impresión (`DovaExt.imprimir` con SVG armado en filas). Cada pieza sigue siendo `<button class="dova-pieza pieza-<estado>" data-ver-pieza>` dentro de `.dova-odontograma-grid` (expediente y `presupuestoDesdeOdontograma` no cambian).
+- Todas las rutas validan paciente (y odontólogo) contra la clínica (`exigirPaciente`). Pruebas: `tests/odontograma.test.js` (28), `tests/ui-odontograma.js` (37).

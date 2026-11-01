@@ -7,7 +7,7 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v67';
+const VERSION = 'dova-v68';
 const PRECARGA = [
   '/mecanico/',
   '/app/styles/base.css',

@@ -10,6 +10,38 @@ async function obtenerPorPaciente(clinicaId, pacienteId) {
   return res.rows;
 }
 
+// El paciente es de la clínica (todo id que llega se valida contra la clínica).
+async function pacienteDeClinica(clinicaId, pacienteId) {
+  const res = await query(
+    `SELECT id, nombre, apellido, fecha_nacimiento, odontograma_denticion FROM pacientes WHERE id=$2 AND clinica_id=$1`,
+    [clinicaId, pacienteId]
+  );
+  return res.rows[0] || null;
+}
+
+async function odontologoDeClinica(clinicaId, odontologoId) {
+  const res = await query('SELECT id FROM odontologos WHERE id=$2 AND clinica_id=$1', [clinicaId, odontologoId]);
+  return !!res.rows[0];
+}
+
+// Todos los cambios del odontograma del paciente, del más viejo al más nuevo.
+async function historialPaciente(clinicaId, pacienteId) {
+  const res = await query(
+    `SELECT h.id, h.pieza, h.superficie, h.estado, h.observacion, h.fecha, o.nombre AS odontologo_nombre
+     FROM odontograma_historial h
+     JOIN pacientes p ON p.id = h.paciente_id AND p.clinica_id = $1
+     LEFT JOIN odontologos o ON o.id = h.odontologo_id
+     WHERE h.paciente_id = $2
+     ORDER BY h.fecha, h.id`,
+    [clinicaId, pacienteId]
+  );
+  return res.rows;
+}
+
+async function guardarDenticion(clinicaId, pacienteId, denticion) {
+  await query('UPDATE pacientes SET odontograma_denticion=$3 WHERE id=$2 AND clinica_id=$1', [clinicaId, pacienteId, denticion]);
+}
+
 async function obtenerHistorialPieza(clinicaId, pacienteId, pieza) {
   const res = await query(
     `SELECT h.*, o.nombre AS odontologo_nombre FROM odontograma_historial h
@@ -100,6 +132,7 @@ async function estudiosPorPieza(clinicaId, pacienteId, pieza) {
 }
 
 module.exports = {
+  pacienteDeClinica, odontologoDeClinica, historialPaciente, guardarDenticion,
   obtenerPorPaciente, obtenerHistorialPieza, actualizarPieza,
   estadoActualPieza, evolucionesPorPieza, planesPorPieza, fotosPorPieza, estudiosPorPieza,
 };
