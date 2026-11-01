@@ -30,7 +30,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   README.md         guía del backend (recorrido de un pedido, molde de módulo)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
-  src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca), tiempoReal (SSE)
+  src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca y `soloPropio(req)` para limitar filas al usuario), tiempoReal (SSE)
   src/db/migrations 0001…0061 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
@@ -81,6 +81,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
   - **sin verificación en dos pasos** (decisión de la clínica; columnas `totp_*` sin uso);
   - usuario y contraseña se aceptan solo como texto plano (sin listas, objetos ni caracteres de control);
   - bloqueo de pantalla por inactividad (`app/core/bloqueo.js`, minutos en `clinicas.bloqueo_inactividad_min`);
+  - SALIR pregunta "¿Estás seguro…?" (Cancelar / Cerrar) con `DovaTurnos.confirmar` (`app/core/router.js`); las pruebas que salen tocan `[data-si]`;
   - avisos de seguridad a los admins con `utils/alertas.js`.
 - CSP `script-src 'self'`: **nada de scripts en línea** ni `onclick=` en el HTML. Todo JS va en archivos.
 - Texto de usuario siempre escapado (`esc(...)`) antes de ponerlo en `innerHTML`.

@@ -34,14 +34,15 @@ async function crear(clinicaId, d) {
   );
   const planId = res.rows[0].id;
 
-  const saldo = Number(d.total) - Number(d.entrega || 0);
-  const montoPorCuota = Math.round((saldo / d.cantidadCuotas) * 100) / 100;
+  // El guaraní no usa centavos: cada cuota es un número entero y la última se lleva
+  // la diferencia, así la suma cierra exacto (ej. 1.760.000 en 6 = 5 × 293.333 + 293.335).
+  const saldo = Math.round(Number(d.total) - Number(d.entrega || 0));
+  const montoPorCuota = Math.floor(saldo / d.cantidadCuotas);
 
   let acumulado = 0;
   for (let i = 1; i <= d.cantidadCuotas; i++) {
-    // La última cuota absorbe el residuo de redondeo para que la suma cierre exacto.
     const esUltima = i === d.cantidadCuotas;
-    const monto = esUltima ? Math.round((saldo - acumulado) * 100) / 100 : montoPorCuota;
+    const monto = esUltima ? saldo - acumulado : montoPorCuota;
     acumulado += monto;
     // Suma de meses en calendario puro (sin husos horarios): 31/01 + 1 mes = 28/02.
     const vencimiento = sumarMeses(d.fechaInicio ? String(d.fechaInicio).slice(0, 10) : hoyIso(), i);

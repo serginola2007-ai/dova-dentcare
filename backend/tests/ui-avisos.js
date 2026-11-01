@@ -70,6 +70,7 @@ const login = async (b, vp, u, c) => {
     P('Turno atendido: botón "Mandar por mi WhatsApp" las indicaciones', /Indicaciones para después/.test(await p.textContent('.dova-indic-turno')));
     await ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: 'ok' })); // sin internet en las pruebas
     const [popup] = await Promise.all([ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null), p.click('.dova-indic-turno [data-indic-enviar]')]);
+    if (popup) await popup.waitForURL(/wa\.me/, { timeout: 8000 }).catch(() => null); // la pestaña nueva arranca en blanco
     const url = popup ? popup.url() : '';
     P('…abre WhatsApp con el texto completo', /wa\.me\/595981222333/.test(url) && /gasa/.test(decodeURIComponent(url)), url.slice(0, 120));
     if (popup) await popup.close();

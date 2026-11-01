@@ -1,4 +1,4 @@
-/* global document, window, getComputedStyle, DovaApp */
+/* global document, window, getComputedStyle, DovaApp, DOVA */
 // Mejoras visuales: título sin repetir en ventanas, montos en una línea, ingreso con marca,
 // Inicio con turnos de hoy y prioridades, barra de estado útil, celular con barra de accesos,
 // campanita que solo resalta lo nuevo y letra grande desde Configuración.
@@ -43,6 +43,13 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
     P('Barra de estado: caja y próximo turno', /Caja (abierta|cerrada)/.test(est) && /(Próximo turno|Sin más turnos)/.test(est), est);
     await p.screenshot({ path: `${DIR}/visual-inicio.png` });
     // Ventana: sin título repetido; montos en una línea
+    // La pantalla de caja necesita una caja abierta con algún movimiento (la abre si no hay).
+    await p.evaluate(async () => {
+      const e = await DOVA.get('/caja/estado');
+      if (!e.abierta) await DOVA.post('/caja/abrir', { montoInicial: 100000 });
+      const e2 = await DOVA.get('/caja/estado');
+      if (!(e2.movimientos || []).length) await DOVA.post('/caja/movimiento', { tipo: 'ingreso', concepto: 'Prueba visual', monto: 50000, metodo: 'efectivo' });
+    });
     await p.evaluate(() => DovaApp.navegar('caja'));
     const F = p.frameLocator('.dova-ventana[data-ventana-ruta="caja"] iframe');
     await F.locator('.dova-tabla td').first().waitFor({ timeout: 15000 });

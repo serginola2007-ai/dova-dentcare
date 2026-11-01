@@ -111,7 +111,9 @@ async function verificarReferencia(clinicaId, tabla, id, nombre) {
  *  porPaciente (bool), permisos {ver:[], editar:[], borrar:[]}, orden,
  *  filtros {query: {col, tipo}}, creadoPor (col), actualizadoEn (bool), borrado ('fisico'|'logico:<col>'|false),
  *  joinPaciente (bool), selectExtra (sql), joins (sql, usa alias t), antesDeGuardar(datos, ctx), despuesDeGuardar(fila, ctx), transformarFila(fila),
- *  antesDeListar(clinicaId) (ej. marcar vencidos), candado(datos, ctx) → clave para serializar altas simultáneas (ej. paciente+sustancia)
+ *  antesDeListar(clinicaId) (ej. marcar vencidos), candado(datos, ctx) → clave para serializar altas simultáneas (ej. paciente+sustancia),
+ *  soloPropio(req) → null (ve todo) o { col, valor }: el usuario solo ve y toca las filas con col = valor
+ *    (ej. un odontólogo, solo sus liquidaciones). Si valor es null no ve ninguna.
  */
 function crearRecurso(cfg) {
   const router = express.Router();
@@ -153,6 +155,9 @@ function crearRecurso(cfg) {
   }
 
   const tr = (fila) => (cfg.transformarFila ? cfg.transformarFila(fila) : fila);
+  // Restricción a lo propio (soloPropio): una fila ajena se trata como inexistente (404).
+  const limite = (req) => (cfg.soloPropio ? cfg.soloPropio(req) : null);
+  const esAjena = (req, fila) => { const l = limite(req); return !!l && (l.valor === null || l.valor === undefined || String(fila[l.col]) !== String(l.valor)); };
 
   router.get('/', requirePermiso(...permisos.ver), async (req, res, next) => {
     try {
@@ -169,8 +174,13 @@ function crearRecurso(cfg) {
       if (cfg.borrado && cfg.borrado.startsWith('logico:') && req.query.incluirInactivos !== 'true') {
         cond.push(`t.${cfg.borrado.split(':')[1]} = true`);
       }
-      const limite = Math.min(Math.max(Math.trunc(Number(req.query.limite)) || 500, 1), 2000);
-      const r = await query(`${selectBase()} WHERE ${cond.join(' AND ')} ORDER BY ${cfg.orden || 't.id DESC'} LIMIT ${limite}`, params);
+      const propio = limite(req);
+      if (propio) {
+        if (propio.valor === null || propio.valor === undefined) cond.push('false');
+        else { params.push(propio.valor); cond.push(`t.${propio.col} = $${params.length}`); }
+      }
+      const tope = Math.min(Math.max(Math.trunc(Number(req.query.limite)) || 500, 1), 2000);
+      const r = await query(`${selectBase()} WHERE ${cond.join(' AND ')} ORDER BY ${cfg.orden || 't.id DESC'} LIMIT ${tope}`, params);
       res.json(r.rows.map(tr));
     } catch (e) { next(e); }
   });
@@ -178,7 +188,7 @@ function crearRecurso(cfg) {
   router.get('/:id', requirePermiso(...permisos.ver), async (req, res, next) => {
     try {
       const fila = await obtener(req.clinicaId, Number(req.params.id));
-      if (!fila) throw new ApiError(404, 'Registro no encontrado');
+      if (!fila || esAjena(req, fila)) throw new ApiError(404, 'Registro no encontrado');
       res.json(fila);
     } catch (e) { next(e); }
   });
@@ -213,7 +223,7 @@ function crearRecurso(cfg) {
     try {
       const id = Number(req.params.id);
       const previo = await obtener(req.clinicaId, id);
-      if (!previo) throw new ApiError(404, 'Registro no encontrado');
+      if (!previo || esAjena(req, previo)) throw new ApiError(404, 'Registro no encontrado');
       const ctx = { clinicaId: req.clinicaId, usuario: req.usuario, creando: false, previo, body: req.body };
       const datos = await normalizar(req.body || {}, ctx);
       if (cfg.antesDeGuardar) await cfg.antesDeGuardar(datos, ctx);
@@ -240,7 +250,7 @@ function crearRecurso(cfg) {
       try {
         const id = Number(req.params.id);
         const previo = await obtener(req.clinicaId, id);
-        if (!previo) throw new ApiError(404, 'Registro no encontrado');
+        if (!previo || esAjena(req, previo)) throw new ApiError(404, 'Registro no encontrado');
         if (cfg.antesDeBorrar) await cfg.antesDeBorrar(previo, { clinicaId: req.clinicaId, usuario: req.usuario });
         if (cfg.borrado === 'fisico') {
           await query(`DELETE FROM ${cfg.tabla} WHERE id=$1 AND clinica_id=$2`, [id, req.clinicaId]);

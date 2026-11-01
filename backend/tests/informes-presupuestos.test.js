@@ -50,7 +50,8 @@ const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new 
     // ---------------- Presupuestos ----------------
     const sinCi = (await q1("INSERT INTO pacientes (clinica_id, nombre, apellido) VALUES (1,'Sin','Cedula' || $1) RETURNING id", [suf])).id; pacs.push(sinCi);
     const otro = (await q1("INSERT INTO pacientes (clinica_id, nombre, apellido, ci) VALUES (1,'Otro','Ci' || $1, $2) RETURNING id", [suf, `OC${suf}`])).id; pacs.push(otro);
-    const trat = (await q1('SELECT id, precio FROM tratamientos WHERE clinica_id=1 AND activo ORDER BY id LIMIT 1')).id;
+    const trat = (await q1('SELECT id, precio FROM tratamientos WHERE clinica_id=1 AND activo ORDER BY id LIMIT 1')
+      || await q1("INSERT INTO tratamientos (clinica_id, nombre, precio) VALUES (1, 'Consulta (prueba)', 100000) RETURNING id")).id;
     const otraClinica = await q1('SELECT id FROM clinicas WHERE id<>1 ORDER BY id LIMIT 1');
     const tratAjeno = otraClinica ? await q1('INSERT INTO tratamientos (clinica_id, nombre, precio) VALUES ($1, $2, 1000) RETURNING id', [otraClinica.id, `Ajeno${suf}`]) : null;
     const item = { tratamientoId: trat, descripcion: 'Tratamiento', cantidad: 1, precioUnitario: 100000 };

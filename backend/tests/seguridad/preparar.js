@@ -20,7 +20,11 @@ const db = new Pool({ connectionString: process.env.DATABASE_URL });
            ON CONFLICT (clinica_id, username) DO UPDATE SET clinica_id=EXCLUDED.clinica_id, rol_id=EXCLUDED.rol_id, password_hash=EXCLUDED.password_hash, activo=true, debe_cambiar_clave=false`, [c2.id, r2.id, hash]);
   let pb = (await q("SELECT id FROM pacientes WHERE clinica_id=$1 AND ci='B-0001'", [c2.id]))[0];
   if (!pb) pb = (await q("INSERT INTO pacientes (clinica_id, nombre, apellido, ci, telefono) VALUES ($1,'Paciente','DeClinicaB','B-0001','0981 999 000') RETURNING id", [c2.id]))[0];
+  // Paciente "marcador" de la Clínica A: las pruebas buscan su apellido en todo lo que ve la
+  // Clínica B (no tiene que aparecer nunca) y usan sus alergias (recepción no las recibe).
+  let marcador = (await q("SELECT id FROM pacientes WHERE clinica_id=1 AND apellido LIKE 'ZZMARCADOR%' LIMIT 1"))[0];
+  if (!marcador) marcador = (await q("INSERT INTO pacientes (clinica_id, nombre, apellido, ci, telefono, alergias, antecedentes_medicos) VALUES (1,'Paciente','ZZMARCADOR-A','A-ZZ-0001','0981 111 222','Penicilina','Hipertensión controlada') RETURNING id"))[0];
   await q("DELETE FROM login_intentos");
-  console.log(JSON.stringify({ rolSinPermisos: rol.id, clinicaB: c2.id, pacienteB: pb.id }));
+  console.log(JSON.stringify({ rolSinPermisos: rol.id, clinicaB: c2.id, pacienteB: pb.id, marcadorA: marcador.id }));
   await db.end();
 })().catch((e) => { console.error(e); process.exit(1); });

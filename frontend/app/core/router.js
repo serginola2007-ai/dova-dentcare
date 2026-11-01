@@ -522,6 +522,11 @@ const DovaApp = (() => {
 
     if (elLogout) {
       elLogout.addEventListener('click', async () => {
+        // Pregunta antes de salir (un toque sin querer no corta la sesión).
+        const seguro = window.DovaTurnos
+          ? await DovaTurnos.confirmar('Cerrar sesión', '¿Estás seguro de que querés cerrar la sesión?', 'Cerrar')
+          : true;
+        if (!seguro) return;
         if (window.DovaVivo) DovaVivo.detener();
         await DOVA.logout();
         location.reload();

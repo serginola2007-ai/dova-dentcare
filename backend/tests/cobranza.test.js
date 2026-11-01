@@ -23,7 +23,7 @@ const recibidos = []; let n = 0;
 const meta = http.createServer((rq, rs) => {
   let b = ''; rq.on('data', (c) => { b += c; }); rq.on('end', () => {
     recibidos.push({ url: rq.url, cuerpo: JSON.parse(b || '{}') });
-    n += 1; rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ messages: [{ id: `wamid.COBRO${n}` }] }));
+    n += 1; rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ messages: [{ id: `wamid.COBRO${process.pid}-${n}` }] }));
   });
 });
 
@@ -35,6 +35,8 @@ const meta = http.createServer((rq, rs) => {
   const S = (await req('POST', '/auth/login', { username: 'sinperm', password: 'Clave1234!' })).j.accessToken;
   const suf = String(Date.now() % 1000000);
   const h = hoy();
+  // Una base nueva puede no tener todavía la configuración de la página web.
+  await db.query('INSERT INTO web_config (clinica_id) VALUES (1) ON CONFLICT (clinica_id) DO NOTHING');
   const webAntes = await q1('SELECT pagos_activos FROM web_config WHERE clinica_id=1');
   const cfgAntes = await q1('SELECT cobranza_auto, cobranza_hora, cobranza_dias_antes, cobranza_repetir_dias, cobranza_max_avisos, presupuesto_seguimiento, presupuesto_dias FROM clinicas WHERE id=1');
   await db.query('UPDATE clinicas SET cobranza_auto=false, cobranza_hora=10, cobranza_dias_antes=2, cobranza_repetir_dias=7, cobranza_max_avisos=3, presupuesto_seguimiento=true, presupuesto_dias=3 WHERE id=1');

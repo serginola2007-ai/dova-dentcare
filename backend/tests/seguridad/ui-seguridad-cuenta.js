@@ -39,7 +39,7 @@ const entrar = async (p, dis, user, clave) => {
       const { ctx, p, err } = await nuevaPagina(b, vp);
       await entrar(p, dis, user, clave);
       P(`[${dis}] Usuario y contraseña alcanzan para entrar (sin segundo paso)`, await visibleShell(p));
-      await p.evaluate(() => DovaApp.navegar('configuracion'));
+      await p.goto(`${URL0}/${dis}/index.html?ventana=1#configuracion`); // en el escritorio, Configuración abre una ventana
       await p.waitForSelector('.dova-tabla-sesiones', { timeout: 8000 });
       P(`[${dis}] Configuración → Seguridad muestra las sesiones abiertas`, await p.locator('text=Esta sesión').count() === 1 && await p.locator('#btn-2fa-activar').count() === 0);
       P(`[${dis}] Sin desborde`, await desborde(p) <= 0, await desborde(p));
@@ -85,11 +85,11 @@ const entrar = async (p, dis, user, clave) => {
     await db.query('DELETE FROM login_intentos');
     const a = await nuevaPagina(b, { width: 1366, height: 900 });
     await entrar(a.p, 'mecanico', 'admin', 'admin');
-    await a.p.evaluate(() => DovaApp.navegar('configuracion')); await a.p.waitForSelector('#form-politica', { timeout: 8000 });
+    await a.p.goto(`${URL0}/mecanico/index.html?ventana=1#configuracion`); await a.p.waitForSelector('#form-politica', { timeout: 8000 });
     P('Política: sin opciones de verificación en dos pasos', await a.p.locator('#pol-2fa').count() === 0);
     await a.p.selectOption('#pol-bloqueo', '30'); await a.p.click('#form-politica button[type=submit]'); await a.p.waitForTimeout(1200);
     P('Política: guarda los minutos de bloqueo', (await db.query('SELECT bloqueo_inactividad_min m FROM clinicas WHERE id=1')).rows[0].m === 30);
-    await a.p.evaluate(() => DovaApp.navegar('usuarios')); await a.p.waitForSelector('.dova-tabla-usuarios', { timeout: 8000 });
+    await a.p.evaluate(() => DovaApp.navegar('usuarios')); /* ya en modo ventana: navega ahí mismo */ await a.p.waitForSelector('.dova-tabla-usuarios', { timeout: 8000 });
     P('Usuarios: sin rastros de "2 pasos"', await a.p.locator('text=2 pasos').count() === 0);
     await a.p.screenshot({ path: `${DIR}/seg-config.png`, fullPage: true });
     P('Sin errores de consola (admin)', a.err.length === 0, a.err);

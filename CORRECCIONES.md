@@ -956,3 +956,26 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - **Pruebas:**
   - `odontograma.test` 28/28 (caras, raíz, dentición por edad, historial, otra clínica 404, auditoría);
   - `ui-odontograma` 37/37 (editor, caras, dentición, historial, impresión, oscuro y celular).
+
+## Tanda: simulación 3 (un año de uso) y confirmación al salir (01/11/2026)
+
+- **SALIR pregunta antes de cerrar la sesión:** "¿Estás seguro de que querés cerrar la sesión?" con **Cancelar** / **Cerrar**. Un toque sin querer ya no corta la sesión.
+- **Simulación de un año** (03/11/2025 → 31/10/2026) con todos los roles por la API real, sobre una base nueva:
+  - más de 51.000 llamadas;
+  - 13.847 turnos y 10.572 cobros;
+  - 312 cajas, 52 presupuestos y 37 planes de pago;
+  - 2.955 cambios de odontograma;
+  - 156 sesiones con kits;
+  - ráfagas simultáneas y 780 entradas maliciosas.
+  Resultado: **0 errores del servidor**. Detalle en el informe del proyecto.
+- **Corregido: un odontólogo veía las liquidaciones de comisiones de sus colegas** (hallazgo que ya figuraba en la simulación 2).
+  - Ahora cada odontólogo ve solo las suyas (listado, filtro y detalle).
+  - El administrador las sigue viendo todas.
+  - Se hizo con una opción general (`soloPropio`) del armador de rutas, que sirve para cualquier otra tabla que lo necesite.
+- **Corregido: cuotas con centavos.** Las cuotas de los planes de pago (y de ortodoncia) son ahora guaraníes enteros; la última se lleva la diferencia y la suma cierra exacta.
+- **Pruebas que quedaron viejas por el escritorio con ventanas** (Configuración y Pacientes se abren en ventana): actualizadas `ui-sesiones` y `ui-seguridad-cuenta`.
+- **Pruebas que dependían de datos de la base vieja:** ahora se arman solas.
+  - Paciente marcador de la clínica A en `preparar.js`.
+  - Configuración web y tratamiento base en `cobranza` e `informes`.
+  - Identificadores únicos del WhatsApp falso.
+- **Pruebas:** `correcciones-sim3.test` 9/9, más todas las de servidor, seguridad y pantallas (ver informe).

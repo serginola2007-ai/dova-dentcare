@@ -33,12 +33,18 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
   const ck = (await ctx.cookies()).find((c) => c.name === 'dova_rt');
   P('Cookie HttpOnly, SameSite=Strict y ruta restringida', ck && ck.httpOnly && ck.sameSite === 'Strict' && ck.path === '/api/auth', ck);
   await ir(p, 'pacientes');
-  P('Recargar la página mantiene la sesión', await esperar(async () => (await p.locator('#shell-root').isVisible()) && (await p.locator('.dova-tabla, table').count()) > 0));
+  // La sección se abre en una ventana del escritorio (un iframe): se busca la tabla en todas.
+  const tablas = async (pg) => { let n = 0; for (const f of pg.frames()) n += await f.locator('.dova-tabla, table').count().catch(() => 0); return n; };
+  P('Recargar la página mantiene la sesión', await esperar(async () => (await p.locator('#shell-root').isVisible()) && (await tablas(p)) > 0));
   // Otra "computadora" de la misma persona
   const otra = await entrar(b, 'recep1', 'clave123');
   // Cerrar sesión en todos los dispositivos desde Configuración
   await ir(p, 'configuracion');
-  await p.click('#btn-logout-todas'); await p.click('#btn-logout-todas');
+  // Configuración se abre en una ventana del escritorio: el botón está dentro de ese iframe.
+  let cfg = null;
+  await esperar(async () => { cfg = p.frames().find((f) => /ventana=1/.test(f.url()) && /configuracion/.test(f.url())); return cfg && (await cfg.locator('#btn-logout-todas').count()) > 0; }, 8000);
+  const donde = cfg || p;
+  await donde.click('#btn-logout-todas'); await donde.click('#btn-logout-todas');
   P('Cerrar en todos: vuelve al login', await esperar(async () => (await p.locator('#login-username').isVisible().catch(() => false)), 8000));
   await otra.p.evaluate(() => { location.hash = 'pacientes'; }); await otra.p.reload(); await otra.p.waitForTimeout(2500);
   P('…y la otra computadora también queda afuera', await otra.p.locator('#login-username').isVisible().catch(() => false));
@@ -46,6 +52,11 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
   // Cerrar sesión normal
   const { ctx: c3, p: p3 } = await entrar(b, 'recep1', 'clave123');
   await p3.click('#logout-btn').catch(() => {});
+  await p3.waitForTimeout(300);
+  P('Salir pregunta "¿Estás seguro?" con Cerrar / Cancelar', /Estás seguro/.test(await p3.textContent('.dova-modal-box').catch(() => '')) && await p3.locator('.dova-modal-box [data-si]').textContent() === 'Cerrar');
+  await p3.click('.dova-modal-box [data-no]'); await p3.waitForTimeout(500);
+  P('Cancelar deja la sesión abierta', await p3.locator('#logout-btn').isVisible() && !(await p3.locator('#login-username').isVisible()));
+  await p3.click('#logout-btn'); await p3.click('.dova-modal-box [data-si]');
   await p3.waitForTimeout(1500); await p3.reload(); await p3.waitForTimeout(2000);
   P('Cerrar sesión: al recargar pide ingresar', await p3.locator('#login-username').isVisible());
   P('…y la cookie se borró', !(await c3.cookies()).some((c) => c.name === 'dova_rt' && c.value));
@@ -59,10 +70,12 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
   await p4.goto(`${BASE}/mecanico/index.html`); await p4.waitForTimeout(500);
   await p4.evaluate(([t, u, c]) => localStorage.setItem('dova_session', JSON.stringify({ accessToken: 'viejo', refreshToken: t, usuario: u, clinica: c })), [rt, lj.usuario, lj.clinica]);
   await p4.evaluate(() => { location.hash = 'pacientes'; }); await p4.reload(); await p4.waitForTimeout(3000);
-  P('Sesión vieja: sigue adentro sin volver a ingresar', await p4.locator('#shell-root').isVisible());
+  // Regla actual: la sesión vale solo en la pestaña donde se inició, así que un token viejo
+  // guardado en el navegador NO deja entrar: se borra y se pide la contraseña.
+  P('Sesión vieja (versión anterior): pide ingresar de nuevo', await p4.locator('#login-username').isVisible() && !(await p4.locator('#shell-root').isVisible()));
   const ls4 = await p4.evaluate(() => localStorage.getItem('dova_session'));
   P('…y el token viejo se borró del navegador', !/refreshToken|accessToken/.test(ls4 || ''), ls4);
-  P('…ahora con cookie HttpOnly', (await c4.cookies()).some((c) => c.name === 'dova_rt' && c.httpOnly));
+  P('…y no se crea una sesión nueva a partir del token viejo', !(await c4.cookies()).some((c) => c.name === 'dova_rt' && c.value));
   // Un token NUEVO (con sesion_id) mandado en el cuerpo, como haría quien lo robó de una cookie, no sirve.
   const r5 = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'recep1', password: 'clave123' }) });
   const rt5 = decodeURIComponent((r5.headers.get('set-cookie') || '').match(/dova_rt=([^;]+)/)[1]);

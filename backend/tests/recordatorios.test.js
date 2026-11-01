@@ -26,7 +26,7 @@ const meta = http.createServer((rq, rs) => {
   let b = ''; rq.on('data', (c) => { b += c; }); rq.on('end', () => {
     const j = JSON.parse(b || '{}'); recibidos.push({ url: rq.url, auth: rq.headers.authorization, cuerpo: j });
     if (falla.has(j.to)) { rs.writeHead(400, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ error: { message: '(#131026) Message undeliverable' } })); return; }
-    n += 1; rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ messages: [{ id: `wamid.PRUEBA${n}` }] }));
+    n += 1; rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify({ messages: [{ id: `wamid.PRUEBA${process.pid}-${n}` }] }));
   });
 });
 

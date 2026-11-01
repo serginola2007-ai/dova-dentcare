@@ -141,6 +141,8 @@ router.use('/comision-liquidaciones', crearRecurso({
   tabla: 'comision_liquidaciones', modulo: 'comisiones', permisos: { ver: ['comisiones.view', 'comisiones.manage'], editar: ['comisiones.manage'] },
   borrado: false, orden: 't.creado_en DESC', selectExtra: 'o.nombre AS odontologo_nombre', joins: 'JOIN odontologos o ON o.id=t.odontologo_id',
   filtros: { odontologoId: { col: 'odontologo_id', tipo: 'id' } },
+  // Un odontólogo (sin comisiones.manage) ve solo sus propias liquidaciones.
+  soloPropio: (req) => ((req.usuario.permisos || []).includes('comisiones.manage') ? null : { col: 'odontologo_id', valor: req.usuario.odontologoId }),
   campos: { estado: { tipo: 'enum', valores: ['borrador', 'aprobada', 'pagada', 'anulada'] } },
   antesDeGuardar: async (d, ctx) => {
     if (ctx.creando) throw new ApiError(400, 'Las liquidaciones se generan con /finanzas/comisiones/liquidar');
