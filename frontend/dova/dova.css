@@ -71,6 +71,14 @@ img { max-width: 100%; height: auto; display: block; }
 .funcion h3 { font-size: 19px; font-weight: 650; margin-bottom: 8px; }
 .funcion p { color: var(--suave); font-size: 16px; }
 
+/* Todo lo que incluye */
+.bloque-incluye { padding-top: 24px; }
+.incluye { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 48px; }
+.incluye-grupo h3 { font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--grafito); padding-bottom: 10px; border-bottom: 2px solid var(--grafito); }
+.incluye-grupo ul { list-style: none; margin: 0; padding: 0; }
+.incluye-grupo li { position: relative; padding: 9px 0 9px 20px; border-bottom: 1px solid var(--linea); font-size: 15px; color: var(--tinta); }
+.incluye-grupo li::before { content: ''; position: absolute; left: 1px; top: 16px; width: 8px; height: 8px; background: var(--verde); }
+
 /* Pantallas */
 .pantallas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.62fr); gap: 32px 28px; align-items: start; }
 .pantallas .pantalla:nth-child(1) { grid-column: 1 / 3; }
@@ -131,11 +139,12 @@ img { max-width: 100%; height: auto; display: block; }
   .plan:nth-child(3) { border-left: 0; }
   .plan:nth-child(n + 3) { border-top: 1px solid var(--linea); }
   .funciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .incluye { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .funcion:not(:nth-child(3n + 1)) { padding-left: 0; border-left: 0; }
   .funcion:nth-child(even) { padding-left: 28px; border-left: 1px solid var(--linea); }
 }
+@media (max-width: 1060px) { .cab-nav { display: none; } }
 @media (max-width: 860px) {
-  .cab-nav { display: none; }
   .portada { grid-template-columns: 1fr; padding-top: 44px; gap: 40px; }
   .pantallas { grid-template-columns: 1fr; }
   .pantallas .pantalla:nth-child(1), .pantallas .pantalla:nth-child(2) { grid-column: auto; grid-row: auto; }
@@ -150,6 +159,7 @@ img { max-width: 100%; height: auto; display: block; }
   .planes { grid-template-columns: 1fr; }
   .plan + .plan { border-left: 0; border-top: 1px solid var(--linea); }
   .funciones { grid-template-columns: 1fr; }
+  .incluye { grid-template-columns: 1fr; }
   .funcion:nth-child(even) { padding-left: 0; border-left: 0; }
   .plan-para { min-height: 0; }
   .portada-captura { box-shadow: 5px 5px 0 var(--grafito-2); }

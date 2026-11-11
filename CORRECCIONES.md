@@ -1000,3 +1000,8 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - "Varias sedes" figura como próximamente; el cobro online no se anuncia hasta probarlo con una cuenta real.
 - La pantalla "Sin conexión" de la app tenía todavía los colores viejos: corregida.
 - Revisada en escritorio, tablet y celular: sin desbordes ni errores de consola.
+
+## Tanda: página de DOVA, más funciones y precios nuevos (10/11/2026)
+- Precios nuevos: Esencial Gs. 190.000, Base 290.000, Completo 450.000 y Premium 690.000 por mes (siguen por debajo de la competencia internacional).
+- Nueva sección "Todo lo que incluye": 39 funciones que ya existen, en 6 grupos (agenda, clínica, pacientes, dinero, gestión, informes), con enlace en el menú.
+- El menú de secciones se oculta por debajo de 1060 px para que la barra no se parta en dos renglones.

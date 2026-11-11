@@ -219,7 +219,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 
 ## Página de DOVA (producto)
 - `frontend/dova/index.html` + `dova.css` (sin JS) e imágenes en `dova/img/*.webp`. `/` → `/dova/`; el personal entra por "Ingresar" (`/mecanico/`).
-- Precios mensuales: Esencial Gs. 100.000, Base 150.000, Completo 250.000, Premium 400.000. Lo que lista cada plan sale de `config/planes.js` (`MODULOS.desde`): si cambia un módulo de plan, actualizar la página.
+- Precios mensuales: Esencial Gs. 190.000, Base 290.000, Completo 450.000, Premium 690.000 (referencia: Dentalink desde US$29). Sección "Todo lo que incluye" (#incluye): 39 funciones reales en 6 grupos; no agregar funciones que no existan. Lo que lista cada plan sale de `config/planes.js` (`MODULOS.desde`): si cambia un módulo de plan, actualizar la página.
 - Contacto: WhatsApp 0982 645 463 (wa.me/595982645463), sergio.espinola007@gmail.com. "Varias sedes" figura como "próximamente" (todavía no existe). No anunciar el cobro online hasta probarlo con Pagopar real.
 
 ## Inicio, celular y apariencia
