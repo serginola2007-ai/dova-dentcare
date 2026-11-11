@@ -85,7 +85,7 @@ async function detalle(c, tipo, desde, hasta) {
         WHERE t.clinica_id=$1 AND t.estado='atendido' AND t.fecha BETWEEN $2 AND $3 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 8`),
     q(`SELECT o.id, o.nombre,
               (SELECT count(*) FROM turnos t WHERE t.odontologo_id=o.id AND t.clinica_id=$1 AND t.estado='atendido' AND t.fecha BETWEEN $2 AND $3)::int AS atendidos,
-              (SELECT COALESCE(sum(p.monto),0) FROM pagos p JOIN presupuestos pr ON pr.id=p.presupuesto_id
+              (SELECT COALESCE(sum(p.monto),0) FROM pagos p LEFT JOIN cuotas cu ON cu.id=p.cuota_id LEFT JOIN planes_pago pp ON pp.id=cu.plan_pago_id JOIN presupuestos pr ON pr.id=COALESCE(p.presupuesto_id, pp.presupuesto_id)
                  WHERE pr.odontologo_id=o.id AND p.clinica_id=$1 AND p.estado='pagado' AND ${FECHA_PAGO} BETWEEN $2 AND $3)::numeric AS cobrado
          FROM odontologos o WHERE o.clinica_id=$1`),
     q(`SELECT ${porMes ? `to_char(${FECHA_PAGO}, 'YYYY-MM')` : `to_char(${FECHA_PAGO}, 'YYYY-MM-DD')`} AS k, sum(p.monto)::numeric AS v

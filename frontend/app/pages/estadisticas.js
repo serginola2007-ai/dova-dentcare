@@ -25,7 +25,7 @@ const DovaEstadisticas = (() => {
       root.querySelector('[data-k]').innerHTML = `
         <h3 class="dova-section-title">Dinero</h3><div class="dova-ext-kpis">
           ${kpi(fmtGs(k.produccion.total), 'Trabajos realizados (Gs.)')}${kpi(fmtGs(k.cobranza.total), 'Cobrado', { sub: `${k.cobranza.pagos} pagos` })}
-          ${kpi(pct(k.cobranza.tasaCobranza), 'Cobrado sobre lo realizado')}${kpi(k.cobranza.ticketPromedio ? fmtGs(k.cobranza.ticketPromedio) : '—', 'Cobro promedio por paciente')}
+          ${kpi(k.cobranza.tasaCobranza > 150 ? 'más del 150%' : pct(k.cobranza.tasaCobranza), 'Cobrado sobre lo realizado', { sub: k.cobranza.tasaCobranza > 150 ? 'hay cobros de trabajos sin sesión registrada' : (k.produccion.total ? '' : 'registrá las sesiones en el plan') })}${kpi(k.cobranza.ticketPromedio ? fmtGs(k.cobranza.ticketPromedio) : '—', 'Cobro promedio por paciente')}
           ${kpi(k.agenda.produccionPorHora ? fmtGs(k.agenda.produccionPorHora) : '—', 'Ingreso por hora de atención')}</div>
         <h3 class="dova-section-title">Presupuestos</h3><div class="dova-ext-kpis">
           ${kpi(pct(k.presupuestos.tasaAceptacion), 'Presupuestos aceptados', { sub: `${k.presupuestos.aceptados} de ${k.presupuestos.presentados}` })}

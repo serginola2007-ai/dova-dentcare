@@ -18,7 +18,7 @@ const DovaConfiguracion = (() => {
         <p class="dova-nota">Elegí cómo ver DOVA: con fondo claro o con fondo oscuro. El cambio se guarda en tu cuenta y te acompaña en cualquier dispositivo donde inicies sesión. Esta es la única parte de DOVA donde se cambia.</p>
         <h4 class="dova-apariencia-sub">Colores</h4>
         <div class="dova-modo-opciones" role="radiogroup" aria-label="Modo de color">
-          <label class="dova-modo-opcion${modo === 'claro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="claro" ${modo === 'claro' ? 'checked' : ''} /> <span><strong>Claro</strong><br><span class="dova-nota">Fondo crema, ideal con buena luz.</span></span></label>
+          <label class="dova-modo-opcion${modo === 'claro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="claro" ${modo === 'claro' ? 'checked' : ''} /> <span><strong>Claro</strong><br><span class="dova-nota">Fondo claro, ideal con buena luz.</span></span></label>
           <label class="dova-modo-opcion${modo === 'oscuro' ? ' seleccionado' : ''}"><input type="radio" name="modo-color" value="oscuro" ${modo === 'oscuro' ? 'checked' : ''} /> <span><strong>Oscuro</strong><br><span class="dova-nota">Fondo oscuro, descansa la vista en ambientes con poca luz.</span></span></label>
         </div>
         <h4 class="dova-apariencia-sub">Tamaño de letra</h4>

@@ -70,6 +70,9 @@
   /* En el celular los montos largos pueden partirse y nunca empujan la pantalla */
   .dova-cards-grid > *, .dova-ext-kpis > *, .dova-contexto-grid > *, .dova-cli-360-grid > * { min-width: 0; }
   .dova-card-valor, .dova-ext-kpi-valor { white-space: normal; font-size: 19px; overflow-wrap: anywhere; }
+  /* Indicadores de a dos por renglón: diez números no ocupan toda la pantalla antes de las pestañas */
+  .dova-ext-kpis, .dova-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dova-cards-grid > .dova-card, .dova-ext-kpis > .dova-ext-kpi { padding: 10px 12px; }
 }
 
 /* ---------- Íconos lineales (app/core/iconos.js) en lugar de emojis ---------- */

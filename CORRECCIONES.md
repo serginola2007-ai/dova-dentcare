@@ -1023,3 +1023,14 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - `glob` dentro de node-pg-migrate forzado a 14.0.4 (override). La alternativa de npm (`--force`) bajaba node-pg-migrate de 9 a 7. Probado: las 62 migraciones y el seed corren en una base nueva.
 - `uuid` dentro de exceljs forzado a 11.1.1 (override). Probado: los Excel se generan y se vuelven a abrir.
 - Resultado: `npm audit` → 0 vulnerabilidades.
+
+## Tanda: simulacro de 1 año de uso intensivo (11/11/2026)
+- Simulación de un año completo en una base nueva: 11.792 pedidos con 3 odontólogos, recepción y caja. Resultado: 261 pacientes, 2.451 turnos, 973 pagos, 1.805 cuotas, 795 historias clínicas, 176 recetas, 46 consentimientos, 10 casos de ortodoncia, 187 sesiones y 206 comprobantes. 0 errores del servidor y todas las reglas de la base se cumplen: saldos, stock, caja, cuotas y firmados.
+- Revisión visual de las 72 pantallas del menú y de las pestañas del paciente, en modo claro y oscuro, en escritorio y en celular.
+- Corregido:
+  - los enlaces directos a una pestaña (`#caja/hist`, `#finanzas/cierre`…) abrían la primera pestaña: ahora abren la pedida;
+  - en Documentos del paciente aparecía "· ·" cuando faltaba un dato;
+  - en celular los indicadores ocupaban un renglón cada uno: ahora van de a dos;
+  - Apariencia decía "Fondo crema": ahora dice "Fondo claro";
+  - "Cobrado sobre lo realizado" mostraba porcentajes absurdos (2795 %) cuando no se registran las sesiones: ahora muestra "más del 150 %" con la explicación, o pide registrar las sesiones;
+  - en Informes y en Producción por odontólogo, "Cobrado" ahora cuenta también los pagos de las cuotas de sus planes de pago (antes solo los pagos directos al presupuesto).

@@ -285,6 +285,12 @@ const DovaApp = (() => {
   }
 
   async function navegar(ruta, params, opciones = {}) {
+    // Un enlace a una pestaña de la sección (#finanzas/cierre, #caja/hist…) abre esa pestaña:
+    // el segundo tramo es el id de una pestaña del menú, no un dato como en #paciente/12.
+    if (typeof params === 'string' && params) {
+      const item = MENU.find((m) => m.ruta === ruta);
+      if (item && item.subs && item.subs.some((sb) => sb[0] === params)) { window.DovaSubPendiente = params; params = undefined; }
+    }
     // Escritorio: cada función se abre en su ventana; Inicio queda de fondo.
     if (ESCRITORIO) {
       if (!ruta || ruta === 'dashboard') { await mostrarInicio(); return; }
@@ -292,6 +298,7 @@ const DovaApp = (() => {
       if (permisoE && !tieneAcceso(permisoE)) { Vistas.toast('No tenés permiso para acceder a esa sección', 'error'); return; }
       document.body.classList.remove('dova-menu-abierto');
       DovaVentanas.abrir(ruta, params, window.DovaSubPendiente || null);
+      window.DovaSubPendiente = null;
       document.dispatchEvent(new CustomEvent('dova:navegar', { detail: { ruta, params } }));
       return;
     }

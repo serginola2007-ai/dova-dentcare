@@ -84,7 +84,7 @@ const REPORTES = {
       GROUP BY p.id HAVING count(*) >= 2 ORDER BY 2 DESC, 1`),
   },
   produccion_odontologo: {
-    grupo: 'Clínicos', titulo: 'Producción por odontólogo', descripcion: 'Atención y montos por profesional en el período. "Presupuestado" son los presupuestos aceptados del período; "Cobrado" son los cobros vinculados a presupuestos de ese profesional.',
+    grupo: 'Clínicos', titulo: 'Producción por odontólogo', descripcion: 'Atención y montos por profesional en el período. "Presupuestado" son los presupuestos aceptados del período; "Cobrado" son los cobros vinculados a presupuestos de ese profesional (también las cuotas de sus planes de pago).',
     filtros: ['odontologoId'], totalizar: ['atendidos', 'pacientes', 'consultas', 'presupuestado', 'cobrado'],
     columnas: [{ k: 'odontologo', t: 'Odontólogo' }, { k: 'atendidos', t: 'Turnos atendidos', tipo: 'num' }, { k: 'pacientes', t: 'Pacientes', tipo: 'num' }, { k: 'consultas', t: 'Consultas registradas', tipo: 'num' }, { k: 'horas', t: 'Horas en sillón', tipo: 'num' }, { k: 'presupuestado', t: 'Presupuestado', tipo: 'gs' }, { k: 'cobrado', t: 'Cobrado', tipo: 'gs' }],
     datos: (x) => x.q(`SELECT o.nombre AS odontologo,
@@ -93,7 +93,7 @@ const REPORTES = {
         (SELECT count(*)::int FROM historia_clinica h WHERE h.odontologo_id=o.id AND h.fecha BETWEEN $2 AND $3 AND h.enmendada_de_id IS NULL) AS consultas,
         (SELECT round(COALESCE(sum(t.duracion_minutos),0)/60.0, 1) FROM turnos t WHERE t.odontologo_id=o.id AND t.fecha BETWEEN $2 AND $3 AND t.estado='atendido') AS horas,
         (SELECT COALESCE(sum(pr.total),0) FROM presupuestos pr WHERE pr.odontologo_id=o.id AND pr.estado='aceptado' AND pr.fecha BETWEEN $2 AND $3) AS presupuestado,
-        (SELECT COALESCE(sum(p.monto),0) FROM pagos p JOIN presupuestos pr ON pr.id=p.presupuesto_id WHERE pr.odontologo_id=o.id AND p.estado='pagado' AND ${FECHA_PAGO} BETWEEN $2 AND $3) AS cobrado
+        (SELECT COALESCE(sum(p.monto),0) FROM pagos p LEFT JOIN cuotas cu ON cu.id=p.cuota_id LEFT JOIN planes_pago pp ON pp.id=cu.plan_pago_id JOIN presupuestos pr ON pr.id=COALESCE(p.presupuesto_id, pp.presupuesto_id) WHERE pr.odontologo_id=o.id AND p.estado='pagado' AND ${FECHA_PAGO} BETWEEN $2 AND $3) AS cobrado
       FROM odontologos o WHERE o.clinica_id=$1 AND (o.activo OR EXISTS (SELECT 1 FROM turnos t WHERE t.odontologo_id=o.id AND t.fecha BETWEEN $2 AND $3)) ${x.w('o.id', 'odontologoId')} ORDER BY o.nombre`),
   },
   // ------------------------------------------------------------- FINANCIEROS
