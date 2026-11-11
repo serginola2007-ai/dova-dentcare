@@ -1005,3 +1005,8 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Precios nuevos: Esencial Gs. 190.000, Base 290.000, Completo 450.000 y Premium 690.000 por mes (siguen por debajo de la competencia internacional).
 - Nueva sección "Todo lo que incluye": 39 funciones que ya existen, en 6 grupos (agenda, clínica, pacientes, dinero, gestión, informes), con enlace en el menú.
 - El menú de secciones se oculta por debajo de 1060 px para que la barra no se parta en dos renglones.
+
+## Tanda: página de DOVA con identidad paraguaya (10/11/2026)
+- Nueva sección "Hecho acá, para que las clínicas de acá crezcan": guaraníes sin centavos, IVA 10/5/exento, teléfonos +595 y WhatsApp, hora de Paraguay, seguros/IPS y soporte local.
+- Toques de guaraní con medida: "Ñane retã", "Mba'éichapa", "Jajotopata" y "Aguyje".
+- Corregido: la página hablaba de "facturas"; DOVA emite comprobantes internos (la factura electrónica SIFEN figura como próximamente).

@@ -107,6 +107,16 @@ img { max-width: 100%; height: auto; display: block; }
 .pronto { display: inline-block; margin-left: 4px; padding: 0 6px; font-size: 12px; color: var(--suave); border: 1px solid var(--linea); border-radius: var(--r); }
 .nota-planes { margin-top: 18px; font-size: 14px; color: var(--suave); }
 
+/* Hecho en Paraguay */
+.paraguay { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: start; }
+.paraguay .bloque-cab { margin-bottom: 0; }
+.paraguay .bloque-bajada + .bloque-bajada { margin-top: 12px; }
+.paraguay-lista { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--grafito); }
+.paraguay-lista li { padding: 16px 0 16px 22px; position: relative; border-bottom: 1px solid var(--linea); color: var(--suave); }
+.paraguay-lista li::before { content: ''; position: absolute; left: 1px; top: 24px; width: 8px; height: 8px; background: var(--verde); }
+.paraguay-lista strong { color: var(--tinta); }
+.cierre > .etiqueta-clara { color: #8FCAAD; margin: 0 0 10px; font-size: 13px; }
+
 /* Seguridad */
 .seguridad { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
 .seguridad li { padding: 18px 0; border-top: 1px solid #CDD1CC; color: var(--suave); }
@@ -149,6 +159,7 @@ img { max-width: 100%; height: auto; display: block; }
   .pantallas { grid-template-columns: 1fr; }
   .pantallas .pantalla:nth-child(1), .pantallas .pantalla:nth-child(2) { grid-column: auto; grid-row: auto; }
   .seguridad { grid-template-columns: 1fr; }
+  .paraguay { grid-template-columns: 1fr; gap: 32px; }
   .bloque { padding-top: 64px; padding-bottom: 64px; }
 }
 @media (max-width: 600px) {
