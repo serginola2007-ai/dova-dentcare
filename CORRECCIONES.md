@@ -1010,3 +1010,4 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Nueva sección "Hecho acá, para que las clínicas de acá crezcan": guaraníes sin centavos, IVA 10/5/exento, teléfonos +595 y WhatsApp, hora de Paraguay, seguros/IPS y soporte local.
 - Toques de guaraní con medida: "Ñane retã", "Mba'éichapa", "Jajotopata" y "Aguyje".
 - Corregido: la página hablaba de "facturas"; DOVA emite comprobantes internos (la factura electrónica SIFEN figura como próximamente).
+- El guaraní no se notaba (estaba abajo y en letra chica): ahora la portada abre con "Mba'éichapa" destacado en verde, y "Ñane retã" y "Ñañomongeta" (conversemos) encabezan la sección de Paraguay y el cierre con el mismo estilo.

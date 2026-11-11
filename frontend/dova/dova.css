@@ -115,7 +115,8 @@ img { max-width: 100%; height: auto; display: block; }
 .paraguay-lista li { padding: 16px 0 16px 22px; position: relative; border-bottom: 1px solid var(--linea); color: var(--suave); }
 .paraguay-lista li::before { content: ''; position: absolute; left: 1px; top: 24px; width: 8px; height: 8px; background: var(--verde); }
 .paraguay-lista strong { color: var(--tinta); }
-.cierre > .etiqueta-clara { color: #8FCAAD; margin: 0 0 10px; font-size: 13px; }
+.saludo { margin: 0 0 6px; font-size: 22px; font-style: italic; font-weight: 600; color: var(--verde); letter-spacing: -0.01em; }
+.cierre > .saludo-claro { color: #8FCAAD; margin: 0 0 8px; font-size: 22px; }
 
 /* Seguridad */
 .seguridad { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }

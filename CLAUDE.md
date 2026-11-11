@@ -220,7 +220,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 ## Página de DOVA (producto)
 - `frontend/dova/index.html` + `dova.css` (sin JS) e imágenes en `dova/img/*.webp`. `/` → `/dova/`; el personal entra por "Ingresar" (`/mecanico/`).
 - Precios mensuales: Esencial Gs. 190.000, Base 290.000, Completo 450.000, Premium 690.000 (referencia: Dentalink desde US$29). Sección "Todo lo que incluye" (#incluye): 39 funciones reales en 6 grupos; no agregar funciones que no existan. Lo que lista cada plan sale de `config/planes.js` (`MODULOS.desde`): si cambia un módulo de plan, actualizar la página.
-- DOVA emite comprobantes internos, NO facturas fiscales (SET/SIFEN pendiente): en la página decir "comprobantes", nunca "facturas". Toques de guaraní medidos (Mba'éichapa, Jajotopata, Aguyje, Ñane retã); sin frases afectivas tipo "Rohayhu". Sección #paraguay: solo afirmaciones verificadas en el sistema.
+- DOVA emite comprobantes internos, NO facturas fiscales (SET/SIFEN pendiente): en la página decir "comprobantes", nunca "facturas". Toques de guaraní medidos y visibles (saludo "Mba'éichapa" en la portada, "Ñane retã", "Ñañomongeta" en el cierre, "Jajotopata", "Aguyje"); sin frases afectivas tipo "Rohayhu". Sección #paraguay: solo afirmaciones verificadas en el sistema.
 - Contacto: WhatsApp 0982 645 463 (wa.me/595982645463), sergio.espinola007@gmail.com. "Varias sedes" figura como "próximamente" (todavía no existe). No anunciar el cobro online hasta probarlo con Pagopar real.
 
 ## Inicio, celular y apariencia
