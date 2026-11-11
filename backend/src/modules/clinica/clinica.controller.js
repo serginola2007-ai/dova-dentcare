@@ -9,7 +9,7 @@ async function obtenerActual(req, res, next) {
 
 async function brandingPublico(req, res, next) {
   try {
-    const slug = req.query.slug || process.env.DOVA_CLINICA_POR_DEFECTO || 'dentcarerc';
+    const slug = req.query.slug || process.env.DOVA_CLINICA_POR_DEFECTO || 'dova';
     const branding = await service.obtenerBrandingPublico(slug);
     res.json(branding);
   } catch (err) { next(err); }

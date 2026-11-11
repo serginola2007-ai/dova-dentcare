@@ -1,4 +1,4 @@
-/* Página web de DentCareRC: reserva turnos, registra pacientes y recibe
+/* Página web pública de la clínica (DOVA): reserva turnos, registra pacientes y recibe
    consultas directamente en DOVA (API /api/web/publico). */
 (() => {
   const API = '/api/web/publico';
@@ -24,14 +24,14 @@
   function aviso(msg) { const a = $('[data-aviso]'); a.textContent = msg; a.hidden = false; clearTimeout(avisoTmr); avisoTmr = setTimeout(() => { a.hidden = true; }, 4500); }
 
   // Turnos reservados en este dispositivo (para volver a verlos).
-  const MIS = 'dentcare-mis-turnos';
+  const MIS = 'dova-mis-turnos';
   const misTurnos = () => { try { return JSON.parse(localStorage.getItem(MIS) || '[]'); } catch (_e) { return []; } };
   const guardarTurno = (t) => { try { const l = misTurnos().filter((x) => x.token !== t.token); l.unshift(t); localStorage.setItem(MIS, JSON.stringify(l.slice(0, 10))); } catch (_e) { /* modo privado */ } };
 
   // ---- Sesión del paciente (cuenta en la web) ----
   // La sesión viaja en una cookie HttpOnly que esta página no puede leer: acá
   // solo se recuerda el nombre para saludar y saber si hay una cuenta abierta.
-  const SES = 'dentcare-sesion';
+  const SES = 'dova-web-sesion';
   const sesion = () => { try { return JSON.parse(localStorage.getItem(SES) || 'null'); } catch (_e) { return null; } };
   const guardarSesion = (x) => { try { localStorage.setItem(SES, JSON.stringify({ nombre: x.nombre, apellido: x.apellido })); } catch (_e) { /* modo privado */ } };
   const cerrarSesion = () => { try { localStorage.removeItem(SES); } catch (_e) { /* */ } };
@@ -155,11 +155,10 @@
   }
 
   function pintarDatos() {
-    document.title = `${info.nombre} — Odontología humanizada`;
+    const pagina = document.title.trim();
+    document.title = pagina && pagina !== 'Clínica odontológica' ? `${pagina} — ${info.nombre}` : `${info.nombre} — Clínica odontológica`;
     $$('[data-nombre]').forEach((e) => { e.textContent = info.nombre; });
-    // Nombre como en la marca: "Dent" + "Care" en terracota (+ lo que siga, ej. "RC").
-    const m = info.nombre.match(/^(dent)(care)(.*)$/i);
-    $('[data-marca]').innerHTML = m ? `${esc(m[1])}<span class="care">${esc(m[2])}</span>${m[3] ? `<span class="rc">${esc(m[3].trim())}</span>` : ''}` : esc(info.nombre);
+    $('[data-marca]').textContent = info.nombre;
     if (info.eslogan && hay('[data-eslogan]')) $('[data-eslogan]').textContent = info.eslogan;
     if (info.presentacion && hay('[data-presentacion]')) $('[data-presentacion]').textContent = info.presentacion;
     // Logo cargado en DOVA (Facturación → Configuración); si no hay, el diente de la marca.
@@ -333,7 +332,7 @@
         try {
           const r = await apiAviso(`${encodeURIComponent(st.control.token)}/reservar`, { method: 'POST', body: { tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora } });
           guardarTurno({ token: r.token, fecha: st.fecha, hora: st.hora, motivo: st.control.titulo });
-          try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+          try { sessionStorage.setItem('dova-recien', '1'); } catch (_e) { /* */ }
           location.href = `mi-turno.html#t=${r.token}`;
         } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno'; if (/ocup/.test(e.message)) st.hora = null; }
       });
@@ -356,7 +355,7 @@
         btn.disabled = true; btn.textContent = 'Reservando…';
         try {
           const r = await cuentaApi('/reservar', { method: 'POST', body: { tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora, comentario: form.comentario.value } });
-          try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+          try { sessionStorage.setItem('dova-recien', '1'); } catch (_e) { /* */ }
           guardarTurno({ token: r.token, fecha: st.fecha, hora: st.hora, motivo: (tratElegido() || {}).nombre || 'Consulta' });
           location.href = 'mi-cuenta.html#turnos';
         } catch (e) { err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno'; }
@@ -385,7 +384,7 @@
       try {
         const r = await api('/reservar', { method: 'POST', body: { ...d, acepta: true, tratamientoId: st.tratamientoId, odontologoId: st.odontologoId, fecha: st.fecha, hora: st.hora } });
         guardarTurno({ token: r.token, fecha: r.turno.fecha, hora: r.turno.hora, motivo: r.turno.motivo });
-        try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+        try { sessionStorage.setItem('dova-recien', '1'); } catch (_e) { /* */ }
         location.href = `mi-turno.html#t=${r.token}`;
       } catch (e) {
         err.textContent = e.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Confirmar turno';
@@ -404,7 +403,7 @@
       return;
     }
     const enlace = `${location.origin}${location.pathname}#t=${token}`;
-    try { if (sessionStorage.getItem('dentcare-recien')) { sessionStorage.removeItem('dentcare-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
+    try { if (sessionStorage.getItem('dova-recien')) { sessionStorage.removeItem('dova-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
     const estado = t.estado === 'cancelado' ? ['Cancelado', 'no'] : t.estado === 'atendido' ? ['Atendido', 'ok'] : t.estado === 'no_asistio' ? ['No asistió', 'no'] : !t.vigente ? ['Pasado', ''] : t.confirmado ? ['Confirmado', 'ok'] : ['Reservado', ''];
     const wa = linkWa(`Hola, soy ${t.nombre}. Tengo turno el ${fechaLarga(t.fecha)} a las ${t.hora}.`);
     v.innerHTML = `<div class="tarjeta-turno">
@@ -665,7 +664,7 @@
       <nav class="cuenta-tabs" aria-label="Mi cuenta">${SECC.map(([k, t]) => `<a href="#${k}" data-tab="${k}">${t}</a>`).join('')}</nav>
       <div class="cuenta-panel" data-panel aria-live="polite"></div>`;
     $('[data-salir]', c).addEventListener('click', async () => { try { await cuentaApi('/salir', { method: 'POST' }); } catch (_e) { /* igual se cierra acá */ } cerrarSesion(); location.href = 'index.html'; });
-    try { if (sessionStorage.getItem('dentcare-recien')) { sessionStorage.removeItem('dentcare-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
+    try { if (sessionStorage.getItem('dova-recien')) { sessionStorage.removeItem('dova-recien'); aviso('¡Listo! Tu turno quedó reservado.'); } } catch (_e) { /* */ }
     const mostrar = async () => {
       const k = (location.hash.slice(1) || 'turnos'); const sec = SECC.some(([x]) => x === k) ? k : 'turnos';
       $$('[data-tab]', c).forEach((a) => { if (a.dataset.tab === sec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -810,7 +809,7 @@
       try {
         const r = await apiAviso(`${encodeURIComponent(token)}/tomar`, { method: 'POST' });
         guardarTurno({ token: r.token, fecha: a.fecha, hora: a.hora, motivo: 'Turno' });
-        try { sessionStorage.setItem('dentcare-recien', '1'); } catch (_e) { /* */ }
+        try { sessionStorage.setItem('dova-recien', '1'); } catch (_e) { /* */ }
         location.href = `mi-turno.html#t=${r.token}`;
       } catch (e) { aviso(e.message); paginaOferta(); }
     });

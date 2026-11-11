@@ -29,8 +29,8 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
     // ---------- Escritorio ----------
     const { ctx, p, err } = await entrar({ width: 1366, height: 860 });
     await p.waitForSelector('[data-login-clinica]');
-    await p.waitForFunction(() => /DentCare/.test(document.querySelector('[data-login-clinica]').textContent), null, { timeout: 5000 }).catch(() => {});
-    P('Ingreso: marca DOVA con el nombre de la clínica', /DOVA/.test(await p.textContent('.dova-login-marca')) && /DentCare/.test(await p.textContent('.dova-login-marca')));
+    await p.waitForFunction(() => /DOVA/.test(document.querySelector('[data-login-clinica]').textContent), null, { timeout: 5000 }).catch(() => {});
+    P('Ingreso: marca DOVA con el nombre de la clínica', /DOVA/.test(await p.textContent('.dova-login-marca')) && /DOVA/.test(await p.textContent('.dova-login-marca')));
     const anchos = await p.evaluate(() => [document.querySelector('.dova-login-ingresar').getBoundingClientRect().width, document.querySelector('#login-username').getBoundingClientRect().width]);
     P('Ingreso: el botón Ingresar va a lo ancho', Math.abs(anchos[0] - anchos[1]) < 4, anchos);
     await login(p);

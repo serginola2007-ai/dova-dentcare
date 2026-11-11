@@ -1,11 +1,10 @@
 # DOVA — Sistema de gestión odontológica
-### Clínica configurada: DentCareRC
+### Producto independiente, para varias clínicas
 
 DOVA es **una sola aplicación, una sola lógica, un solo backend y una sola
-base de datos**, con tres estilos visuales entre los que cada usuario puede
-elegir: **Moderno**, **Minimalista** y **Técnico** y **Mecánico** (escritorio clásico con los colores de la clínica). Ningún dato, función,
-rol ni permiso cambia según el diseño elegido — el diseño es solamente una
-capa visual.
+base de datos**. Tiene un único diseño, **Mecánico** (escritorio clásico),
+con la paleta propia de DOVA "grafito y verde" en modo claro u oscuro.
+Cada clínica es un cliente que se da de alta desde Plataforma.
 
 ## Estructura
 
@@ -47,7 +46,7 @@ directamente.
 cd backend
 cp .env.example .env      # completar DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET
 npm run migrate:up        # crea/actualiza todas las tablas, incluida la preferencia de diseño
-npm run seed               # clínica DentCareRC, roles, permisos y usuario admin/admin
+npm run seed               # clínica inicial (DOVA), roles, permisos y usuario admin/admin
 npm run dev                 # http://localhost:4000 (con recarga automática)
 ```
 
@@ -115,7 +114,7 @@ ya viene versionado con `http://localhost:4000/api` para que `Iniciar DOVA.bat`
 funcione de una.
 
 - `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
-- `DOVA_CLINICA_POR_DEFECTO` (opcional): código de la clínica a la que entra el login cuando no se indica otra (por defecto `dentcarerc`).
+- `DOVA_CLINICA_POR_DEFECTO` (opcional): código de la clínica a la que entra el login cuando no se indica otra (por defecto `dova`). `DOVA_CLINICA_NOMBRE` (opcional): nombre de la clínica inicial que crea el seed en una instalación nueva (por defecto `DOVA`).
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (opcionales): activan los avisos push en celulares y compus (la app instalada avisa de turnos, cobros y mensajes aunque esté cerrada). Generalas una sola vez con `npx web-push generate-vapid-keys` y no las cambies después (cada cambio desactiva los dispositivos ya suscritos). `VAPID_SUBJECT` es un `mailto:` de contacto. Sin las claves, la tarjeta "Avisos en este dispositivo" no aparece.
 - `PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY` (opcionales): conectan el cobro online (Pagopar). En Pagopar, la URL de respuesta es `<PUBLIC_URL>/api/cobro-online/aviso/pagopar`. Sin estas claves, el cobro online no se ofrece.
 - `WEB_CLINICA_ID` (opcional): clínica que atiende la página web (por defecto, la primera).
@@ -171,7 +170,7 @@ permite disco para archivos.
 desplegar solo. Las migraciones aplican únicamente lo nuevo (nunca borran
 datos) y el seed no duplica nada.
 
-**Dominio propio** (ej. `sistema.dentcarerc.com`): Render → servicio
+**Dominio propio** (ej. `sistema.tuclinica.com`): Render → servicio
 `dova` → Settings → Custom Domains.
 
 **Opcional:** `ADMIN_PASSWORD` (contraseña inicial del admin, solo antes del

@@ -26,7 +26,7 @@ function nuevoDoc(res, nombre) {
   return doc;
 }
 function cabecera(doc, clinica, titulo) {
-  doc.fontSize(16).fillColor(clinica.color_primario || '#C1673F').text(clinica.nombre || 'DOVA');
+  doc.fontSize(16).fillColor(clinica.color_primario || '#428B6D').text(clinica.nombre || 'DOVA');
   doc.fontSize(8.5).fillColor('#555555').text([clinica.direccion, clinica.telefono, clinica.email].filter(Boolean).join(' · '));
   doc.moveDown(0.4).moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#DDDDDD').stroke();
   doc.moveDown(0.8).fontSize(15).fillColor('#000000').text(titulo, { align: 'center' });
@@ -40,7 +40,7 @@ function datosPaciente(doc, p) {
 }
 function titulo(doc, t) {
   if (doc.y > 720) doc.addPage();
-  doc.moveDown(0.4).fontSize(11.5).fillColor('#8F4F32').text(t);
+  doc.moveDown(0.4).fontSize(11.5).fillColor('#336752').text(t);
   doc.moveDown(0.2).moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#EEEEEE').stroke();
   doc.moveDown(0.3).fillColor('#000000');
 }

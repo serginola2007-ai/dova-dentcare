@@ -399,7 +399,7 @@ function pdf(res, r, filtrosTxt, clinica) {
   res.setHeader('Content-Disposition', `inline; filename="${r.clave}-${r.desde}-${r.hasta}.pdf"`);
   doc.pipe(res);
   const W = doc.page.width - 72;
-  doc.fontSize(14).fillColor(clinica.color_primario || '#C1673F').text(clinica.nombre || 'DOVA');
+  doc.fontSize(14).fillColor(clinica.color_primario || '#428B6D').text(clinica.nombre || 'DOVA');
   const [tit, ...resto] = encabezados(r, filtrosTxt);
   doc.moveDown(0.3).fontSize(13).fillColor('#000').text(tit);
   doc.fontSize(9).fillColor('#555').text(resto.join(' · '));
@@ -416,18 +416,18 @@ function pdf(res, r, filtrosTxt, clinica) {
     const y = doc.y; let x = 36;
     if (fondo) doc.rect(36, y, W, alto).fill(fondo);
     vals.forEach((v, i) => {
-      doc.font(negrita ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor(fondo === '#8F4F32' ? '#FFFFFF' : '#000000')
+      doc.font(negrita ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor(fondo === '#336752' ? '#FFFFFF' : '#000000')
         .text(v, x + 2, y + 3, { width: anchos[i] - 4, align: derecha(r.columnas[i]) ? 'right' : 'left' });
       x += anchos[i];
     });
     doc.y = y + alto; doc.x = 36;
     doc.moveTo(36, doc.y).lineTo(36 + W, doc.y).strokeColor('#EEEEEE').lineWidth(0.5).stroke();
   };
-  const cabecera = () => fila(r.columnas.map((c) => c.t), { negrita: true, fondo: '#8F4F32' });
+  const cabecera = () => fila(r.columnas.map((c) => c.t), { negrita: true, fondo: '#336752' });
   cabecera();
   if (!r.filas.length) doc.font('Helvetica').fontSize(9).fillColor('#555').text('Sin datos para estos filtros.', 36, doc.y + 6);
   for (const f of r.filas) fila(r.columnas.map((c) => fmtCelda(f[c.k], c.tipo)));
-  if (r.totales) fila(r.columnas.map((c, i) => (i === 0 ? 'TOTAL' : r.totales[c.k] !== undefined ? fmtCelda(r.totales[c.k], c.tipo) : '')), { negrita: true, fondo: '#F3EDE8' });
+  if (r.totales) fila(r.columnas.map((c, i) => (i === 0 ? 'TOTAL' : r.totales[c.k] !== undefined ? fmtCelda(r.totales[c.k], c.tipo) : '')), { negrita: true, fondo: '#ECEEEF' });
   const rango = doc.bufferedPageRange();
   for (let i = rango.start; i < rango.start + rango.count; i++) {
     doc.switchToPage(i);

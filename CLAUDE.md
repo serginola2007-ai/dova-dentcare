@@ -1,6 +1,6 @@
 # DOVA — guía para Claude Code
 
-DOVA es el sistema de gestión odontológica de la clínica **DentCareRC** (Paraguay).
+DOVA es un sistema de gestión odontológica **propio e independiente** (Paraguay), para varias clínicas (cada una es un cliente en Plataforma). DentCareRC ya no es cliente: no volver a agregar su nombre, datos ni colores.
 Incluye:
 - pantallas del personal: agenda, pacientes, consulta, caja, facturación, inventario, reportes;
 - la página web pública de la clínica;
@@ -31,7 +31,7 @@ backend/            Node 22 + Express 5 + PostgreSQL (node-pg-migrate)
   src/config/       env.js, db.js, seguridad.js (sesiones, cookies, límites: todo por env)
   src/modules/*     un módulo por área: *.routes.js / *.service.js / *.repository.js
   src/utils/        auditoria, sesiones, cookies, montos, recurso (CRUD genérico con lista blanca y `soloPropio(req)` para limitar filas al usuario), tiempoReal (SSE)
-  src/db/migrations 0001…0061 — SOLO se agregan nuevas, nunca se editan las viejas
+  src/db/migrations 0001…0062 — SOLO se agregan nuevas, nunca se editan las viejas
   src/db/seed.js    roles, permisos, admin (nunca deja admin/admin en producción)
   scripts/          migrar.js, verificar-sintaxis.js, crear-usuario-app.sql
   tests/seguridad/  pruebas de seguridad (ver SECURITY-TESTS.md)
@@ -149,7 +149,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Se aplica en UN solo lugar: `auth.repository.getPermisosEfectivos` saca los permisos de módulos que el plan no incluye (menú, pantallas y API se cierran juntos). Lo que no tiene permiso propio (web pública, envíos automáticos) usa `conModulo(...)`/`modulosHabilitados(...)`.
 - Panel del dueño: `modules/plataforma/` (`/api/plataforma`, permiso sintetizado `plataforma.manage` solo para usuarios con `usuarios.proveedor`; no da acceso a datos de pacientes). Alta de clínica (roles, permisos, admin con clave temporal), plan, suspensión y pagos mensuales (`suscripcion_pagos`). `GET /api/clinica/plan` = "Mi plan".
 - Suspensión: `clinicas.activa=false`; el login responde 403 `CLINICA_SUSPENDIDA` solo con la clave correcta y el middleware corta los tokens abiertos (el proveedor queda exento).
-- Login por clínica: `clinicaSlug` en el cuerpo (por defecto `DOVA_CLINICA_POR_DEFECTO` o `dentcarerc`); la pantalla de ingreso tiene "Entro a otra clínica" (también `?clinica=`).
+- Login por clínica: `clinicaSlug` en el cuerpo (por defecto `DOVA_CLINICA_POR_DEFECTO` o `dova`); la pantalla de ingreso tiene "Entro a otra clínica" (también `?clinica=`).
 - Límite conocido: la página web pública atiende UNA clínica por instalación (`WEB_CLINICA_ID`).
 - Pantallas: `app/pages/plataforma.js`. Pruebas: `tests/plataforma.test.js`, `tests/ui-plataforma.js`.
 
@@ -204,6 +204,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Solo existe el diseño `mecanico` (carpeta `frontend/mecanico`). `/moderno/`, `/minimalista/` y `/tecnico/` redirigen (301) ahí; el selector de diseño y su pantalla se eliminaron.
 - Modo claro/oscuro: `usuarios.tema_preferido` (migración 0058), en la sesión como `temaPreferido`; `DOVA.actualizarTema(tema)` → `PATCH /usuarios/me/preferencias {tema}`; `DovaApp.aplicarModo(tema)` pone `data-theme` (light/dark), lo guarda en `localStorage('dova-tema')` y lo propaga a las ventanas (`DovaVentanas.aplicarTema`). **Solo se cambia en Configuración → Apariencia**: no agregar toggles en otras partes.
 - Colores nuevos en el CSS: usar variables (`--white`, `--ink`, `--mec-*`), nunca hex fijos, o se rompe el modo oscuro. Pruebas: `tests/ui-mecanico.js`.
+- Paleta DOVA "grafito y verde" (0062): grafito para la estructura (`--mec-escritorio` #3A4246, barras `--bordo-osc` #24292C) y un solo acento verde (`--mec-primario`/`--terracotta` #3E7C62; en oscuro #6DB592). Los nombres viejos de variables (`--terracotta`, `--bordo`, `--cobalto` en la web) se mantienen: solo cambiaron los valores. Rojo solo para errores, ámbar para avisos. Íconos de la app: diente claro sobre verde.
 
 
 ## Rentabilidad (Finanzas)

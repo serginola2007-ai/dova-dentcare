@@ -45,7 +45,7 @@ const enlaceDe = (m) => m.template.components[0].parameters[3].text;
     P('Configurar sin permiso: 403', (await req('PUT', '/mensajes/config', { encuesta: true }, R)).s === 403);
     P('Enlace de reseña que no es de Google: 400', (await req('PUT', '/mensajes/config', { resenaUrl: 'https://otro-sitio.com/x' }, A)).s === 400);
     P('Hora fuera de rango: 400', (await req('PUT', '/mensajes/config', { hora: 6 }, A)).s === 400);
-    let r = await req('PUT', '/mensajes/config', { listaEspera: true, resenaUrl: 'https://g.page/r/prueba-dentcare/review' }, A);
+    let r = await req('PUT', '/mensajes/config', { listaEspera: true, resenaUrl: 'https://g.page/r/prueba-dova/review' }, A);
     P('Guardar: lista de espera automática y enlace de reseña', r.s === 200 && r.j.listaEspera === true && /g\.page/.test(r.j.resenaUrl) && /Se liberó un turno/.test(r.j.ejemplos.oferta), r.j);
 
     // ---------- 1. Turno liberado ----------

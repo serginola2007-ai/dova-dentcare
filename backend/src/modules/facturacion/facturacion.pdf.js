@@ -6,10 +6,10 @@
    fiscal válida. */
 const PDFDocument = require('pdfkit');
 
-const COLOR = '#2B2420';
-const ACENTO = '#C1673F';
-const GRIS = '#6B6055';
-const LINEA = '#E4DACA';
+const COLOR = '#242627';
+const ACENTO = '#428B6D';
+const GRIS = '#5D6163';
+const LINEA = '#D4D8DA';
 const gs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`;
 const num = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY');
 function fmtDia(f) {
@@ -77,7 +77,7 @@ function generar(res, { factura: f, config: cfg, logo, metodos, disposicion = 'i
   let y = Math.max(altoIzq, y0 + 92) + 14;
 
   // ---------------- Cliente ----------------
-  doc.roundedRect(M, y, ancho, 66, 6).fillColor('#F7F3EC').fill();
+  doc.roundedRect(M, y, ancho, 66, 6).fillColor('#F1F2F2').fill();
   doc.fillColor(GRIS).font('Helvetica-Bold').fontSize(7.5).text('CLIENTE', M + 10, y + 8);
   doc.fillColor(COLOR).font('Helvetica-Bold').fontSize(11).text(f.cliente_nombre, M + 10, y + 19, { width: ancho / 2 });
   doc.font('Helvetica').fontSize(8.5).fillColor(COLOR);
@@ -106,7 +106,7 @@ function generar(res, { factura: f, config: cfg, logo, metodos, disposicion = 'i
     const desc = `${it.descripcion}${it.pieza ? ` (pieza ${it.pieza})` : ''}`;
     const alto = Math.max(doc.heightOfString(desc, { width: cols[1].w - 8 }), 10) + 8;
     if (y + alto > doc.page.height - 200) { doc.addPage(); y = M; cabecera(); doc.font('Helvetica').fontSize(8.5).fillColor(COLOR); }
-    if (i % 2) doc.rect(M, y - 2, ancho, alto).fillColor('#FBF8F3').fill();
+    if (i % 2) doc.rect(M, y - 2, ancho, alto).fillColor('#F6F7F8').fill();
     doc.fillColor(COLOR);
     const vals = [Number(it.cantidad) % 1 ? Number(it.cantidad).toLocaleString('es-PY') : num(it.cantidad), desc, num(it.precio_unitario), Number(it.descuento) ? num(it.descuento) : '-', it.tasa_iva ? `${it.tasa_iva}%` : 'Exenta', num(it.subtotal)];
     let cx = M;
@@ -149,7 +149,7 @@ function generar(res, { factura: f, config: cfg, logo, metodos, disposicion = 'i
   doc.font('Helvetica').fontSize(9).fillColor(COLOR).text(metodosUsados.join(', ') || (f.condicion === 'credito' ? 'A crédito' : '-'), lx, doc.y + 1, { width: lw });
   doc.moveDown(0.4);
   doc.font('Helvetica').fontSize(8.5).fillColor(GRIS).text(`Cobrado: ${gs(f.cobrado)}${Number(f.acreditado) ? `   ·   Notas de crédito: ${gs(f.acreditado)}` : ''}   ·   Saldo: ${gs(f.saldo)}`, lx, doc.y, { width: lw });
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(f.estado === 'anulada' ? '#B8443A' : f.estado === 'pagada' ? '#5F7259' : ACENTO).text(`Estado: ${ESTADOS[f.estado] || f.estado}`, lx, doc.y + 3, { width: lw });
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(f.estado === 'anulada' ? '#B8443A' : f.estado === 'pagada' ? '#547768' : ACENTO).text(`Estado: ${ESTADOS[f.estado] || f.estado}`, lx, doc.y + 3, { width: lw });
 
   y = Math.max(yFinTotales, doc.y) + 14;
   if (f.observaciones) {
@@ -273,7 +273,7 @@ function reporte(res, { config: cfg, rep, titulo }) {
   doc.font('Helvetica').fontSize(8.5);
   rep.filas.forEach((f, i) => {
     if (y > doc.page.height - 70) { doc.addPage(); y = M; cab(); doc.font('Helvetica').fontSize(8.5); }
-    if (i % 2) doc.rect(M, y - 2, ancho, 15).fillColor('#FBF8F3').fill();
+    if (i % 2) doc.rect(M, y - 2, ancho, 15).fillColor('#F6F7F8').fill();
     const v = [f.etiqueta, String(f.facturas), num(f.total), num(f.cobrado), num(f.pendiente)];
     let cx = M; doc.fillColor(COLOR);
     cols.forEach((c, j) => { doc.text(v[j], cx + 4, y, { width: c.w - 8, align: j ? 'right' : 'left', height: 12, ellipsis: true }); cx += c.w; });

@@ -1,48 +1,48 @@
 /* DOVA — variables y estilos base compartidos por los 3 diseños.
    Paleta idéntica a la identidad visual ya validada por el cliente. */
 :root {
-  --cream: #F7F3EC;
-  --ink: #2B2420;
-  --ink-soft: #6B6055;
-  --terracotta: #C1673F;
-  --terracotta-dark: #A5522F;
-  --sage: #7A8B76;
-  --sage-dark: #5F7259;
+  --cream: #F1F2F2;
+  --ink: #242627;
+  --ink-soft: #5D6163;
+  --terracotta: #428B6D;
+  --terracotta-dark: #34765A;
+  --sage: #6C9584;
+  --sage-dark: #547768;
   --rust: #B8443A;
-  --border: #E4DACA;
-  --border-strong: #D8C9B2;
+  --border: #D4D8DA;
+  --border-strong: #C1C6C9;
   --white: #FFFFFF;
-  --on-dark: #F7F3EC;
+  --on-dark: #F1F2F2;
   /* Barra superior oscura: se mantiene oscura también en modo oscuro (si
      usara --ink, en modo oscuro quedaba clara con letras claras: invisible). */
-  --barra: #2B2420;
+  --barra: #242627;
   --radius-s: 2px;
   --radius-m: 2px;
-  --shadow-menu: 0 8px 24px rgba(43,36,32,0.12);
+  --shadow-menu: 0 8px 24px rgba(36,38,39,0.12);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --cream: #201C18;
-    --ink: #F2EBE1;
-    --ink-soft: #A79C8E;
-    --terracotta: #D98159;
-    --terracotta-dark: #E8A57C;
-    --sage: #8FA189;
-    --sage-dark: #A3B69C;
+    --cream: #1B1C1D;
+    --ink: #E8EAEB;
+    --ink-soft: #979C9E;
+    --terracotta: #70C2A0;
+    --terracotta-dark: #93D1B7;
+    --sage: #84A698;
+    --sage-dark: #97BBAC;
     --rust: #E0776C;
-    --border: #3A342E;
-    --border-strong: #4A423A;
-    --white: #2A2521;
+    --border: #333435;
+    --border-strong: #404344;
+    --white: #242627;
     --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
-    --barra: #15120F;
+    --barra: #111213;
   }
 }
 :root[data-theme="dark"] {
-  --cream: #201C18; --ink: #F2EBE1; --ink-soft: #A79C8E; --terracotta: #D98159;
-  --terracotta-dark: #E8A57C; --sage: #8FA189; --sage-dark: #A3B69C; --rust: #E0776C;
-  --border: #3A342E; --border-strong: #4A423A; --white: #2A2521;
+  --cream: #1B1C1D; --ink: #E8EAEB; --ink-soft: #979C9E; --terracotta: #70C2A0;
+  --terracotta-dark: #93D1B7; --sage: #84A698; --sage-dark: #97BBAC; --rust: #E0776C;
+  --border: #333435; --border-strong: #404344; --white: #242627;
   --shadow-menu: 0 8px 24px rgba(0,0,0,0.4);
-  --barra: #15120F;
+  --barra: #111213;
 }
 
 * { box-sizing: border-box; }
@@ -104,7 +104,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 .dova-nota { font-size: 13px; color: var(--ink-soft); }
 .dova-nota-alerta { color: var(--rust); }
 
-.dova-modal-overlay { position: fixed; inset: 0; background: rgba(43,36,32,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.dova-modal-overlay { position: fixed; inset: 0; background: rgba(36,38,39,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .dova-modal-box { background: var(--white); border-radius: var(--radius-m); padding: 24px; width: 90%; max-width: 420px; box-shadow: var(--shadow-menu); }
 .dova-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 
@@ -134,8 +134,8 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 .dova-pieza { aspect-ratio: 1; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--white); font-size: 11px; color: var(--ink-soft); }
 .dova-pieza:hover { border-color: var(--terracotta); }
 .dova-pieza.pieza-caries, .dova-pieza.pieza-extraccion_indicada { background: rgba(184,68,58,0.15); border-color: var(--rust); color: var(--rust); }
-.dova-pieza.pieza-endodoncia, .dova-pieza.pieza-tratamiento_realizado { background: rgba(122,139,118,0.2); border-color: var(--sage-dark); color: var(--sage-dark); }
-.dova-pieza.pieza-restauracion, .dova-pieza.pieza-corona, .dova-pieza.pieza-sellante { background: rgba(193,103,63,0.12); border-color: var(--terracotta); color: var(--terracotta-dark); }
+.dova-pieza.pieza-endodoncia, .dova-pieza.pieza-tratamiento_realizado { background: rgba(108,149,132,0.2); border-color: var(--sage-dark); color: var(--sage-dark); }
+.dova-pieza.pieza-restauracion, .dova-pieza.pieza-corona, .dova-pieza.pieza-sellante { background: rgba(66,139,109,0.12); border-color: var(--terracotta); color: var(--terracotta-dark); }
 .dova-pieza.pieza-ausente { background: var(--border); color: var(--ink-soft); text-decoration: line-through; }
 
 .dova-expediente-pieza, .dova-etapas-box { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 16px; margin-top: 12px; }
@@ -148,7 +148,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
 /* ---- Fase 5: materiales consumidos por etapa/sesión (inventario ↔ procedimientos) ---- */
 .dova-materiales-box { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 13px; }
 .dova-badge { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; font-weight: 600; }
-.dova-badge-ok { background: rgba(122,139,118,0.2); color: var(--sage-dark); }
+.dova-badge-ok { background: rgba(108,149,132,0.2); color: var(--sage-dark); }
 
 /* ---- Modo Consulta ---- */
 .dova-consulta-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 20px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -192,7 +192,7 @@ label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 
    core/router.js) y el propio breakpoint de mobile lo muestra. */
 .dova-menu-overlay { display: none; }
 body.dova-menu-abierto .dova-menu-overlay {
-  display: block; position: fixed; inset: 0; background: rgba(43,36,32,0.4); z-index: 900;
+  display: block; position: fixed; inset: 0; background: rgba(36,38,39,0.4); z-index: 900;
 }
 
 @media (max-width: 1024px) {
@@ -318,7 +318,7 @@ body.dova-menu-abierto .dova-menu-overlay {
   color: var(--ink); background: none; border: none; border-radius: 2px; padding: 10px 12px; font-size: 14px;
 }
 .dova-submenu .dova-menu-item:hover, .dova-submenu .dova-menu-item:focus-visible { background: var(--cream); outline: none; }
-.dova-submenu .dova-menu-item.activo { background: rgba(193,103,63,0.12); color: var(--terracotta-dark, var(--terracotta)); font-weight: 600; }
+.dova-submenu .dova-menu-item.activo { background: rgba(66,139,109,0.12); color: var(--terracotta-dark, var(--terracotta)); font-weight: 600; }
 
 /* Segundo nivel: al pasar por una herramienta (Clínica, Facturación…) se
    abre al costado un panel con sus pestañas. */

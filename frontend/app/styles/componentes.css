@@ -1,8 +1,8 @@
 /* DOVA — estilos del seguimiento integral. Usa las variables de base.css,
    así que cada diseño (moderno/minimalista/técnico) lo tiñe con su skin. */
-:root { --dova-ext-marca: #C1673F; --dova-ext-grid: #EDE6DA; --dova-ext-critica-bg: rgba(184,68,58,0.12); --dova-ext-atencion-bg: rgba(193,103,63,0.14); --dova-ext-info-bg: rgba(122,139,118,0.16); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dova-ext-marca: #CC7550; --dova-ext-grid: #3A342E; } }
-:root[data-theme="dark"] { --dova-ext-marca: #CC7550; --dova-ext-grid: #3A342E; }
+:root { --dova-ext-marca: #428B6D; --dova-ext-grid: #E2E4E5; --dova-ext-critica-bg: rgba(184,68,58,0.12); --dova-ext-atencion-bg: rgba(66,139,109,0.14); --dova-ext-info-bg: rgba(108,149,132,0.16); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dova-ext-marca: #469D79; --dova-ext-grid: #333435; } }
+:root[data-theme="dark"] { --dova-ext-marca: #469D79; --dova-ext-grid: #333435; }
 
 /* Formularios */
 .dova-ext-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 14px; }
@@ -169,7 +169,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cal-grilla { display: grid; }
 .dova-cal-esquina, .dova-cal-col-titulo { position: sticky; top: 0; background: var(--white); z-index: 1; border-bottom: 1px solid var(--border-strong, var(--border)); }
 .dova-cal-col-titulo { padding: 8px; text-align: center; font-size: 13px; border-left: 1px solid var(--border); }
-.dova-cal-col-titulo.hoy { background: rgba(193,103,63,.08); }
+.dova-cal-col-titulo.hoy { background: rgba(66,139,109,.08); }
 .dova-cal-dia-btn { border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 2px; }
 .dova-cal-dia-btn:hover { background: rgba(0,0,0,.05); }
 .dova-cal-dia-btn b { font-size: 16px; margin-left: 2px; }
@@ -177,7 +177,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cal-hora { position: sticky; left: 0; z-index: 1; background: var(--white); font-size: 11px; color: var(--ink-soft); text-align: right; padding: 4px 8px; border-top: 1px solid var(--border); }
 .dova-cal-celda { min-height: 54px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); padding: 3px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
 .dova-cal-celda:hover { background: rgba(0,0,0,.025); }
-.dova-cal-celda.hoy { background: rgba(193,103,63,.04); }
+.dova-cal-celda.hoy { background: rgba(66,139,109,.04); }
 .dova-cal-celda.ahora { box-shadow: inset 0 2px 0 var(--rust); }
 .dova-cal-chip { --c: var(--sage); display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; line-height: 1.25; color: var(--ink); border: 0; border-left: 4px solid var(--c); border-radius: 2px; padding: 4px 6px; cursor: pointer; background: color-mix(in srgb, var(--c) 14%, var(--white)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dova-cal-chip span { display: block; font-size: 11px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; }
@@ -191,7 +191,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cal-mes-celda { min-height: 96px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); padding: 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
 .dova-cal-mes-celda:hover { background: rgba(0,0,0,.025); }
 .dova-cal-mes-celda.fuera { opacity: .45; }
-.dova-cal-mes-celda.hoy { background: rgba(193,103,63,.07); }
+.dova-cal-mes-celda.hoy { background: rgba(66,139,109,.07); }
 .dova-cal-mes-celda .dova-cal-chip { font-size: 11px; padding: 2px 5px; }
 .dova-cal-mes-num { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
 .dova-cal-mas { font-size: 11px; color: var(--ink-soft); }
@@ -245,7 +245,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-fac-total-final { border-top: 2px solid var(--ink); padding-top: 6px; font-weight: 700; font-size: 18px; }
 .dova-fac-historial { list-style: none; margin: 0; padding: 0; }
 .dova-fac-historial li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--border); }
-.dova-fac-h-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--sage-dark, #6b7f6b); margin-top: 6px; flex: none; }
+.dova-fac-h-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--sage-dark, #628878); margin-top: 6px; flex: none; }
 .dova-fac-h-punto.anulada, .dova-fac-h-punto.pago_anulado { background: var(--rust); }
 .dova-fac-h-punto.creada { background: var(--terracotta); }
 .dova-fac-form fieldset { border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px 14px; margin: 0 0 14px; background: var(--white); min-width: 0; }
@@ -320,7 +320,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-web-horario td { white-space: nowrap; }
 .dova-cal-web { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 2px; background: var(--dova-ext-info-bg); color: var(--sage-dark); }
 @media (max-width: 700px) { .dova-web-cuando { margin-left: 0; width: 100%; } .dova-web-horario td { display: block; white-space: normal; } }
-.dova-web-codigo { font: 700 40px/1.1 ui-monospace, monospace; letter-spacing: 6px; text-align: center; margin: 8px 0 14px; padding: 14px; border-radius: var(--radius-m); background: var(--bg, #f6f3ee); }
+.dova-web-codigo { font: 700 40px/1.1 ui-monospace, monospace; letter-spacing: 6px; text-align: center; margin: 8px 0 14px; padding: 14px; border-radius: var(--radius-m); background: var(--bg, #f1f2f3); }
 .dova-modal-actions a.dova-btn-primary { text-decoration: none; display: inline-flex; align-items: center; }
 
 /* ===== Clínica integral: Modo Consulta y Ficha 360° (pages/clinica.js) ===== */
@@ -461,7 +461,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cli-doclista li:last-child { border-bottom: 0; }
 .dova-cli-doclista .dova-btn-link { text-align: left; padding: 0; }
 .dova-ext-chip { border: 1px solid var(--border); background: var(--white); border-radius: 2px; padding: 4px 12px; font-size: 13px; cursor: pointer; color: inherit; }
-.dova-ext-chip.activo { border-color: var(--terracotta, #C1673F); box-shadow: inset 0 0 0 1px var(--terracotta, #C1673F); }
+.dova-ext-chip.activo { border-color: var(--terracotta, #428B6D); box-shadow: inset 0 0 0 1px var(--terracotta, #428B6D); }
 .dova-ext-chip strong { margin-left: 4px; }
 
 /* Centro de reportes */
@@ -471,7 +471,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-rep-menu h4:first-child { margin-top: 0; }
 .dova-rep-menu button { text-align: left; background: none; border: 0; padding: 7px 8px; border-radius: 2px; cursor: pointer; color: inherit; font: inherit; font-size: 14px; }
 .dova-rep-menu button:hover { background: rgba(0,0,0,.05); }
-.dova-rep-menu button.activo { background: rgba(193,103,63,.14); font-weight: 600; }
+.dova-rep-menu button.activo { background: rgba(66,139,109,.14); font-weight: 600; }
 .dova-rep-select { display: none; }
 .dova-rep-cuerpo { min-width: 0; }
 .dova-rep-export { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
@@ -484,7 +484,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 }
 
 /* Centro de comandos (Ctrl+K) */
-.dova-cmd-overlay { position: fixed; inset: 0; background: rgba(20, 16, 14, .45); z-index: 3000; display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
+.dova-cmd-overlay { position: fixed; inset: 0; background: rgba(16,17,18, .45); z-index: 3000; display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
 .dova-cmd { width: 100%; max-width: 640px; background: var(--white, #fff); color: var(--ink, #222); border-radius: 2px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; }
 .dova-cmd-barra { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border, #e5e5e5); }
 .dova-cmd-barra input { flex: 1; border: 0; outline: 0; font-size: 17px; background: transparent; color: inherit; padding: 4px 0; margin: 0; min-width: 0; }
@@ -492,7 +492,7 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-cmd-lista { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
 .dova-cmd-grupo { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .6; padding: 10px 10px 4px; }
 .dova-cmd-item { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 2px; cursor: pointer; }
-.dova-cmd-item[aria-selected="true"] { background: rgba(193,103,63,.14); }
+.dova-cmd-item[aria-selected="true"] { background: rgba(66,139,109,.14); }
 .dova-cmd-item small { display: block; opacity: .7; font-size: 12px; margin-top: 1px; }
 .dova-cmd-ic { width: 24px; text-align: center; flex-shrink: 0; }
 .dova-cmd-vacio { padding: 14px 10px; opacity: .7; }
@@ -594,9 +594,9 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-ventanas { position: fixed; left: 0; right: 0; top: 0; bottom: 0; z-index: 400; pointer-events: none; }
 .dova-ventanas.arrastrando { cursor: grabbing; }
 .dova-ventanas.arrastrando iframe { pointer-events: none; }
-.dova-ventana { position: absolute; display: flex; flex-direction: column; pointer-events: auto; background: var(--white); color: var(--ink); border: 1px solid var(--border-strong, var(--border)); border-radius: 4px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 20, 10, .20), 0 2px 6px rgba(30, 20, 10, .10); }
+.dova-ventana { position: absolute; display: flex; flex-direction: column; pointer-events: auto; background: var(--white); color: var(--ink); border: 1px solid var(--border-strong, var(--border)); border-radius: 4px; overflow: hidden; box-shadow: 0 10px 30px rgba(19,20,21, .20), 0 2px 6px rgba(19,20,21, .10); }
 .dova-ventana[hidden] { display: none; }
-.dova-ventana.activa { box-shadow: 0 18px 46px rgba(30, 20, 10, .30), 0 2px 8px rgba(30, 20, 10, .16); }
+.dova-ventana.activa { box-shadow: 0 18px 46px rgba(19,20,21, .30), 0 2px 8px rgba(19,20,21, .16); }
 .dova-ventana-barra { flex: none; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 6px 0 12px; background: var(--cream); border-bottom: 1px solid var(--border); cursor: grab; user-select: none; touch-action: none; }
 .dova-ventana:not(.activa) .dova-ventana-titulo { color: var(--ink-soft); }
 .dova-ventana-titulo { flex: 1; min-width: 0; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -693,7 +693,7 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 
 /* Comparador antes / después: lado a lado y botones */
 .dova-cli-cmp-modos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
-.dova-cli-cmp-modos .dova-btn-secundario.activo { border-color: var(--terracotta, #b5654a); font-weight: 700; }
+.dova-cli-cmp-modos .dova-btn-secundario.activo { border-color: var(--terracotta, #48846b); font-weight: 700; }
 .dova-cli-comparar.lado { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #111; }
 .dova-cli-comparar.lado > img { order: 2; } .dova-cli-comparar.lado .dova-cli-comparar-antes { position: static; clip-path: none; order: 1; }
 .dova-cli-comparar.lado .dova-cli-cmp-linea { display: none; }
@@ -736,7 +736,7 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 .dova-atender-fila[data-nivel="urgente"] { box-shadow: inset 3px 0 0 var(--rust); padding-left: 10px; }
 .dova-atender-fila[data-nivel="urgente"] .dova-atender-n { color: var(--rust); }
 .dova-atender-fila[data-nivel="aviso"] { box-shadow: inset 3px 0 0 var(--terracotta); padding-left: 10px; }
-.dova-campana-num.vista { background: var(--mec-hundido, #B49C82); color: var(--ink); font-weight: 600; }
+.dova-campana-num.vista { background: var(--mec-hundido, #959DA1); color: var(--ink); font-weight: 600; }
 .dova-apariencia-sub { margin: 14px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-soft); }
 
 /* ===== Odontograma dibujado (components/odontograma.js) =====

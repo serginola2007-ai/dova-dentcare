@@ -2,8 +2,8 @@
    Opción recomendada (funciona en el plan gratis de Render, que BLOQUEA el
    SMTP): Brevo, por su API web. Variables:
      BREVO_API_KEY  la clave de API de brevo.com (gratis, 300 emails por día)
-     MAIL_REMITENTE el email remitente, verificado en Brevo (ej. dentcarerc@gmail.com)
-     MAIL_NOMBRE    nombre que ve el paciente (opcional, ej. DentCare)
+     MAIL_REMITENTE el email remitente, verificado en Brevo (ej. avisos@tuclinica.com)
+     MAIL_NOMBRE    nombre que ve el paciente (opcional; si no, el nombre de la clínica)
    Alternativa con servidor pago: SMTP con
      SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_SECURE (true para 465)
    Ejemplo con Gmail: SMTP_HOST=smtp.gmail.com, SMTP_USER=la cuenta, SMTP_PASS=una
@@ -37,12 +37,12 @@ function obtenerTransporte() {
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Plantilla simple con los colores de la clínica.
 function html(titulo, parrafos, clinica) {
-  return `<div style="background:#F7EEE1;padding:24px;font-family:Arial,sans-serif;color:#2B241E">
-    <div style="max-width:520px;margin:0 auto;background:#FBF6EE;border-radius:16px;padding:28px">
-      <p style="margin:0 0 4px;font-family:Georgia,serif;font-style:italic;color:#8F4F32">${esc(clinica || 'dentcarerc')}</p>
+  return `<div style="background:#EBECED;padding:24px;font-family:Arial,sans-serif;color:#232526">
+    <div style="max-width:520px;margin:0 auto;background:#F4F5F5;border-radius:16px;padding:28px">
+      <p style="margin:0 0 4px;font-family:Georgia,serif;font-style:italic;color:#336752">${esc(clinica || 'DOVA')}</p>
       <h1 style="font-family:Georgia,serif;font-weight:normal;font-size:24px;margin:0 0 16px">${esc(titulo)}</h1>
       ${parrafos.join('')}
-      <p style="margin-top:24px;font-size:12px;color:#5B5148">Este mensaje lo envió la página web de ${esc(clinica || 'la clínica')}. Si no lo pediste, ignoralo.</p>
+      <p style="margin-top:24px;font-size:12px;color:#4F5254">Este mensaje lo envió la página web de ${esc(clinica || 'la clínica')}. Si no lo pediste, ignoralo.</p>
     </div></div>`;
 }
 
@@ -56,7 +56,7 @@ async function enviar({ para, asunto, texto, htmlCuerpo }) {
       method: 'POST',
       headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({
-        sender: { email: process.env.MAIL_REMITENTE || process.env.SMTP_FROM, name: process.env.MAIL_NOMBRE || 'DentCare' },
+        sender: { email: process.env.MAIL_REMITENTE || process.env.SMTP_FROM, name: process.env.MAIL_NOMBRE || 'DOVA' },
         to: [{ email: para }], subject: asunto, textContent: texto, htmlContent: htmlCuerpo || undefined,
       }),
       signal: AbortSignal.timeout(15000),

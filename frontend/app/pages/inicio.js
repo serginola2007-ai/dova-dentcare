@@ -73,7 +73,7 @@ const DovaInicio = (() => {
   const DIENTE_SVG = '<svg viewBox="12 13 76 76" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M50 24C42 18 30 14 22 20C13 27 15 44 20 56C24 66 27 82 33 84C39 86 40 70 45 64C47 62 53 62 55 64C60 70 61 86 67 84C73 82 76 66 80 56C85 44 87 27 78 20C70 14 58 18 50 24Z"/></svg>';
   function marcaClinica() {
     const c = DOVA.clinicaActual() || {};
-    const nombre = String(c.nombre || 'DentCareRC').trim();
+    const nombre = String(c.nombre || 'DOVA').trim();
     const texto = /^dent\s*care\s*rc$/i.test(nombre) ? 'Dent<span class="care">Care</span><span class="rc">RC</span>' : esc(nombre);
     return `<div class="dova-inicio-marca atenuada" data-inicio-marca aria-hidden="true"><span>
         <span class="dova-inicio-marca-logo">${DIENTE_SVG}</span>

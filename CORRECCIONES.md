@@ -979,3 +979,11 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
   - Configuración web y tratamiento base en `cobranza` e `informes`.
   - Identificadores únicos del WhatsApp falso.
 - **Pruebas:** `correcciones-sim3.test` 9/9, más todas las de servidor, seguridad y pantallas (ver informe).
+
+## Tanda: DOVA producto independiente y paleta "grafito y verde" (10/11/2026)
+- **DentCareRC deja de ser cliente.** Se sacó todo lo suyo del código: nombre en títulos, manifiesto, login, correos, PDF y guías; código de clínica por defecto (`dova`); afiche de Vitamina C, fotos de antes/después y del sillón de la web pública; dirección y teléfonos del seed.
+- **Migración 0062:** la clínica "dentcarerc" de la base pasa a llamarse **DOVA** (código `dova`) y se borran sus datos de identidad (contacto, redes, logo, datos fiscales, textos de la web). No se borran pacientes, turnos ni usuarios. Si ya existe una clínica `dova`, no toca nada.
+- **Paleta nueva, mismo diseño y funciones:** grafito para la estructura (escritorio, menú, barras de título) y un único verde clínico para lo importante (botón principal, enlaces, marca). Rojo solo para errores y ámbar para avisos. Claro y oscuro. También en la web pública, comprobantes y facturas en PDF, correos y guías.
+- **Íconos de la app** recoloreados (diente claro sobre verde).
+- La web pública toma el nombre de la clínica de la base (sin la marca "DentCare" armada a mano).
+- **Pruebas:** `ui-mecanico` 33/33, `ui-plataforma` 13/13, `ui-visual` 18/19 (el que falta pide datos de urgencias que la base de prueba vacía no tiene), lint 0, build sin errores.

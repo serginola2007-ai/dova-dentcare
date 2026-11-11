@@ -15,7 +15,7 @@ function fmtDia(f) {
    un comprobante interno imprimible/descargable. */
 
 function encabezado(doc, clinica) {
-  doc.fontSize(18).fillColor(clinica.color_primario || '#C1673F').text(clinica.nombre || 'DOVA', { align: 'left' });
+  doc.fontSize(18).fillColor(clinica.color_primario || '#428B6D').text(clinica.nombre || 'DOVA', { align: 'left' });
   doc.fontSize(9).fillColor('#555555');
   const lineas = [clinica.direccion, clinica.telefono, clinica.email].filter(Boolean);
   lineas.forEach((l) => doc.text(l));

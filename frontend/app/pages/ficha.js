@@ -177,7 +177,7 @@ const DovaFicha = (() => {
     const form = document.querySelector('[data-anamnesis]');
     const canvas = form.querySelector('[data-firma]');
     const ctx = canvas.getContext('2d'); let dibujando = false; let firmo = false;
-    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#2B2420';
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#242627';
     const pos = (e) => { const b = canvas.getBoundingClientRect(); return [(e.clientX - b.left) * (canvas.width / b.width), (e.clientY - b.top) * (canvas.height / b.height)]; };
     canvas.addEventListener('pointerdown', (e) => { dibujando = true; firmo = true; ctx.beginPath(); ctx.moveTo(...pos(e)); });
     canvas.addEventListener('pointermove', (e) => { if (dibujando) { ctx.lineTo(...pos(e)); ctx.stroke(); } });

@@ -95,14 +95,14 @@ function texto(d) {
   return `Resumen del día de ${d.clinica}\n${d.fechaTexto}\n\n${lineas(d).map((x) => `• ${x}`).join('\n')}\n\nEnviado por DOVA.`;
 }
 function htmlCorreo(d) {
-  return `<div style="background:#F7EEE1;padding:24px;font-family:Arial,sans-serif;color:#2B241E">
-    <div style="max-width:520px;margin:0 auto;background:#FBF6EE;border-radius:12px;padding:26px">
-      <p style="margin:0 0 4px;color:#8F4F32">${esc(d.clinica)}</p>
+  return `<div style="background:#EBECED;padding:24px;font-family:Arial,sans-serif;color:#232526">
+    <div style="max-width:520px;margin:0 auto;background:#F4F5F5;border-radius:12px;padding:26px">
+      <p style="margin:0 0 4px;color:#336752">${esc(d.clinica)}</p>
       <h1 style="font-family:Georgia,serif;font-weight:normal;font-size:22px;margin:0 0 4px">Resumen del día</h1>
-      <p style="margin:0 0 16px;color:#5B5148">${esc(d.fechaTexto)}</p>
-      <p style="font-size:26px;margin:0 0 14px"><strong>${esc(gs(d.cobrado))}</strong> <span style="font-size:14px;color:#5B5148">cobrado</span></p>
+      <p style="margin:0 0 16px;color:#4F5254">${esc(d.fechaTexto)}</p>
+      <p style="font-size:26px;margin:0 0 14px"><strong>${esc(gs(d.cobrado))}</strong> <span style="font-size:14px;color:#4F5254">cobrado</span></p>
       <ul style="padding-left:18px;margin:0;line-height:1.7">${lineas(d).slice(1).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      <p style="margin-top:22px;font-size:12px;color:#5B5148">Enviado por DOVA. Lo podés apagar o cambiar en Configuración → Resumen del día.</p>
+      <p style="margin-top:22px;font-size:12px;color:#4F5254">Enviado por DOVA. Lo podés apagar o cambiar en Configuración → Resumen del día.</p>
     </div></div>`;
 }
 // Variables de la plantilla de WhatsApp (sin saltos de línea: Meta no los acepta).

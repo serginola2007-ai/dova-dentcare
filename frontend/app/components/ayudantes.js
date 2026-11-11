@@ -28,8 +28,8 @@ const DovaAyudantes = (() => {
       document.body.appendChild(cont);
     }
     const el = document.createElement('div');
-    const colores = { info: '#2B2420', error: '#B8443A', ok: '#7A8B76' };
-    el.style.cssText = `background:${colores[tipo] || colores.info};color:#F7F3EC;padding:11px 16px;border-radius:2px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18);max-width:320px;`;
+    const colores = { info: '#242627', error: '#B8443A', ok: '#6C9584' };
+    el.style.cssText = `background:${colores[tipo] || colores.info};color:#F1F2F2;padding:11px 16px;border-radius:2px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18);max-width:320px;`;
     el.textContent = msg;
     cont.appendChild(el);
     setTimeout(() => el.remove(), 4000);

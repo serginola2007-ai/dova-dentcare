@@ -99,7 +99,7 @@
 
 /* ---------- Botones ---------- */
 .dova-btn-primary, .dova-btn-secundario { transition: background-color .12s, border-color .12s, color .12s; white-space: nowrap; }
-.dova-btn-primary:hover { background: var(--terracotta-dark, #9E4F2E); }
+.dova-btn-primary:hover { background: var(--terracotta-dark, #327157); }
 .dova-btn-primary:active { filter: brightness(.92); }
 .dova-btn-secundario:hover { background: var(--cream); border-color: var(--ink-soft); }
 .dova-btn-secundario:active { background: color-mix(in srgb, var(--cream) 70%, var(--border)); }
@@ -107,7 +107,7 @@
 .dova-btn-primary:disabled, .dova-btn-secundario:disabled, .dova-btn-link:disabled { opacity: .45; cursor: not-allowed; filter: none; }
 .dova-btn-primary:focus-visible, .dova-btn-secundario:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
 .dova-btn-link { transition: color .12s; text-underline-offset: 2px; }
-.dova-btn-link:hover { color: var(--terracotta-dark, #9E4F2E); text-decoration-thickness: 2px; }
+.dova-btn-link:hover { color: var(--terracotta-dark, #327157); text-decoration-thickness: 2px; }
 .dova-link-peligro:hover { color: color-mix(in srgb, var(--rust) 80%, black) !important; }
 /* Botones de la agenda (Día/Semana/Mes/Lista) al mismo tamaño */
 .dova-cal-vistas button { padding: 5px 10px; font-size: 13px; line-height: 18px; transition: background-color .12s; }
@@ -326,20 +326,20 @@ body.dova-firmando #shell-root { visibility: hidden; }
 
 /* ---------- Visor de radiografías (pantalla completa, siempre oscuro) ---------- */
 body.dova-visor-abierto { overflow: hidden; }
-.dova-visor { position: fixed; inset: 0; z-index: 9600; background: #0E0C0B; color: #EDE6DC; display: flex; flex-direction: column; font-family: inherit; }
-.dova-visor-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 12px; background: #1C1916; border-bottom: 1px solid #34302B; }
-.dova-visor-barra select, .dova-visor-barra button { margin: 0; width: auto; font: inherit; font-size: 13px; background: #2A2622; color: #EDE6DC; border: 1px solid #4A443D; border-radius: 2px; padding: 6px 10px; min-height: 34px; cursor: pointer; }
+.dova-visor { position: fixed; inset: 0; z-index: 9600; background: #0C0D0D; color: #E3E5E6; display: flex; flex-direction: column; font-family: inherit; }
+.dova-visor-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 12px; background: #18191A; border-bottom: 1px solid #2E3031; }
+.dova-visor-barra select, .dova-visor-barra button { margin: 0; width: auto; font: inherit; font-size: 13px; background: #252627; color: #E3E5E6; border: 1px solid #424445; border-radius: 2px; padding: 6px 10px; min-height: 34px; cursor: pointer; }
 .dova-visor-barra select { max-width: 260px; }
-.dova-visor-barra button:hover, .dova-visor-barra button:focus-visible { border-color: #D98159; outline: none; }
-.dova-visor-barra button[aria-pressed="true"] { background: #C1673F; border-color: #C1673F; color: #FFFFFF; }
+.dova-visor-barra button:hover, .dova-visor-barra button:focus-visible { border-color: #70C2A0; outline: none; }
+.dova-visor-barra button[aria-pressed="true"] { background: #428B6D; border-color: #428B6D; color: #FFFFFF; }
 .dova-visor-grupo { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .dova-visor-zoom { min-width: 48px; text-align: center; font-size: 13px; }
-.dova-visor-ctl { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: #C9C0B4; }
-.dova-visor-ctl input { width: 110px; margin: 0; padding: 0; accent-color: #D98159; }
+.dova-visor-ctl { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: #BCBFC1; }
+.dova-visor-ctl input { width: 110px; margin: 0; padding: 0; accent-color: #70C2A0; }
 .dova-visor-cerrar { margin-left: auto; }
 .dova-visor-areas { flex: 1; display: flex; min-height: 0; touch-action: none; }
 .dova-visor-area { position: relative; flex: 1; overflow: hidden; cursor: grab; }
-.dova-visor.comparando .dova-visor-area + .dova-visor-area { border-left: 2px solid #34302B; }
+.dova-visor.comparando .dova-visor-area + .dova-visor-area { border-left: 2px solid #2E3031; }
 .dova-visor-area:active { cursor: grabbing; }
 .dova-visor.midiendo .dova-visor-area { cursor: crosshair; }
 .dova-visor-lienzo { position: absolute; left: 50%; top: 50%; transform-origin: center center; }
@@ -350,14 +350,14 @@ body.dova-visor-abierto { overflow: hidden; }
 .dova-visor-medida text { fill: #F2B705; font-weight: 700; paint-order: stroke; stroke: #000; stroke-width: 3px; }
 .dova-visor-punto { fill: #F2B705; }
 .dova-visor-titulo { position: absolute; left: 10px; bottom: 8px; font-size: 12px; background: rgba(0,0,0,.6); padding: 3px 8px; border-radius: 2px; }
-.dova-visor-ayuda { margin: 0; padding: 6px 12px; font-size: 12px; color: #C9C0B4; background: #1C1916; border-top: 1px solid #34302B; }
+.dova-visor-ayuda { margin: 0; padding: 6px 12px; font-size: 12px; color: #BCBFC1; background: #18191A; border-top: 1px solid #2E3031; }
 .dova-visor-calib { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.dova-visor-calib input { width: 70px; margin: 0 0 0 6px; padding: 4px 6px; background: #2A2622; color: #EDE6DC; border: 1px solid #4A443D; }
-.dova-visor-calib button { background: #2A2622; color: #EDE6DC; border: 1px solid #4A443D; padding: 4px 10px; }
+.dova-visor-calib input { width: 70px; margin: 0 0 0 6px; padding: 4px 6px; background: #252627; color: #E3E5E6; border: 1px solid #424445; }
+.dova-visor-calib button { background: #252627; color: #E3E5E6; border: 1px solid #424445; padding: 4px 10px; }
 @media (max-width: 768px) {
   .dova-visor-ctl input { width: 80px; }
   .dova-visor.comparando .dova-visor-areas { flex-direction: column; }
-  .dova-visor.comparando .dova-visor-area + .dova-visor-area { border-left: 0; border-top: 2px solid #34302B; }
+  .dova-visor.comparando .dova-visor-area + .dova-visor-area { border-left: 0; border-top: 2px solid #2E3031; }
 }
 .dova-guias-lista { list-style: none; padding: 0; margin: 6px 0; }
 .dova-guias-lista li { padding: 6px 0; border-bottom: 1px solid var(--border); }

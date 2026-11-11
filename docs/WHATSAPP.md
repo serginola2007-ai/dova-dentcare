@@ -36,7 +36,7 @@ DOVA los manda solo, a la hora elegida, el día anterior (o 2 o 3 días antes). 
      ```
      Hola {{1}}, te recordamos tu turno en {{2}} el {{3}} a las {{4}}. Confirmá o cancelá tu turno acá: {{5}}
      ```
-   - Ejemplos para la revisión: `Ana`, `DentCareRC`, `martes 14 de octubre`, `09:30`, `https://dova.onrender.com/web/mi-turno.html#t=ejemplo`
+   - Ejemplos para la revisión: `Ana`, `Clínica Sonrisas`, `martes 14 de octubre`, `09:30`, `https://dova.onrender.com/web/mi-turno.html#t=ejemplo`
 
    Esperar la aprobación (suele tardar minutos u horas).
 5. En **Render → servicio dova → Environment**, agregar:
@@ -107,12 +107,12 @@ En **Finanzas → Avisos de cobro** se ven las cuotas que vencen pronto, las ven
     ```
     Hola {{1}}, te escribimos de {{2}}. Te recordamos que {{3}}. Si ya pagaste, no tengas en cuenta este mensaje. Podés ver los datos para pagar y mandarnos el comprobante acá: {{4}}
     ```
-    Ejemplos para la revisión: `Ana`, `DentCareRC`, `la cuota 2 de 6 por Gs. 350.000 vence el 15/10/2026`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
+    Ejemplos para la revisión: `Ana`, `Clínica Sonrisas`, `la cuota 2 de 6 por Gs. 350.000 vence el 15/10/2026`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
   - `seguimiento_presupuesto`:
     ```
     Hola {{1}}, te escribimos de {{2}}. Te contamos que {{3}}. Acá lo podés revisar y avisarnos si querés empezar o si tenés alguna consulta: {{4}}
     ```
-    Ejemplos para la revisión: `Ana`, `DentCareRC`, `el presupuesto de tu tratamiento por Gs. 2.500.000 está esperando tu respuesta`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
+    Ejemplos para la revisión: `Ana`, `Clínica Sonrisas`, `el presupuesto de tu tratamiento por Gs. 2.500.000 está esperando tu respuesta`, `https://dova.onrender.com/web/mi-pago.html#t=ejemplo`
   - Si en Meta se usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_PAGO` y `WHATSAPP_PLANTILLA_PRESUPUESTO`.
 - **El enlace (página "Mi pago")** vale 30 días y muestra:
   - lo que el paciente tiene pendiente;
@@ -136,28 +136,28 @@ Las tres plantillas son de categoría **Utilidad** e idioma **Español**, con `{
   ```
   Hola {{1}}, te escribimos de {{2}}. Te contamos que {{3}}. Si lo querés, tomalo acá (es para el primero que lo confirme): {{4}}
   ```
-  Ejemplos: `Ana`, `DentCareRC`, `se liberó un turno el martes 14 de octubre a las 10:00 con Dra. Pérez`, `https://dova.onrender.com/web/tomar-turno.html#t=ejemplo`
+  Ejemplos: `Ana`, `Clínica Sonrisas`, `se liberó un turno el martes 14 de octubre a las 10:00 con Dra. Pérez`, `https://dova.onrender.com/web/tomar-turno.html#t=ejemplo`
 - `control_periodico`:
   ```
   Hola {{1}}, te escribimos de {{2}}. Te avisamos que {{3}}. Elegí el día y la hora que te queden mejor acá: {{4}}
   ```
-  Ejemplos: `Ana`, `DentCareRC`, `ya te toca tu limpieza y control`, `https://dova.onrender.com/web/reservar.html#c=ejemplo`
+  Ejemplos: `Ana`, `Clínica Sonrisas`, `ya te toca tu limpieza y control`, `https://dova.onrender.com/web/reservar.html#c=ejemplo`
 - `encuesta_atencion`:
   ```
   Hola {{1}}, gracias por atenderte en {{2}}: {{3}}. Del 0 al 10, ¿qué tan probable es que nos recomiendes? Respondé acá: {{4}}
   ```
-  Ejemplos: `Ana`, `DentCareRC`, `queremos saber cómo te atendimos`, `https://dova.onrender.com/web/encuesta.html#t=ejemplo`
+  Ejemplos: `Ana`, `Clínica Sonrisas`, `queremos saber cómo te atendimos`, `https://dova.onrender.com/web/encuesta.html#t=ejemplo`
 
 - `indicaciones_tratamiento`:
   ```
   Hola {{1}}, te escribimos de {{2}}: {{3}}. Leelos acá: {{4}}
   ```
-  Ejemplos: `Ana`, `DentCareRC`, `te dejamos los cuidados para después de tu extracción simple`, `https://dova.onrender.com/web/indicaciones.html#t=ejemplo`
+  Ejemplos: `Ana`, `Clínica Sonrisas`, `te dejamos los cuidados para después de tu extracción simple`, `https://dova.onrender.com/web/indicaciones.html#t=ejemplo`
 - `resumen_diario` (al dueño, Configuración → Resumen del día):
   ```
   Resumen del día de {{1}} ({{2}}): cobrado {{3}}; atendidos {{4}}; faltaron {{5}}; pacientes nuevos {{6}}; presupuestos aceptados {{7}}; turnos para mañana {{8}}.
   ```
-  Ejemplos: `DentCareRC`, `Martes, 13 de octubre`, `Gs. 3.420.000`, `18 de 22`, `2`, `3`, `2 por Gs. 5.000.000`, `20`
+  Ejemplos: `Clínica Sonrisas`, `Martes, 13 de octubre`, `Gs. 3.420.000`, `18 de 22`, `2`, `3`, `2 por Gs. 5.000.000`, `20`
 
 Si en Meta usan otros nombres, cargarlos en Render como `WHATSAPP_PLANTILLA_LISTA_ESPERA`, `WHATSAPP_PLANTILLA_CONTROL`, `WHATSAPP_PLANTILLA_ENCUESTA`, `WHATSAPP_PLANTILLA_INDICACIONES` y `WHATSAPP_PLANTILLA_RESUMEN`.
 

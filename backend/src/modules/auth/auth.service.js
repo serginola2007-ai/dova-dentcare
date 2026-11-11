@@ -54,14 +54,13 @@ async function emitirSesion(usuario, { sesionId, sesionInicio, ip, agente } = {}
   return { accessToken, refreshToken: refreshTokenRaw, permisos, refreshVence: vence, sid };
 }
 
-/* clinicaSlug es opcional: por ahora DOVA tiene una sola clínica real
-   (DentCareRC) y el frontend no manda ese dato, así que se usa como
-   default. */
+/* clinicaSlug es opcional: si el login no lo manda se usa la clínica
+   principal de la instalación (DOVA_CLINICA_POR_DEFECTO o "dova"). */
 const MAX_FALLIDOS_USUARIO = 5;
 const MAX_FALLIDOS_IP = 30;
 
 // Código de la clínica que llega del login: solo minúsculas, números y guiones; si no viene, la principal.
-const SLUG_POR_DEFECTO = () => process.env.DOVA_CLINICA_POR_DEFECTO || 'dentcarerc';
+const SLUG_POR_DEFECTO = () => process.env.DOVA_CLINICA_POR_DEFECTO || 'dova';
 const slugValido = (v) => (typeof v === 'string' && /^[a-z0-9][a-z0-9-]{0,79}$/.test(v.trim().toLowerCase()) ? v.trim().toLowerCase() : null);
 
 async function login({ username, password, clinicaSlug, ip, agente }) {

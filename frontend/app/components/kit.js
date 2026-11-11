@@ -62,8 +62,8 @@ const DovaExt = (() => {
     }
   }
   // Colores para elegir con un toque (agenda de odontólogos, etc.).
-  const COLORES = [['#2E7D32', 'Verde'], ['#1565C0', 'Azul'], ['#00838F', 'Turquesa'], ['#6A1B9A', 'Violeta'], ['#AD1457', 'Fucsia'],
-    ['#C62828', 'Rojo'], ['#EF6C00', 'Naranja'], ['#F9A825', 'Amarillo'], ['#5D4037', 'Marrón'], ['#455A64', 'Gris azulado']];
+  const COLORES = [['#2E7D32', 'Verde'], ['#1565C0', 'Azul'], ['#00838F', 'Turquesa'], ['#545D61', 'Violeta'], ['#5A6367', 'Fucsia'],
+    ['#C62828', 'Rojo'], ['#398666', 'Naranja'], ['#F9A825', 'Amarillo'], ['#454C4F', 'Marrón'], ['#455A64', 'Gris azulado']];
   // El selector "Otro" copia el color elegido a su opción.
   document.addEventListener('input', (e) => {
     if (!e.target.matches || !e.target.matches('[data-color-input]')) return;
@@ -281,7 +281,7 @@ const DovaExt = (() => {
   /* Una sola serie por gráfico (sin leyenda: el título la nombra), un solo eje,
      columnas finas con extremo redondeado, grilla recesiva, tooltip al pasar
      el mouse y tabla alternativa accesible. Color de marca validado para
-     claro (#C1673F) y oscuro (#CC7550) — ver --dova-ext-marca en ext.css. */
+     claro (#428B6D) y oscuro (#469D79) — ver --dova-ext-marca en ext.css. */
   function niceMax(v) { if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
   function fmtEje(v, formato) {
     if (formato === 'gs') return v >= 1e6 ? `${Math.round(v / 1e5) / 10} M` : v >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(v);
@@ -370,7 +370,7 @@ const DovaExt = (() => {
     const w = window.open('', '_blank');
     if (!w) { toast('El navegador bloqueó la ventana de impresión', 'error'); return; }
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title>
-      <style>body{font-family:system-ui,sans-serif;color:#2B2420;margin:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #D8C9B2;padding:6px;text-align:left}.nota{color:#6B6055;font-size:12px}</style>
+      <style>body{font-family:system-ui,sans-serif;color:#242627;margin:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #C1C6C9;padding:6px;text-align:left}.nota{color:#5D6163;font-size:12px}</style>
       </head><body>${html}</body></html>`);
     w.document.close();
     // Sin script dentro de la ventana (la política de seguridad no lo permite): se imprime desde acá.

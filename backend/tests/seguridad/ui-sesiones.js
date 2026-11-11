@@ -93,7 +93,7 @@ const ir = async (p, hash) => { await p.evaluate((h) => { location.hash = h; }, 
   const claves = p5.locator('[data-f-activar] input[type=password]'); for (let i = 0; i < await claves.count(); i++) await claves.nth(i).fill('Portal2026x');
   await p5.click('[data-f-activar] button[type=submit]'); await p5.waitForTimeout(2500);
   P('Portal: activa la cuenta y entra', p5.url().includes('mi-cuenta'));
-  const ls5 = await p5.evaluate(() => localStorage.getItem('dentcare-sesion'));
+  const ls5 = await p5.evaluate(() => localStorage.getItem('dova-web-sesion'));
   P('Portal: el navegador no guarda el token', ls5 && !/token|eyJ/.test(ls5), ls5);
   const ck5 = (await c5.cookies()).find((c) => c.name === 'dova_portal');
   P('Portal: cookie HttpOnly, SameSite=Strict, ruta del portal', ck5 && ck5.httpOnly && ck5.sameSite === 'Strict' && ck5.path === '/api/web/cuenta', ck5);

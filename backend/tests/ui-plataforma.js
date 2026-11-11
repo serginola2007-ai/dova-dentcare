@@ -22,13 +22,13 @@ const entrar = async (p, usuario, clave, clinica) => {
   const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   try {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await ctx.newPage(); const err = errores(p);
-    await p.goto(`${URL0}/mecanico/index.html?clinica=dentcarerc`);
+    await p.goto(`${URL0}/mecanico/index.html?clinica=dova`);
     await p.waitForSelector('#login-clinica');
-    P('El login trae el código de la clínica (desde el enlace)', (await p.inputValue('#login-clinica')) === 'dentcarerc');
+    P('El login trae el código de la clínica (desde el enlace)', (await p.inputValue('#login-clinica')) === 'dova');
     await entrar(p, 'admin', 'admin', 'no-existe');
     await p.waitForSelector('#login-error:not([style*="none"])', { timeout: 8000 });
     P('Un código de clínica equivocado no deja entrar', /incorrect|inválid|clínica|usuario|contraseña/i.test(await p.textContent('#login-error')), await p.textContent('#login-error'));
-    await entrar(p, 'admin', 'admin', 'dentcarerc');
+    await entrar(p, 'admin', 'admin', 'dova');
     await p.waitForSelector('#shell-root:not([style*="display: none"])', { timeout: 15000 }); await p.waitForTimeout(1000);
     P('Con el código correcto entra', true);
     P('El proveedor ve "Plataforma" en el menú', await p.evaluate(() => /Plataforma/.test(document.body.innerText) || !!document.querySelector('[data-ruta="plataforma"]')));
@@ -37,7 +37,7 @@ const entrar = async (p, usuario, clave, clinica) => {
     const f = fr('plataforma');
     await f.locator('.dova-plat table').waitFor({ timeout: 15000 });
     const txt = await f.locator('.dova-plat').innerText();
-    P('Plataforma lista las clínicas con su plan', /DentCareRC/.test(txt) && /Premium/.test(txt), txt.slice(0, 200));
+    P('Plataforma lista las clínicas con su plan', /DOVA/.test(txt) && /Premium/.test(txt), txt.slice(0, 200));
     const cerrar = () => f.locator('[data-cerrar-modal]').first().click();
     await f.locator('[data-plat-nueva]').click(); await f.locator('#pl-slug').waitFor();
     P('Nueva clínica abre el formulario', true);

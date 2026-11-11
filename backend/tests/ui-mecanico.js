@@ -44,7 +44,7 @@ const q1 = async (s, p) => (await db.query(s, p)).rows[0];
       const t1 = await p.textContent('[data-mec-reloj]'); await p.waitForTimeout(1200);
       P('…el reloj avanza', t1 !== await p.textContent('[data-mec-reloj]'));
       P('Menú en mayúsculas', await p.evaluate(() => getComputedStyle(document.querySelector('#menu-root .dova-menu-item')).textTransform === 'uppercase'));
-      P('Área de trabajo terracota (color de la clínica) y letra Tahoma', await p.evaluate(() => getComputedStyle(document.querySelector('.mec-cuerpo')).backgroundColor === 'rgb(154, 85, 54)' && /Tahoma/.test(getComputedStyle(document.body).fontFamily)));
+      P('Área de trabajo grafito (paleta DOVA) y letra Tahoma', await p.evaluate(() => getComputedStyle(document.querySelector('.mec-cuerpo')).backgroundColor === 'rgb(58, 66, 70)' && /Tahoma/.test(getComputedStyle(document.body).fontFamily)));
       await p.click('#mec-iconos [data-mec-ir="nueva-factura"]'); await p.waitForTimeout(1500);
       await p.click('#mec-iconos [data-mec-ir="nuevo-presupuesto"]'); await p.waitForTimeout(1500);
       const rec = await p.textContent('#mec-recientes');

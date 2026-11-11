@@ -1,6 +1,6 @@
 /* Seed inicial de DOVA.
    Crea:
-   - La clínica DentCareRC (primera clínica configurada dentro de DOVA).
+   - La clínica inicial de la instalación (código DOVA_CLINICA_POR_DEFECTO o "dova").
    - Los roles de sistema (admin, odontologo, recepcion, asistente, helpdesk).
    - El catálogo de permisos y su asignación por defecto a cada rol.
    - El usuario admin (protegido, con contraseña inicial aleatoria o ADMIN_PASSWORD; no puede quedar sin permisos ni ser
@@ -19,13 +19,13 @@ async function run() {
   try {
     await client.query('BEGIN');
 
-    // 1) Clínica DentCareRC
+    // 1) Clínica inicial (los datos reales se cargan en Configuración)
     const clinicaRes = await client.query(
       `INSERT INTO clinicas (nombre, slug, color_primario, color_secundario, direccion, telefono, whatsapp, email, horario_atencion)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT (slug) DO UPDATE SET nombre = EXCLUDED.nombre
        RETURNING id`,
-      ['DentCareRC', 'dentcarerc', '#C1673F', '#A5522F', 'Nro 49, Pampa Grande, Luque, Paraguay', '0986 451 065', '0986 451 065', '', 'Lunes a sábado de 8:00 a 12:00 y de 14:00 a 19:00']
+      [process.env.DOVA_CLINICA_NOMBRE || 'DOVA', process.env.DOVA_CLINICA_POR_DEFECTO || 'dova', '#3E7C62', '#24292C', '', '', '', '', '']
     );
     const clinicaId = clinicaRes.rows[0].id;
 
@@ -151,7 +151,7 @@ async function run() {
     }
 
     await client.query('COMMIT');
-    console.log('Seed completado: clínica DentCareRC, roles, permisos y usuario admin listos.');
+    console.log('Seed completado: clínica inicial, roles, permisos y usuario admin listos.');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error en seed:', err);

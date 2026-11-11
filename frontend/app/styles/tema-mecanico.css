@@ -1,34 +1,39 @@
-/* Diseño MECÁNICO: sistema de escritorio clásico, con los colores de DentCareRC
-   (terracota, crema y salvia de la marca).
+/* Diseño MECÁNICO: sistema de escritorio clásico. Paleta DOVA "grafito y verde":
+   grafito para la estructura (menú, escritorio, barras de título) y un verde
+   clínico como único acento (botón principal, enlaces, marca).
    Barra de menú en mayúsculas, tira de íconos a la izquierda, área de
-   trabajo bordó con las pantallas como "ventanas" con barra de título,
+   trabajo grafito con las pantallas como "ventanas" con barra de título,
    recuadros de "Parámetros activos" y "Ventanas abiertas recientemente",
    barra de estado abajo y letra Tahoma chica. Claro u oscuro (lo elige cada usuario en Configuración). Para todos los usuarios. */
 :root, :root[data-theme="light"] {
   color-scheme: light;
-  --cream: #F7EEE1; --ink: #2B241E; --ink-soft: #6E5A48;
-  --terracotta: #B96A47; --terracotta-dark: #8F4F32;
-  --sage: #7C8A66; --sage-dark: #5F7254; --rust: #A8432E;
-  --border: #DCC8AE; --border-strong: #B49C82; --white: #FFFFFF; --on-dark: #FFFFFF;
-  --barra: #5E3322; --bordo: #9A5536; --bordo-osc: #5E3322; --gris: #EFE0C9; --gris-claro: #FBF6EE;
-  --mec-escritorio: #9A5536; --mec-luz: #FFFFFF; --mec-sombra: #6E5A48; --mec-hundido: #B49C82; --mec-activo: #E6D3BA;
-  --mec-linea: #EADCC8; --mec-fila-par: #FBF4EA; --mec-hover: #F6E2D3; --mec-in-osc: #9C866F; --mec-in-luz: #E3D2BC;
-  --mec-trazo: #2B241E; --mec-enlace: #5E3322; --mec-marca: #9A5536; --mec-inact1: #8a7a6e; --mec-inact2: #b5a698;
-  --mec-marco: #5E3322; --mec-marco-inact: #7A685B;   /* borde de ventanas y cuadros (activo / atrás) */
-  --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(60,30,15,0.30);
+  --cream: #F2F3F1; --ink: #1E2224; --ink-soft: #61686B;
+  --terracotta: #3E7C62; --terracotta-dark: #2F6650;
+  --sage: #5E7F70; --sage-dark: #3E6A55; --rust: #A8432E;
+  --border: #D6D9D6; --border-strong: #A9AFAD; --white: #FFFFFF; --on-dark: #FFFFFF;
+  --barra: #24292C; --bordo: #4A5459; --bordo-osc: #24292C; --gris: #ECEDEB; --gris-claro: #F7F7F5;
+  --mec-escritorio: #3A4246; --mec-luz: #FFFFFF; --mec-sombra: #61686B; --mec-hundido: #A9AFAD; --mec-activo: #DCE0DD;
+  --mec-linea: #E2E4E1; --mec-fila-par: #F4F5F3; --mec-hover: #E3EEE8; --mec-in-osc: #8E9593; --mec-in-luz: #DDE0DE;
+  --mec-trazo: #1E2224; --mec-enlace: #2F6650; --mec-marca: #3E7C62; --mec-inact1: #6E777A; --mec-inact2: #A3AAAC;
+  --mec-marco: #24292C; --mec-marco-inact: #6E777A;   /* borde de ventanas y cuadros (activo / atrás) */
+  --mec-primario: #3E7C62; --mec-prim-luz: #7FB39C; --mec-prim-osc: #24493A;   /* botón principal (verde) */
+  --mec-sombra-caja: rgba(20,24,26,0.30);
+  --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(20,24,26,0.30);
 }
-/* Modo oscuro: mismos tonos de la marca (terracota, crema, salvia) sobre marrones muy oscuros. */
+/* Modo oscuro: grafitos casi negros y el mismo verde, más claro para que se lea. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --cream: #1B1410; --ink: #F0E6D8; --ink-soft: #B6A18A;
-  --terracotta: #D98159; --terracotta-dark: #E8A57C;
-  --sage: #8FA189; --sage-dark: #A3B69C; --rust: #E0776C;
-  --border: #4A3A2E; --border-strong: #6A5646; --white: #261D17; --on-dark: #FFFFFF;
-  --barra: #120C08; --bordo: #8A4A2E; --bordo-osc: #3E2216; --gris: #32261E; --gris-claro: #261D17;
-  --mec-escritorio: #17100C; --mec-luz: #54433A; --mec-sombra: #0E0906; --mec-hundido: #6A5646; --mec-activo: #46352A;
-  --mec-linea: #3A2D24; --mec-fila-par: #2C221B; --mec-hover: #4A3226; --mec-in-osc: #0E0906; --mec-in-luz: #54433A;
-  --mec-trazo: #000000; --mec-enlace: #E8A57C; --mec-marca: #E8A57C; --mec-inact1: #3A3029; --mec-inact2: #54453A;
-  --mec-marco: #D98159; --mec-marco-inact: #7A6558;
+  --cream: #111314; --ink: #E8EAE8; --ink-soft: #9EA4A6;
+  --terracotta: #6DB592; --terracotta-dark: #8FCAAD;
+  --sage: #7FA894; --sage-dark: #9CC0AE; --rust: #E0776C;
+  --border: #33393C; --border-strong: #4A5357; --white: #1B1E1F; --on-dark: #FFFFFF;
+  --barra: #0B0C0D; --bordo: #3B4549; --bordo-osc: #1B1F21; --gris: #1E2122; --gris-claro: #181A1B;
+  --mec-escritorio: #111314; --mec-luz: #3E4549; --mec-sombra: #08090A; --mec-hundido: #4A5357; --mec-activo: #2E3437;
+  --mec-linea: #2B2F31; --mec-fila-par: #1C1F20; --mec-hover: #22332C; --mec-in-osc: #08090A; --mec-in-luz: #3E4549;
+  --mec-trazo: #000000; --mec-enlace: #8FCAAD; --mec-marca: #7DBC9F; --mec-inact1: #2E3437; --mec-inact2: #444C50;
+  --mec-marco: #6DB592; --mec-marco-inact: #5A6367;
+  --mec-primario: #2F6E55; --mec-prim-luz: #5E9C82; --mec-prim-osc: #12291F;
+  --mec-sombra-caja: rgba(0,0,0,0.6);
   --radius-s: 0; --radius-m: 0; --shadow-menu: 2px 2px 0 rgba(0,0,0,0.6);
 }
 body { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; font-size: 12px; background: var(--mec-escritorio); color: var(--ink); }
@@ -47,7 +52,7 @@ label { font-size: 11px; color: var(--ink); }
 .dova-menu-item { background: none; border: 1px solid transparent; color: var(--ink); padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; border-radius: 0; }
 .dova-menu-item:hover, .dova-menu-item:focus-visible { background: var(--bordo); color: #FFFFFF; }
 .dova-menu-item.activo { border-color: var(--mec-hundido) var(--mec-luz) var(--mec-luz) var(--mec-hundido); background: var(--mec-activo); color: var(--ink); font-weight: 700; }
-.dova-submenu, .dova-submenu2 { background: var(--gris-claro); border: 1px solid var(--mec-sombra); border-radius: 0; box-shadow: 2px 2px 0 rgba(60,30,15,0.30); padding: 2px; }
+.dova-submenu, .dova-submenu2 { background: var(--gris-claro); border: 1px solid var(--mec-sombra); border-radius: 0; box-shadow: 2px 2px 0 var(--mec-sombra-caja); padding: 2px; }
 .dova-submenu .dova-menu-item { text-transform: none; text-align: left; padding: 4px 18px 4px 10px; }
 .dova-submenu .dova-menu-item.activo { background: var(--bordo); color: #FFFFFF; border-color: transparent; }
 .dova-logout { background: var(--gris); border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); color: var(--ink); font-size: 11px; padding: 3px 10px; text-transform: uppercase; border-radius: 0; }
@@ -62,9 +67,9 @@ label { font-size: 11px; color: var(--ink); }
 .mec-icono.activo { border-color: var(--mec-sombra) var(--mec-luz) var(--mec-luz) var(--mec-sombra); background: var(--mec-activo); }
 
 /* Pantalla actual: una "ventana" con barra de título */
-.dova-main { flex: 1; min-width: 0; margin: 10px; padding: 0 12px 14px; background: var(--gris-claro); border: 1px solid var(--bordo-osc); box-shadow: 2px 2px 0 rgba(60,30,15,0.30); max-width: none; }
+.dova-main { flex: 1; min-width: 0; margin: 10px; padding: 0 12px 14px; background: var(--gris-claro); border: 1px solid var(--bordo-osc); box-shadow: 2px 2px 0 var(--mec-sombra-caja); max-width: none; }
 .dova-main > .dova-view-title:first-child, .dova-main > :first-child > .dova-view-title:first-child, .dova-main > div:first-child > h2:first-child {
-  margin: 0 -12px 10px; padding: 5px 10px; background: linear-gradient(90deg, var(--bordo-osc), var(--bordo) 70%, #C1673F); color: #FFFFFF;
+  margin: 0 -12px 10px; padding: 5px 10px; background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); color: #FFFFFF;
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; font-family: inherit;
 }
 .dova-main > .dova-cargando:first-child { padding-top: 14px; }
@@ -83,7 +88,7 @@ label { font-size: 11px; color: var(--ink); }
 .dova-btn-primary, .dova-btn-primario, .dova-btn-secundario, .dova-btn-peligro {
   border-radius: 0; font-size: 12px; padding: 4px 12px; border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); box-shadow: 1px 1px 0 var(--mec-trazo);
 }
-.dova-btn-primary, .dova-btn-primario { background: var(--bordo); color: #FFFFFF; border-color: #D9946F #5E3322 #5E3322 #D9946F; }
+.dova-btn-primary, .dova-btn-primario { background: var(--mec-primario); color: #FFFFFF; border-color: var(--mec-prim-luz) var(--mec-prim-osc) var(--mec-prim-osc) var(--mec-prim-luz); }
 .dova-btn-secundario { background: var(--gris); color: var(--ink); }
 .dova-btn-primary:active, .dova-btn-primario:active, .dova-btn-secundario:active { box-shadow: none; transform: translate(1px, 1px); }
 .dova-tabs, .dova-ext-subtabs { border-bottom: 1px solid var(--mec-hundido); }
@@ -91,7 +96,7 @@ label { font-size: 11px; color: var(--ink); }
 
 /* Columna derecha: parámetros y ventanas recientes */
 .mec-lateral { flex: 0 0 250px; margin: 10px 10px 10px 0; display: flex; flex-direction: column; gap: 10px; }
-.mec-recuadro { background: var(--gris-claro); border: 1px solid var(--bordo-osc); box-shadow: 2px 2px 0 rgba(60,30,15,0.30); }
+.mec-recuadro { background: var(--gris-claro); border: 1px solid var(--bordo-osc); box-shadow: 2px 2px 0 var(--mec-sombra-caja); }
 .mec-recuadro-titulo { font-family: inherit; margin: 0; padding: 4px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #FFFFFF; background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
 .mec-param { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; margin: 0; padding: 8px; font-size: 11px; }
 .mec-param dt { font-weight: 700; text-transform: uppercase; color: var(--ink-soft); }
@@ -109,7 +114,7 @@ label { font-size: 11px; color: var(--ink); }
 
 /* Login */
 #login-root { min-height: 100vh; }
-.dova-login-card { border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 rgba(60,30,15,0.35); background: var(--gris-claro); padding-top: 0; }
+.dova-login-card { border: 1px solid var(--bordo-osc); box-shadow: 3px 3px 0 var(--mec-sombra-caja); background: var(--gris-claro); padding-top: 0; }
 .dova-login-title { margin: 0 -32px 18px; padding: 6px 12px; text-align: left; font-size: 13px; text-transform: uppercase; color: #FFFFFF; background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
 
 /* ---- Pantallas más chicas ---- */
@@ -137,7 +142,7 @@ label { font-size: 11px; color: var(--ink); }
 /* Pantallas sin título propio (ej. la ficha del paciente): barra de título con el nombre de la ventana. */
 .mec-shell .dova-main[data-ventana]:not([data-ventana=""]):not(:has(> .dova-view-title:first-child, > :first-child > .dova-view-title:first-child, > div:first-child > h2:first-child, > .dova-cargando))::before {
   content: attr(data-ventana); display: block; margin: 0 -12px 10px; padding: 5px 10px; color: #FFFFFF;
-  background: linear-gradient(90deg, var(--bordo-osc), var(--bordo) 70%, #C1673F); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
 }
 @media (max-width: 768px) { .mec-shell .dova-main[data-ventana]::before { margin: 0 -8px 10px; } }
 
@@ -150,7 +155,7 @@ body .dova-ventana.activa { border-color: var(--mec-marco); box-shadow: 0 0 0 1p
 @media (max-width: 768px) { body .dova-ventana, body .dova-ventana.activa { border: 0; box-shadow: none; } }   /* en el celular la ventana ocupa toda la pantalla */
 body .dova-ventana-barra { height: 26px; padding: 0 3px 0 8px; background: linear-gradient(90deg, var(--mec-inact1), var(--mec-inact2)); color: #FFFFFF; border-bottom: 1px solid var(--bordo-osc); }
 body .dova-ventana.activa .dova-ventana-barra { background: linear-gradient(90deg, var(--bordo-osc), var(--bordo)); }
-body .dova-ventana:not(.activa) .dova-ventana-titulo { color: #F3ECE3; }
+body .dova-ventana:not(.activa) .dova-ventana-titulo { color: #ECEEEE; }
 body .dova-ventana-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
 body .dova-ventana-btn, body .dova-ventana-zoom { height: 18px; min-width: 20px; padding: 0 4px; font-size: 12px; color: var(--ink); background: var(--gris); border: 1px solid; border-color: var(--mec-luz) var(--mec-sombra) var(--mec-sombra) var(--mec-luz); border-radius: 0; }
 body .dova-ventana-zoom { min-width: 40px; font-size: 10px; }

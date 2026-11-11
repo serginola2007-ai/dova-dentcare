@@ -111,7 +111,7 @@ const login = async (b, vp, u, c, dis = 'mecanico') => {
       await p.goto(`${URL0}/mecanico/index.html`); await p.fill('#login-username', u); await p.fill('#login-password', c); await p.click('#form-login button[type=submit]');
       await p.waitForSelector('[data-inicio-marca]:not(.atenuada)', { timeout: 15000 }); await p.waitForTimeout(800);
       const t = (await p.textContent('[data-inicio-marca]')).replace(/\s+/g, '');
-      P(`${tag} Aparece el logo y el nombre de la clínica`, t === 'DentCareRC' && await p.locator('[data-inicio-marca] svg').count() === 1, t);
+      P(`${tag} Aparece el logo y el nombre de la clínica`, t === 'DOVA' && await p.locator('[data-inicio-marca] svg').count() === 1, t);
       const caja = await p.locator('[data-inicio-marca]').boundingBox(); const nombre = await p.locator('.dova-inicio-marca-nombre').boundingBox();
       const main = await p.evaluate(() => { const r = document.querySelector('[data-inicio-marca]').parentElement.getBoundingClientRect(); return { x: r.x, w: r.width }; });
       const logo = await p.locator('.dova-inicio-marca-logo svg').boundingBox();

@@ -67,7 +67,7 @@ services:
       - key: MAIL_REMITENTE
         sync: false
       - key: MAIL_NOMBRE
-        value: DentCare
+        value: DOVA
       # Recordatorios de turnos por WhatsApp Business (OPCIONAL, ver docs/WHATSAPP.md).
       # Sin estas variables, los recordatorios se mandan desde el WhatsApp de la recepción.
       - key: WHATSAPP_TOKEN

@@ -8,7 +8,7 @@
 const { query } = require('../config/db');
 const { ApiError } = require('../middlewares/error.middleware');
 
-const COMUNES = new Set(['admin', 'administrador', 'password', 'contraseña', 'contrasena', 'dentcarerc', 'dova', '12345678', '123456789', '1234567890',
+const COMUNES = new Set(['admin', 'administrador', 'password', 'contraseña', 'contrasena', 'dova', '12345678', '123456789', '1234567890',
   'qwerty123', 'password1', 'admin123', 'admin1234', 'clave123', 'clave1234', 'abc12345', 'asuncion1', 'paraguay1', '11111111', '00000000']);
 
 function validarClaveFuerte(clave, { username, nombre } = {}) {

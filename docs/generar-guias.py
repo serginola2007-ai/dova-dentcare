@@ -8,7 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, Frame, KeepInFrame
 from reportlab.lib.styles import ParagraphStyle
 
-TERRA = HexColor('#A5522F'); TINTA = HexColor('#2B241E'); SUAVE = HexColor('#6B6055'); CREMA = HexColor('#F7EEE1'); LINEA = HexColor('#E4D3BD')
+TERRA = HexColor('#3E7C62'); TINTA = HexColor('#232526'); SUAVE = HexColor('#5D6163'); CREMA = HexColor('#EBECED'); LINEA = HexColor('#CDD2D4')
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'docs', 'guias')
 W, H = A4
 
@@ -66,10 +66,10 @@ GUIAS = {
 def generar(clave, titulo, sub, secciones):
     ruta = os.path.join(OUT, f'guia-{clave}.pdf')
     c = canvas.Canvas(ruta, pagesize=A4)
-    c.setTitle(f'DOVA - Guía rápida: {titulo}'); c.setAuthor('DentCareRC')
+    c.setTitle(f'DOVA - Guía rápida: {titulo}'); c.setAuthor('DOVA')
     c.setFillColor(TERRA); c.rect(0, H - 30 * mm, W, 30 * mm, stroke=0, fill=1)
     c.setFillColor(HexColor('#FFFFFF')); c.setFont('Helvetica-Bold', 22); c.drawString(16 * mm, H - 16 * mm, f'Guía rápida · {titulo}')
-    c.setFont('Helvetica', 10.5); c.drawString(16 * mm, H - 23.5 * mm, f'DOVA · DentCareRC — {sub}')
+    c.setFont('Helvetica', 10.5); c.drawString(16 * mm, H - 23.5 * mm, f'DOVA — {sub}')
     # Dos columnas de recuadros
     col_w = (W - 16 * mm * 2 - 8 * mm) / 2
     mitad = (len(secciones) + 1) // 2
