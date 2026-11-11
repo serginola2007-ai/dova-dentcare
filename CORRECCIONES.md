@@ -987,3 +987,9 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - **Íconos de la app** recoloreados (diente claro sobre verde).
 - La web pública toma el nombre de la clínica de la base (sin la marca "DentCare" armada a mano).
 - **Pruebas:** `ui-mecanico` 33/33, `ui-plataforma` 13/13, `ui-visual` 18/19 (el que falta pide datos de urgencias que la base de prueba vacía no tiene), lint 0, build sin errores.
+
+## Tanda: logo DOVA "diente angular" (10/11/2026)
+- Logo nuevo: un diente dibujado con líneas rectas, como pieza mecánica, en trazo claro sobre el verde DOVA.
+- Maestro en `frontend/iconos/logo.svg`; de ahí salen los íconos de la app, el favicon, el ícono de iPhone y los maskable (con zona segura).
+- El mismo dibujo en la web pública (cabecera, pie y horarios libres) y en el fondo de Inicio. Se quitó el armado "Dent/Care/RC" que quedaba en Inicio.
+- Pruebas: `ui-mecanico` 33/33, lint 0.

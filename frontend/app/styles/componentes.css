@@ -578,8 +578,6 @@ button.dova-ext-kpi, .dova-ext-kpi { display: flex; flex-direction: column; just
 .dova-inicio-marca-logo { display: inline-flex; color: var(--terracotta); }
 .dova-inicio-marca-logo svg { width: 240px; height: 240px; }
 .dova-inicio-marca-nombre { font-size: 38px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; display: inline-flex; align-items: flex-end; }
-.dova-inicio-marca-nombre .care { color: var(--terracotta); }
-.dova-inicio-marca-nombre .rc { font-size: .5em; font-weight: 700; margin-left: 3px; padding-bottom: .18em; color: var(--ink-soft); }
 @media (max-width: 768px) {
   .dova-inicio { min-height: calc(100vh - 260px); }
   .dova-inicio-marca { left: 0; }

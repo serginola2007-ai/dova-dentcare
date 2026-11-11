@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Logo DOVA: diente angular (trazo claro) sobre verde DOVA. Fuente de los PNG de esta carpeta. -->
+  <rect width="64" height="64" rx="3" fill="#3E7C62"/>
+  <path d="M19 19L27 16L32 20L37 16L45 19L47 29L42 41L39 49H35L32 38L29 49H25L22 41L17 29Z" fill="none" stroke="#F2F3F1" stroke-width="2.6" stroke-linejoin="miter"/>
+  <path d="M25 25H39" stroke="#CFE3D9" stroke-width="2.6"/>
+</svg>
