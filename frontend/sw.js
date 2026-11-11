@@ -7,7 +7,7 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v71';
+const VERSION = 'dova-v72';
 const PRECARGA = [
   '/mecanico/',
   '/app/styles/base.css',
@@ -71,8 +71,8 @@ const PRECARGA = [
 ];
 
 const SIN_CONEXION = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DOVA — sin conexión</title><style>body{font-family:system-ui,sans-serif;background:#F7F3EC;color:#2B2420;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;text-align:center}
-button{margin-top:16px;padding:10px 18px;border:0;border-radius:8px;background:#C1673F;color:#fff;font:inherit;cursor:pointer}</style></head>
+<title>DOVA — sin conexión</title><style>body{font-family:system-ui,sans-serif;background:#F2F3F1;color:#1E2224;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;text-align:center}
+button{margin-top:16px;padding:10px 18px;border:0;border-radius:2px;background:#3E7C62;color:#fff;font:inherit;cursor:pointer}</style></head>
 <body><div><h1>Sin conexión</h1><p>DOVA necesita internet para mostrar y guardar los datos de la clínica.</p><button onclick="location.reload()">Reintentar</button></div></body></html>`;
 
 self.addEventListener('install', (e) => {

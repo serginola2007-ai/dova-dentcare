@@ -46,6 +46,7 @@ frontend/           JavaScript puro, sin build
   app/styles/       base.css, componentes.css, tema-mecanico.css (claro/oscuro), sobrio.css (último)
   README.md         guía corta del front: carpetas, reglas y cómo agregar una pantalla
   web/              página pública + portal del paciente
+  dova/             página de DOVA como producto (funciones, planes con precio, contacto); `/` redirige acá salvo WEB_EN_INICIO=true
   sw.js             service worker (precache con VERSION)
 ```
 
@@ -215,6 +216,11 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - `tratamiento_kits` (insumo + cantidad por sesión) y `sesiones_tratamiento.kit_aplicado`. `modules/inventario/kits.service.js`; rutas `GET /api/inventario/kits`, `GET|PUT /api/inventario/kits/:tratamientoId` (ver: `inventario.view`; guardar: `inventario.manage`; valida insumo y tratamiento contra la clínica).
 - `planes.service.registrarSesion` valida fecha y odontólogo, y llama a `kits.aplicarASesion` (salvo `descontarKit: false`): descuenta con `registrarConsumoProcedimiento` (movimiento + auditoría), nunca dos veces la misma sesión, nunca deja stock negativo; si falta stock registra la sesión igual y devuelve `kit.faltantes`; avisa a los admins (`alertas.alertarAdmins`, tipo `inventario`) cuando algo llega al mínimo o faltó.
 - Pantallas: Inventario → Kits por tratamiento (`app/pages/inventario.js`) y bloque de sesiones del plan (`app/pages/clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).
+
+## Página de DOVA (producto)
+- `frontend/dova/index.html` + `dova.css` (sin JS) e imágenes en `dova/img/*.webp`. `/` → `/dova/`; el personal entra por "Ingresar" (`/mecanico/`).
+- Precios mensuales: Esencial Gs. 100.000, Base 150.000, Completo 250.000, Premium 400.000. Lo que lista cada plan sale de `config/planes.js` (`MODULOS.desde`): si cambia un módulo de plan, actualizar la página.
+- Contacto: WhatsApp 0982 645 463 (wa.me/595982645463), sergio.espinola007@gmail.com. "Varias sedes" figura como "próximamente" (todavía no existe). No anunciar el cobro online hasta probarlo con Pagopar real.
 
 ## Inicio, celular y apariencia
 - Inicio (recepción/admin): `seccionHoy`/`cargarHoy` en `app/pages/inicio.js` (`GET /api/agenda?desde=hoy&hasta=hoy`) y `filaAtender(..., nivel)` con `data-nivel` urgente/aviso; `DovaInicio.ordenarAtender` ordena después de que la extensión suma sus filas.

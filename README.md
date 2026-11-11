@@ -113,7 +113,7 @@ Para desarrollo local no hace falta tocar nada: `frontend/app/core/config.js`
 ya viene versionado con `http://localhost:4000/api` para que `Iniciar DOVA.bat`
 funcione de una.
 
-- `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica en vez de DOVA. DOVA sigue en `/moderno/`.
+- `WEB_EN_INICIO` (opcional, `true`/`false`): si es `true`, la dirección principal (`/`) abre la página web de la clínica. Si no, abre la página de DOVA como producto (`/dova/`: funciones, planes y contacto). El sistema del personal está siempre en `/mecanico/`.
 - `DOVA_CLINICA_POR_DEFECTO` (opcional): código de la clínica a la que entra el login cuando no se indica otra (por defecto `dova`). `DOVA_CLINICA_NOMBRE` (opcional): nombre de la clínica inicial que crea el seed en una instalación nueva (por defecto `DOVA`).
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (opcionales): activan los avisos push en celulares y compus (la app instalada avisa de turnos, cobros y mensajes aunque esté cerrada). Generalas una sola vez con `npx web-push generate-vapid-keys` y no las cambies después (cada cambio desactiva los dispositivos ya suscritos). `VAPID_SUBJECT` es un `mailto:` de contacto. Sin las claves, la tarjeta "Avisos en este dispositivo" no aparece.
 - `PAGOPAR_PUBLIC_KEY`, `PAGOPAR_PRIVATE_KEY` (opcionales): conectan el cobro online (Pagopar). En Pagopar, la URL de respuesta es `<PUBLIC_URL>/api/cobro-online/aviso/pagopar`. Sin estas claves, el cobro online no se ofrece.

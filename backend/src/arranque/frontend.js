@@ -12,7 +12,9 @@ function servirFrontend(app) {
       res.type('application/javascript').set('Cache-Control', 'no-cache').send('window.DOVA_API_BASE = "/api";\n');
     });
     // Página web de la clínica: /web/ (con WEB_EN_INICIO=true también es la página de inicio).
-    app.get('/', (req, res) => res.redirect(302, process.env.WEB_EN_INICIO === 'true' ? '/web/' : '/mecanico/'));
+    // La dirección principal muestra la página de DOVA (planes y contacto); el personal entra por /mecanico/.
+    app.get('/', (req, res) => res.redirect(302, process.env.WEB_EN_INICIO === 'true' ? '/web/' : '/dova/'));
+    app.get(/^\/dova$/, (req, res) => res.redirect(301, '/dova/'));
     app.get(/^\/web$/, (req, res) => res.redirect(301, '/web/'));
     // DOVA tiene un solo diseño: los enlaces viejos a los otros diseños llevan al actual (el # se conserva en el navegador).
     app.get(/^\/(moderno|minimalista|tecnico)(\/.*)?$/, (req, res) => res.redirect(301, '/mecanico/'));

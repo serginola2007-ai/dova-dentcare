@@ -993,3 +993,10 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Maestro en `frontend/iconos/logo.svg`; de ahí salen los íconos de la app, el favicon, el ícono de iPhone y los maskable (con zona segura).
 - El mismo dibujo en la web pública (cabecera, pie y horarios libres) y en el fondo de Inicio. Se quitó el armado "Dent/Care/RC" que quedaba en Inicio.
 - Pruebas: `ui-mecanico` 33/33, lint 0.
+
+## Tanda: página de DOVA con planes (10/11/2026)
+- Nueva página `/dova/` para ofrecer DOVA a clínicas: qué hace, capturas del sistema, los 4 planes con precio (Esencial Gs. 100.000, Base 150.000, Completo 250.000, Premium 400.000 por mes), seguridad, preguntas frecuentes y contacto por WhatsApp y correo.
+- La dirección principal (`/`) ahora abre esta página; el personal entra con "Ingresar" (`/mecanico/`, igual que antes). `WEB_EN_INICIO=true` sigue mostrando la web de la clínica.
+- "Varias sedes" figura como próximamente; el cobro online no se anuncia hasta probarlo con una cuenta real.
+- La pantalla "Sin conexión" de la app tenía todavía los colores viejos: corregida.
+- Revisada en escritorio, tablet y celular: sin desbordes ni errores de consola.
