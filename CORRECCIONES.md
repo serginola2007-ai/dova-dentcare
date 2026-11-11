@@ -1047,3 +1047,7 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Agenda: botón "Imprimir" con la lista de turnos del período y odontólogo elegidos (hora, paciente, teléfono, tratamiento, estado y una columna "Llegó" para marcar a mano).
 - `/api/agenda` sin fechas ni paciente trae desde hace un año, no todos los turnos de la historia.
 - Pruebas: `tests/busqueda-pacientes.test.js` (17).
+
+## Tanda: retoques de diseño en Página web (11/11/2026)
+- Cuentas de pacientes: el botón "Buscar" se montaba sobre la caja de búsqueda; ahora queda al lado.
+- Horario de atención (página web y horario de cada odontólogo): la casilla "y" del segundo horario quedaba arriba de las horas; ahora va en la misma línea.

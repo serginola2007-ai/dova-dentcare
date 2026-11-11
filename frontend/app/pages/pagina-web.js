@@ -28,7 +28,7 @@ const DovaWeb = (() => {
   async function accesos(c, navegar) {
     const buscar = buscarAcceso;
     c.innerHTML = `<p class="dova-nota">Los pacientes que ya tienen ficha entran a la página con un <strong>código de 6 números</strong> que les das desde acá (vale 48 horas). También sirve si se olvidaron la contraseña. Las personas nuevas crean su cuenta solas desde la página.</p>
-      <div class="dova-fac-filtros-form"><div style="flex:1;min-width:240px;max-width:520px"><label>Buscar paciente (nombre, apellido o cédula)</label><input style="width:100%" data-buscar value="${esc(buscar)}" placeholder="Ej.: Benítez o 4567890" /></div>
+      <div class="dova-busca-fila"><div style="flex:1;min-width:220px;max-width:520px"><label>Buscar paciente (nombre, apellido o cédula)</label><input style="width:100%" data-buscar value="${esc(buscar)}" placeholder="Ej.: Benítez o 4567890" /></div>
         <div class="dova-fac-f-botones"><button type="button" class="dova-btn-primary" data-ir>Buscar</button></div></div>
       <div data-res></div>`;
     const inp = c.querySelector('[data-buscar]'); const out = c.querySelector('[data-res]');
