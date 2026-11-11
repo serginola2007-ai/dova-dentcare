@@ -23,7 +23,7 @@ const DovaRapido = (() => {
           ${crear ? '<button type="button" role="tab" data-rap-tab="nuevo" aria-selected="false">+ Nuevo paciente</button>' : ''}
         </div>
         <div data-rap-panel="buscar">
-          <label for="rap-q">Buscar por nombre, apellido o C.I.</label>
+          <label for="rap-q">Buscar por nombre, C.I. o teléfono</label>
           <input type="search" id="rap-q" autocomplete="off" placeholder="Escribí al menos 2 letras o números…" />
           <div class="dova-rap-res" data-rap-res aria-live="polite"></div>
         </div>
@@ -80,6 +80,7 @@ const DovaRapido = (() => {
 
     // ---- Nuevo ----
     const form = box.querySelector('[data-rap-panel="nuevo"]');
+    parecidos(form, { nombre: '#rap-nombre', apellido: '#rap-apellido', ci: '#rap-ci', tel: '#rap-tel' }, ir);
     if (form) form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = form.querySelector('[data-rap-error]'); err.hidden = true;
@@ -107,6 +108,34 @@ const DovaRapido = (() => {
     });
   }
 
-  return { turno, paciente };
+
+  /* Aviso de paciente parecido al dar de alta (mismo nombre y apellido, C.I. o teléfono).
+     sel = { nombre, apellido, ci, tel } (selectores dentro del form); abrir(id) abre la ficha. */
+  function parecidos(form, sel, abrir) {
+    if (!form || !puede('pacientes.view')) return;
+    let caja = form.querySelector('[data-parecidos]');
+    if (!caja) {
+      caja = document.createElement('div'); caja.className = 'dova-parecidos'; caja.setAttribute('data-parecidos', ''); caja.setAttribute('aria-live', 'polite'); caja.hidden = true;
+      const acc = form.querySelector('.dova-modal-actions'); form.insertBefore(caja, acc || null);
+    }
+    const val = (k) => { const el = sel[k] && form.querySelector(sel[k]); return el ? el.value.trim() : ''; };
+    let pedido = 0;
+    const revisar = async () => {
+      const n = ++pedido;
+      const q = new URLSearchParams({ nombre: val('nombre'), apellido: val('apellido'), ci: val('ci'), telefono: val('tel') });
+      let lista = [];
+      try { lista = await DOVA.get(`/pacientes/parecidos?${q}`); } catch (_e) { return; }
+      if (n !== pedido) return;
+      if (!lista.length) { caja.hidden = true; caja.innerHTML = ''; return; }
+      caja.innerHTML = `<p><strong>Ojo: ya hay ${lista.length === 1 ? 'un paciente parecido' : 'pacientes parecidos'}.</strong> Revisá antes de guardar para no duplicar la ficha.</p>
+        <ul>${lista.map((p) => `<li><span>${esc(p.nombre)} ${esc(p.apellido || '')} <span class="dova-nota">${p.ci ? `C.I. ${esc(p.ci)}` : 'Sin C.I.'}${p.telefono ? ` · ${esc(p.telefono)}` : ''}${p.activo === false ? ' · dado de baja' : ''}</span></span>
+          ${abrir && p.activo !== false ? `<button type="button" class="dova-btn-link" data-parecido="${esc(p.id)}">Ver ficha</button>` : ''}</li>`).join('')}</ul>`;
+      caja.hidden = false;
+      caja.querySelectorAll('[data-parecido]').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.parecido)));
+    };
+    Object.values(sel).forEach((s) => { const el = form.querySelector(s); if (el) el.addEventListener('change', revisar); });
+  }
+
+  return { turno, paciente, parecidos };
 })();
 window.DovaRapido = DovaRapido;

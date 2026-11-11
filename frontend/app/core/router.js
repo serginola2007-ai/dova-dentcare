@@ -289,7 +289,7 @@ const DovaApp = (() => {
     // el segundo tramo es el id de una pestaña del menú, no un dato como en #paciente/12.
     if (typeof params === 'string' && params) {
       const item = MENU.find((m) => m.ruta === ruta);
-      if (item && item.subs && item.subs.some((sb) => sb[0] === params)) { window.DovaSubPendiente = params; params = undefined; }
+      if (item && item.subs && item.subs.some((sb) => sb[0] === params)) window.DovaSubPendiente = params; // el dato se mantiene: hay secciones que lo usan (#facturacion/nueva)
     }
     // Escritorio: cada función se abre en su ventana; Inicio queda de fondo.
     if (ESCRITORIO) {

@@ -17,8 +17,27 @@ async function listar(clinicaId, { q, page = 1, pageSize = 20, incluirInactivos 
   if (soloEliminados) condiciones.push('activo = false');
   else if (!incluirInactivos) condiciones.push('activo = true');
   if (q) {
-    params.push(`%${q.toLowerCase()}%`);
-    condiciones.push(`(LOWER(nombre) LIKE $${params.length} OR LOWER(apellido) LIKE $${params.length} OR ci LIKE $${params.length})`);
+    // Sin acentos y sin mayúsculas, nombre y apellido juntos ("juan perez" encuentra "Juan Pérez"),
+    // C.I. sin puntos y teléfono sin espacios ni prefijo. Los comodines que escribe el usuario no cuentan.
+    const ACENTOS = "'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun'";
+    const norm = (col) => `translate(LOWER(${col}), ${ACENTOS})`;
+    const limpio = String(q).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[%_\\]/g, ' ').replace(/\s+/g, ' ').trim();
+    params.push(`%${limpio}%`);
+    const pq = params.length;
+    const ors = [`${norm("nombre || ' ' || COALESCE(apellido,'')")} LIKE $${pq}`, `${norm("COALESCE(apellido,'') || ' ' || nombre")} LIKE $${pq}`];
+    const digitos = /[a-zñ]/.test(limpio) ? '' : limpio.replace(/\D/g, ''); // con letras se busca por nombre, no por números
+    if (digitos.length >= 3) {
+      params.push(`%${digitos}%`);
+      const pd = params.length;
+      ors.push(`regexp_replace(COALESCE(ci,''), '\\D', '', 'g') LIKE $${pd}`);
+      if (digitos.length >= 6) {
+        params.push(`%${digitos.replace(/^(595|0)/, '')}%`);
+        ors.push(`regexp_replace(COALESCE(telefono,'') || ' ' || COALESCE(whatsapp,''), '\\D', '', 'g') LIKE $${params.length}`);
+      }
+    } else {
+      ors.push(`LOWER(COALESCE(ci,'')) LIKE $${pq}`);
+    }
+    condiciones.push(`(${ors.join(' OR ')})`);
   }
 
   const where = condiciones.join(' AND ');

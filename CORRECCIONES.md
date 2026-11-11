@@ -1034,3 +1034,16 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
   - Apariencia decía "Fondo crema": ahora dice "Fondo claro";
   - "Cobrado sobre lo realizado" mostraba porcentajes absurdos (2795 %) cuando no se registran las sesiones: ahora muestra "más del 150 %" con la explicación, o pide registrar las sesiones;
   - en Informes y en Producción por odontólogo, "Cobrado" ahora cuenta también los pagos de las cuotas de sus planes de pago (antes solo los pagos directos al presupuesto).
+
+## Tanda: búsqueda, pacientes repetidos e impresión de la agenda (11/11/2026)
+- Arreglo urgente: con el cambio de los enlaces a pestañas, el acceso "Nueva factura" abría Facturación en la primera pestaña. Ahora abre el formulario directo, como antes, y los enlaces a pestañas siguen funcionando.
+- Búsqueda de pacientes (lista, acceso rápido y búsqueda general):
+  - no distingue acentos ni mayúsculas ("jose nunez" encuentra "José Núñez");
+  - acepta nombre y apellido juntos, en cualquier orden;
+  - encuentra la C.I. con o sin puntos y el teléfono escrito de cualquier forma (con espacios, con 0 o con +595);
+  - "%" y "_" ya no funcionan como comodines.
+- Alta de paciente: si ya hay alguien con el mismo nombre y apellido, la misma C.I. o el mismo teléfono, aparece un aviso con un botón para abrir esa ficha (no bloquea el alta). Ruta `GET /api/pacientes/parecidos`.
+- Alta de paciente desde Pacientes: el botón Guardar se bloquea mientras guarda (un doble clic creaba dos fichas) y al terminar abre la ficha nueva.
+- Agenda: botón "Imprimir" con la lista de turnos del período y odontólogo elegidos (hora, paciente, teléfono, tratamiento, estado y una columna "Llegó" para marcar a mano).
+- `/api/agenda` sin fechas ni paciente trae desde hace un año, no todos los turnos de la historia.
+- Pruebas: `tests/busqueda-pacientes.test.js` (17).

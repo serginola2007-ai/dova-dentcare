@@ -841,3 +841,10 @@ body.dova-con-ventanas .dova-main { padding-bottom: 64px; }
 /* Mixta en la boca: el número de los dientes de leche va del lado de adentro (no pisa a los permanentes). */
 .dova-odonto[data-denticion="mixta"][data-vista="boca"] .odo-temporal.odo-arriba .odo-numero { bottom: auto; top: calc(100% + 2px); }
 .dova-odonto[data-denticion="mixta"][data-vista="boca"] .odo-temporal.odo-abajo .odo-numero { top: auto; bottom: calc(100% + 2px); }
+
+/* Aviso de paciente parecido en el alta */
+.dova-parecidos { border-left: 3px solid var(--terracotta); background: var(--dova-ext-atencion-bg); padding: 8px 12px; margin: 10px 0; font-size: 13px; color: var(--ink); }
+.dova-parecidos p { margin: 0 0 4px; }
+.dova-parecidos ul { list-style: none; margin: 0; padding: 0; }
+.dova-parecidos li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
+.dova-parecidos li > span { min-width: 0; overflow-wrap: anywhere; }

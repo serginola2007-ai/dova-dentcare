@@ -98,7 +98,10 @@ const DovaAgenda = (() => {
           <select data-odo aria-label="Odontólogo"><option value="">Todos los odontólogos</option>${odos.map((o) => `<option value="${o.id}" ${String(o.id) === String(e.odontologoId || '') ? 'selected' : ''}>${esc(o.nombre)}</option>`).join('')}</select>
           <select data-est aria-label="Estado"><option value="">Turnos activos</option>${['reservado', 'confirmado', 'atendido', 'no_asistio', 'cancelado', 'reprogramado'].map((x) => `<option value="${x}" ${e.estadoFiltro === x ? 'selected' : ''}>${esc(etiqueta(x))}</option>`).join('')}<option value="todos" ${e.estadoFiltro === 'todos' ? 'selected' : ''}>Todos (incluye cancelados)</option></select>
         </div>
-        ${puedeCrear ? '<button class="dova-btn-primary" data-nuevo-turno>+ Nuevo turno</button>' : ''}
+        <div class="dova-op-nav">
+          <button class="dova-btn-secundario" data-imprimir-agenda title="Lista de turnos para imprimir o guardar en PDF">Imprimir</button>
+          ${puedeCrear ? '<button class="dova-btn-primary" data-nuevo-turno>+ Nuevo turno</button>' : ''}
+        </div>
       </div>
       <div class="dova-cal-cabecera"><h3 class="dova-section-title" style="margin:0">${esc(tituloVista(e, desde, hasta))}</h3>
         <span class="dova-nota">${activos} turno${activos === 1 ? '' : 's'}${puedeCrear && e.vista !== 'mes' && e.vista !== 'lista' ? ' · tocá un espacio libre para dar un turno' : ''}</span></div>
@@ -118,6 +121,17 @@ const DovaAgenda = (() => {
     if (rango) rango.addEventListener('change', (ev) => recargar({ dias: ev.target.value ? Number(ev.target.value) : 0 }));
     c.querySelector('[data-odo]').addEventListener('change', (ev) => recargar({ odontologoId: ev.target.value }));
     c.querySelector('[data-est]').addEventListener('change', (ev) => recargar({ estadoFiltro: ev.target.value }));
+    c.querySelector('[data-imprimir-agenda]').addEventListener('click', () => {
+      const lista = turnos.slice().sort((a, b) => `${a.fecha}${a.hora_inicio}`.localeCompare(`${b.fecha}${b.hora_inicio}`));
+      const variosDias = desde !== hasta;
+      const odoSel = e.odontologoId && odoPorId[e.odontologoId] ? ` · ${odoPorId[e.odontologoId].nombre}` : '';
+      X.imprimir(`Agenda ${tituloVista(e, desde, hasta)}`, `<h1>Agenda · ${esc(tituloVista(e, desde, hasta))}${esc(odoSel)}</h1>
+        <p class="nota">${lista.length} turno${lista.length === 1 ? '' : 's'} · impreso el ${esc(new Date().toLocaleString('es-PY', { hour12: false }))}</p>
+        ${lista.length ? `<table><thead><tr>${variosDias ? '<th>Fecha</th>' : ''}<th>Hora</th><th>Paciente</th><th>Teléfono</th><th>Tratamiento</th><th>Odontólogo</th><th>Estado</th><th>Llegó</th></tr></thead><tbody>
+          ${lista.map((t) => `<tr>${variosDias ? `<td>${esc(fmtFecha(t.fecha))}</td>` : ''}<td>${esc(hora5(t.hora_inicio))}</td><td>${esc(`${t.paciente_nombre || ''} ${t.paciente_apellido || ''}`.trim())}</td>
+            <td>${esc(t.paciente_telefono || t.paciente_whatsapp || '')}</td><td>${esc(t.tratamiento_nombre || t.motivo || '')}</td><td>${esc(t.odontologo_nombre || '')}</td><td>${esc(etiqueta(t.estado))}</td><td></td></tr>`).join('')}
+        </tbody></table>` : '<p>No hay turnos en este período.</p>'}`);
+    });
     const bn = c.querySelector('[data-nuevo-turno]');
     if (bn) bn.addEventListener('click', () => modalTurno({ fijo: { fecha: e.vista === 'semana' || e.vista === 'mes' ? (desde <= hoy() && hoy() <= hasta ? hoy() : e.fecha) : e.fecha, odontologoId: e.odontologoId }, alGuardar: () => recargar() }));
     // Calendario: tocar un turno abre su detalle; tocar un espacio libre da un turno ahí.

@@ -19,7 +19,8 @@ async function buscar(clinicaId, q, permisos, usuario) {
   if (!q || q.trim().length < 2) {
     throw new ApiError(400, 'La búsqueda requiere al menos 2 caracteres');
   }
-  const termino = q.trim().toLowerCase();
+  const termino = q.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[%_\\]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (termino.length < 2) throw new ApiError(400, 'La búsqueda requiere al menos 2 caracteres');
   const categoriasPermitidas = CATEGORIAS.filter((c) => permisos.includes(c.permiso));
 
   const resultados = await Promise.all(

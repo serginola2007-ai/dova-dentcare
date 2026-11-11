@@ -17,6 +17,8 @@ async function listar(clinicaId, { desde, hasta, odontologoId, estado, pacienteI
   const params = [clinicaId];
 
   if (desde) { params.push(desde); condiciones.push(`t.fecha >= $${params.length}`); }
+  // Sin rango ni paciente: no traer todos los años de turnos (crece sin límite). Último año en adelante.
+  if (!desde && !pacienteId) condiciones.push("t.fecha >= current_date - 365");
   if (hasta) { params.push(hasta); condiciones.push(`t.fecha <= $${params.length}`); }
   if (odontologoId) { params.push(odontologoId); condiciones.push(`t.odontologo_id = $${params.length}`); }
   if (estado) { params.push(estado); condiciones.push(`t.estado = $${params.length}`); }

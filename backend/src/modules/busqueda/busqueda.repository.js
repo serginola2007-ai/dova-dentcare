@@ -1,5 +1,8 @@
 const { query } = require('../../config/db');
 
+// Dígitos para buscar C.I. y teléfono sin puntos, espacios ni prefijo (595 / 0). Vacío si son pocos.
+const digitosDe = (q) => { if (/[a-zñ]/i.test(q)) return ''; const d = String(q).replace(/\D/g, '').replace(/^(595|0)/, ''); return d.length >= 5 ? d : ''; };
+
 /* Búsqueda global (sección 26 del prompt): búsqueda tradicional rápida
    sobre datos reales, sin IA. Cada función busca en una sola tabla con
    LIKE case-insensitive; el service decide cuáles llamar según los
@@ -11,9 +14,10 @@ async function pacientes(clinicaId, q) {
     `SELECT id, nombre, apellido, ci, telefono
        FROM pacientes
       WHERE clinica_id=$1 AND activo=true
-        AND (LOWER(nombre) LIKE $2 OR LOWER(apellido) LIKE $2 OR ci LIKE $2 OR telefono LIKE $2)
+        AND (translate(LOWER(nombre || ' ' || COALESCE(apellido,'')), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(COALESCE(apellido,'') || ' ' || nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR LOWER(COALESCE(ci,'')) LIKE $2 OR telefono LIKE $2
+             OR ($3 <> '' AND (regexp_replace(COALESCE(ci,''), '\\D', '', 'g') LIKE '%' || $3 || '%' OR regexp_replace(COALESCE(telefono,'') || ' ' || COALESCE(whatsapp,''), '\\D', '', 'g') LIKE '%' || $3 || '%')))
       ORDER BY apellido, nombre LIMIT 8`,
-    [clinicaId, `%${q}%`]
+    [clinicaId, `%${q}%`, digitosDe(q)]
   );
   return res.rows;
 }
@@ -23,7 +27,7 @@ async function citas(clinicaId, q) {
     `SELECT t.id, t.fecha, t.hora_inicio, t.motivo, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
        FROM turnos t JOIN pacientes p ON p.id = t.paciente_id
       WHERE t.clinica_id=$1
-        AND (LOWER(t.motivo) LIKE $2 OR LOWER(p.nombre) LIKE $2 OR LOWER(p.apellido) LIKE $2)
+        AND (translate(LOWER(t.motivo), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(p.nombre || ' ' || COALESCE(p.apellido,'')), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(COALESCE(p.apellido,'') || ' ' || p.nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY t.fecha DESC LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -33,7 +37,7 @@ async function citas(clinicaId, q) {
 async function tratamientos(clinicaId, q) {
   const res = await query(
     `SELECT id, nombre, categoria, precio FROM tratamientos
-      WHERE clinica_id=$1 AND (LOWER(nombre) LIKE $2 OR LOWER(categoria) LIKE $2)
+      WHERE clinica_id=$1 AND (translate(LOWER(nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(categoria), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY nombre LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -45,7 +49,7 @@ async function presupuestos(clinicaId, q) {
   const res = await query(
     `SELECT pr.id, pr.fecha, pr.total, pr.estado, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
        FROM presupuestos pr JOIN pacientes p ON p.id = pr.paciente_id
-      WHERE pr.clinica_id=$1 AND (LOWER(p.nombre) LIKE $2 OR LOWER(p.apellido) LIKE $2)
+      WHERE pr.clinica_id=$1 AND (translate(LOWER(p.nombre || ' ' || COALESCE(p.apellido,'')), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(COALESCE(p.apellido,'') || ' ' || p.nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY pr.fecha DESC LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -57,7 +61,7 @@ async function pagos(clinicaId, q) {
     `SELECT pg.id, pg.fecha, pg.monto, pg.concepto, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
        FROM pagos pg JOIN pacientes p ON p.id = pg.paciente_id
       WHERE pg.clinica_id=$1
-        AND (LOWER(pg.concepto) LIKE $2 OR LOWER(p.nombre) LIKE $2 OR LOWER(p.apellido) LIKE $2)
+        AND (translate(LOWER(pg.concepto), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(p.nombre || ' ' || COALESCE(p.apellido,'')), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(COALESCE(p.apellido,'') || ' ' || p.nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY pg.fecha DESC LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -69,7 +73,7 @@ async function evoluciones(clinicaId, q) {
     `SELECT h.id, h.fecha, h.procedimiento, h.diagnostico, p.id AS paciente_id, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
        FROM historia_clinica h JOIN pacientes p ON p.id = h.paciente_id
       WHERE h.clinica_id=$1
-        AND (LOWER(h.procedimiento) LIKE $2 OR LOWER(h.diagnostico) LIKE $2 OR LOWER(p.nombre) LIKE $2 OR LOWER(p.apellido) LIKE $2)
+        AND (translate(LOWER(h.procedimiento), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(h.diagnostico), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(p.nombre || ' ' || COALESCE(p.apellido,'')), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(COALESCE(p.apellido,'') || ' ' || p.nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY h.fecha DESC LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -79,7 +83,7 @@ async function evoluciones(clinicaId, q) {
 async function tickets(clinicaId, q) {
   const res = await query(
     `SELECT id, titulo, estado, categoria FROM tickets
-      WHERE clinica_id=$1 AND (LOWER(titulo) LIKE $2 OR LOWER(descripcion) LIKE $2)
+      WHERE clinica_id=$1 AND (translate(LOWER(titulo), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(descripcion), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY creado_en DESC LIMIT 8`,
     [clinicaId, `%${q}%`]
   );
@@ -89,7 +93,7 @@ async function tickets(clinicaId, q) {
 async function usuarios(clinicaId, q) {
   const res = await query(
     `SELECT id, nombre, username FROM usuarios
-      WHERE clinica_id=$1 AND activo=true AND (LOWER(nombre) LIKE $2 OR LOWER(username) LIKE $2)
+      WHERE clinica_id=$1 AND activo=true AND (translate(LOWER(nombre), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2 OR translate(LOWER(username), 'áéíóúàèìòùäëïöüâêîôûñ', 'aeiouaeiouaeiouaeioun') LIKE $2)
       ORDER BY nombre LIMIT 8`,
     [clinicaId, `%${q}%`]
   );

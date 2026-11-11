@@ -10,7 +10,7 @@ const DovaPacientes = (() => {
     return `
       <h2 class="dova-view-title">Pacientes</h2>
       <div class="dova-toolbar">
-        <input id="pacientes-buscar" type="search" placeholder="Buscar por nombre o C.I..." class="dova-input-buscar" autocomplete="off" />
+        <input id="pacientes-buscar" type="search" placeholder="Buscar por nombre, C.I. o teléfono…" class="dova-input-buscar" autocomplete="off" />
         ${puedeBorrar ? '<button id="btn-ver-eliminados" class="dova-btn-secundario" aria-pressed="false">Ver eliminados</button>' : ''}
         ${DOVA.tienePermiso('pacientes.create') && window.DovaImportar ? '<button id="btn-importar-pacientes" class="dova-btn-secundario" type="button">Importar desde Excel</button>' : ''}
         ${DOVA.tienePermiso('pacientes.create') ? '<button id="btn-nuevo-paciente" class="dova-btn-primary">+ Nuevo paciente</button>' : ''}
@@ -131,16 +131,28 @@ const DovaPacientes = (() => {
             </div>
           </form>
         `);
-        document.getElementById('form-nuevo-paciente').addEventListener('submit', async (e) => {
+        const formNuevo = document.getElementById('form-nuevo-paciente');
+        if (window.DovaRapido && DovaRapido.parecidos) {
+          DovaRapido.parecidos(formNuevo, { nombre: '#np-nombre', apellido: '#np-apellido', ci: '#np-ci', tel: '#np-telefono' },
+            (id) => { const r = document.getElementById('modal-root'); if (r) r.innerHTML = ''; DovaApp.navegar('paciente', String(id)); });
+        }
+        formNuevo.addEventListener('submit', async (e) => {
           e.preventDefault();
-          await manejarError(() => DOVA.post('/pacientes', {
+          const btnG = formNuevo.querySelector('button[type=submit]');
+          if (btnG.disabled) return;
+          btnG.disabled = true;
+          let creado;
+          try {
+            creado = await manejarError(() => DOVA.post('/pacientes', {
             nombre: document.getElementById('np-nombre').value,
             apellido: document.getElementById('np-apellido').value,
             ci: document.getElementById('np-ci').value || undefined,
             telefono: document.getElementById('np-telefono').value || undefined,
           }));
+          } catch (_e) { btnG.disabled = false; return; }
           toast('Paciente creado', 'ok');
-          location.reload();
+          const r = document.getElementById('modal-root'); if (r) r.innerHTML = '';
+          if (creado && creado.id) DovaApp.navegar('paciente', String(creado.id)); else location.reload();
         });
       });
     }
