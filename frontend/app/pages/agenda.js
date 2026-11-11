@@ -206,6 +206,16 @@ const DovaAgenda = (() => {
     try { await DOVA.patch(`/agenda/${t.id}/estado`, { estado: nuevo }); toast('Turno actualizado', 'ok'); alTerminar(); } catch (ex) { toast(ex.message, 'error'); }
   }
 
+  // Enlace de WhatsApp con un mensaje para confirmar el turno (solo turnos por venir con teléfono).
+  function waTurno(t) {
+    const n = String(t.paciente_whatsapp || t.paciente_telefono || '').replace(/\D/g, '');
+    if (n.length < 8 || !['reservado', 'confirmado'].includes(t.estado) || String(t.fecha).slice(0, 10) < hoy()) return null;
+    const num = n.startsWith('595') ? n : n.startsWith('0') ? `595${n.slice(1)}` : `595${n}`;
+    const dia = fmtLargo(String(t.fecha).slice(0, 10), { weekday: 'long', day: 'numeric', month: 'long' }).toLowerCase().replace(',', '');
+    const texto = `Hola ${t.paciente_nombre || ''}, te escribimos del consultorio para recordarte tu turno del ${dia} a las ${hora5(t.hora_inicio)}${t.odontologo_nombre ? ` con ${t.odontologo_nombre}` : ''}. ¿Nos confirmás tu asistencia? Gracias.`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(texto)}`;
+  }
+
   // Detalle de un turno tocado en el calendario, con todas sus acciones.
   function detalleTurno(t, navegar, alTerminar) {
     const editable = puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado);
@@ -222,6 +232,8 @@ const DovaAgenda = (() => {
       </div>
       <div class="dova-modal-actions dova-cal-acciones">
         <button class="dova-btn-secundario" data-d="ficha">Ver ficha</button>
+        ${waTurno(t) ? `<a class="dova-btn-secundario" href="${esc(waTurno(t))}" target="_blank" rel="noopener" title="Abre WhatsApp con un mensaje para confirmar el turno">WhatsApp</a>` : ''}
+        ${puede('agenda.create') && ['atendido', 'no_asistio', 'cancelado'].includes(t.estado) ? '<button class="dova-btn-secundario" data-d="proximo">Dar otro turno</button>' : ''}
         ${puede('agenda.edit') && ['reservado', 'confirmado'].includes(t.estado) && !t.llegada_en && String(t.fecha).slice(0, 10) === hoy() ? '<button class="dova-btn-secundario" data-d="llego">Llegó (en espera)</button>' : ''}
         ${DOVA.tienePermiso('historia_clinica.edit') && !['cancelado', 'no_asistio'].includes(t.estado) ? '<button class="dova-btn-primary" data-d="consulta">Iniciar consulta</button>' : ''}
         ${editable ? `
@@ -241,6 +253,7 @@ const DovaAgenda = (() => {
       if (a === 'ficha') return navegar('paciente', t.paciente_id);
       if (a === 'consulta') return navegar('consulta', `${t.paciente_id}/t${t.id}`);
       if (a === 'reprogramar') return modalTurno({ turno: t, alGuardar: alTerminar });
+      if (a === 'proximo') return modalTurno({ fijo: { pacienteId: t.paciente_id, pacienteNombre: `${t.paciente_nombre || ''} ${t.paciente_apellido || ''}`.trim(), odontologoId: t.odontologo_id }, alGuardar: alTerminar });
       if (a === 'llego') return DOVA.post(`/operaciones/flujo/${t.id}/llegada`, {}).then(() => { toast('Paciente en sala de espera', 'ok'); alTerminar(); }).catch((e) => toast(e.message, 'error'));
       return cambiarEstadoTurno(t, a, alTerminar);
     }));

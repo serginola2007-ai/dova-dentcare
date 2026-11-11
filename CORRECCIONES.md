@@ -1051,3 +1051,10 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 ## Tanda: retoques de diseño en Página web (11/11/2026)
 - Cuentas de pacientes: el botón "Buscar" se montaba sobre la caja de búsqueda; ahora queda al lado.
 - Horario de atención (página web y horario de cada odontólogo): la casilla "y" del segundo horario quedaba arriba de las horas; ahora va en la misma línea.
+
+## Tanda: barrido de la API y detalle del turno (11/11/2026)
+- Barrido de toda la API (604 rutas, 48.230 pedidos con datos rotos, IDs falsos y textos con código): 0 errores del servidor, 0 respuestas lentas y ninguna respuesta que muestre detalles internos.
+- Los títulos de todas las ventanitas (detalle del turno, alta de paciente, cobros…) salían con otra letra (con serifa): ahora usan la letra de DOVA.
+- Detalle del turno:
+  - botón "WhatsApp" que abre el chat del paciente con un mensaje listo para confirmar el turno (solo para turnos por venir y con teléfono);
+  - botón "Dar otro turno" en turnos atendidos, cancelados o a los que el paciente no vino, con el paciente y el odontólogo ya elegidos.

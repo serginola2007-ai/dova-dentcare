@@ -137,7 +137,7 @@ label { font-size: 11px; color: var(--ink); }
 /* Más específico que los ajustes generales de base.css/sobrio.css */
 .mec-shell .dova-main { padding: 0 12px 14px !important; margin: 10px; max-width: none; }
 .mec-shell .dova-view-title { font-size: 12px; }
-.mec-shell h1, .mec-shell h2, .mec-shell h3, .mec-shell h4, .mec-shell [class*="valor"], .mec-shell [class*="titulo"] { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; }
+h1, h2, h3, h4, .dova-card-valor, .mec-shell [class*="valor"], .mec-shell [class*="titulo"] { font-family: Tahoma, Verdana, 'Segoe UI', Geneva, sans-serif; }
 @media (max-width: 768px) { .mec-shell .dova-main { margin: 6px; padding: 0 8px 12px !important; } }
 /* Pantallas sin título propio (ej. la ficha del paciente): barra de título con el nombre de la ventana. */
 .mec-shell .dova-main[data-ventana]:not([data-ventana=""]):not(:has(> .dova-view-title:first-child, > :first-child > .dova-view-title:first-child, > div:first-child > h2:first-child, > .dova-cargando))::before {
