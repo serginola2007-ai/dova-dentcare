@@ -7,7 +7,7 @@
    - Pantallas, scripts y estilos: primero la red (siempre la versión
      nueva); si no hay conexión, la copia guardada.
    - Lo que viene de otros sitios (fuentes de Google) no se intercepta. */
-const VERSION = 'dova-v75';
+const VERSION = 'dova-v76';
 const PRECARGA = [
   '/mecanico/',
   '/app/styles/base.css',
@@ -124,6 +124,6 @@ self.addEventListener('notificationclick', (e) => {
   e.waitUntil((async () => {
     const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (abiertas.length) { const c = abiertas[0]; await c.focus(); c.postMessage({ tipo: 'dova-ir', ruta }); return; }
-    await self.clients.openWindow('/?app=1');
+    await self.clients.openWindow('/mecanico/');
   })());
 });

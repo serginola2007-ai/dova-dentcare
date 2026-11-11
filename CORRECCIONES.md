@@ -1011,3 +1011,9 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Toques de guaraní con medida: "Ñane retã", "Mba'éichapa", "Jajotopata" y "Aguyje".
 - Corregido: la página hablaba de "facturas"; DOVA emite comprobantes internos (la factura electrónica SIFEN figura como próximamente).
 - El guaraní no se notaba (estaba abajo y en letra chica): ahora la portada abre con "Mba'éichapa" destacado en verde, y "Ñane retã" y "Ñañomongeta" (conversemos) encabezan la sección de Paraguay y el cierre con el mismo estilo.
+
+## Tanda: la app instalada abre directo en el ingreso (11/11/2026)
+- Desde que la dirección principal muestra la página de DOVA, la app instalada pasaba primero por esa página. Ahora abre directo en el ingreso del sistema:
+  - el manifiesto arranca en `/mecanico/?app=1`;
+  - `/?app=1` (lo que tienen guardado las apps instaladas antes, sobre todo en iPhone) redirige a `/mecanico/`;
+  - tocar un aviso push también abre el sistema directo.

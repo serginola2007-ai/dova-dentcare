@@ -4,7 +4,7 @@
   "short_name": "DOVA",
   "description": "Gestión odontológica: agenda, pacientes, cobros, caja y seguimiento.",
   "lang": "es",
-  "start_url": "/?app=1",
+  "start_url": "/mecanico/?app=1",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],

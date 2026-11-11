@@ -218,7 +218,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Pantallas: Inventario → Kits por tratamiento (`app/pages/inventario.js`) y bloque de sesiones del plan (`app/pages/clinica.js planDetalle`). Pruebas: `tests/kits.test.js` (22), `tests/ui-kits.js` (7).
 
 ## Página de DOVA (producto)
-- `frontend/dova/index.html` + `dova.css` (sin JS) e imágenes en `dova/img/*.webp`. `/` → `/dova/`; el personal entra por "Ingresar" (`/mecanico/`).
+- `frontend/dova/index.html` + `dova.css` (sin JS) e imágenes en `dova/img/*.webp`. `/` → `/dova/`; el personal entra por "Ingresar" (`/mecanico/`). La app instalada NO pasa por la página: `start_url` es `/mecanico/?app=1` y `/?app=1` (instalaciones viejas) redirige a `/mecanico/`.
 - Precios mensuales: Esencial Gs. 190.000, Base 290.000, Completo 450.000, Premium 690.000 (referencia: Dentalink desde US$29). Sección "Todo lo que incluye" (#incluye): 39 funciones reales en 6 grupos; no agregar funciones que no existan. Lo que lista cada plan sale de `config/planes.js` (`MODULOS.desde`): si cambia un módulo de plan, actualizar la página.
 - DOVA emite comprobantes internos, NO facturas fiscales (SET/SIFEN pendiente): en la página decir "comprobantes", nunca "facturas". Toques de guaraní medidos y visibles (saludo "Mba'éichapa" en la portada, "Ñane retã", "Ñañomongeta" en el cierre, "Jajotopata", "Aguyje"); sin frases afectivas tipo "Rohayhu". Sección #paraguay: solo afirmaciones verificadas en el sistema.
 - Contacto: WhatsApp 0982 645 463 (wa.me/595982645463), sergio.espinola007@gmail.com. "Varias sedes" figura como "próximamente" (todavía no existe). No anunciar el cobro online hasta probarlo con Pagopar real.
