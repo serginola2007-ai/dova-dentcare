@@ -1017,3 +1017,9 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
   - el manifiesto arranca en `/mecanico/?app=1`;
   - `/?app=1` (lo que tienen guardado las apps instaladas antes, sobre todo en iPhone) redirige a `/mecanico/`;
   - tocar un aviso push también abre el sistema directo.
+
+## Tanda: npm audit en 0 (11/11/2026)
+- `npm audit fix`: body-parser, multer, nodemailer y qs a versiones corregidas.
+- `glob` dentro de node-pg-migrate forzado a 14.0.4 (override). La alternativa de npm (`--force`) bajaba node-pg-migrate de 9 a 7. Probado: las 62 migraciones y el seed corren en una base nueva.
+- `uuid` dentro de exceljs forzado a 11.1.1 (override). Probado: los Excel se generan y se vuelven a abrir.
+- Resultado: `npm audit` → 0 vulnerabilidades.

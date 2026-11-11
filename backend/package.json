@@ -44,6 +44,11 @@
     "node": ">=20"
   },
   "overrides": {
-    "uuid": "^11.1.1"
+    "node-pg-migrate": {
+      "glob": "^14.0.4"
+    },
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   }
 }
