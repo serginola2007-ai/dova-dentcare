@@ -1077,3 +1077,12 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
   - el portal del paciente: "Te queda por pagar" y la línea "Atenciones" en Pagos, con su botón para pagar.
 - Los turnos que ya estaban atendidos no se cargan para atrás.
 - Pruebas: `tests/cargo-atencion.test.js` (21). Siguen bien: rentabilidad, kits, ortodoncia, Mi día, informes y correcciones-sim3.
+
+## Tanda: revisión del portal del paciente (12/11/2026)
+- Revisé en un navegador real el portal y las páginas públicas, en escritorio y en celular: ingreso, Turnos, Mi tratamiento, Pagos, Comprobantes, Mis datos, Inicio, Reservar, Tratamientos, Equipo, Contacto, Primera visita, Mi pago y Mi turno. No hay errores de consola ni nada que se salga de la pantalla.
+- Corregido:
+  - "Te queda por pagar" mostraba Gs. 0 aunque hubiera cuotas sin pagar: solo contaba los presupuestos. Ahora suma lo mismo que lista la pestaña Pagos (cuotas, presupuestos sin financiar y atenciones);
+  - en celular las pestañas (Comprobantes, Mis datos) quedaban cortadas fuera de la pantalla: ahora bajan a una segunda línea;
+  - Pagos muestra las cuotas vencidas y la próxima de cada plan, y las demás quedan plegadas en "Ver las cuotas que vienen después (N)". Antes era una lista larguísima;
+  - en Equipo, la especialidad quedaba pegada al enlace "Reservar con…".
+- Atenciones en el portal: se reducen con los pagos a cuenta (sin cuota ni presupuesto) y con los descuentos de la cuenta.

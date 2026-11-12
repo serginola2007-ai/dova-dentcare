@@ -164,7 +164,8 @@ legend { font: 700 20px var(--titulo); margin-bottom: 4px; padding: 0; }
 .equipo li { display: flex; gap: 14px; align-items: center; padding: 16px; background: var(--blanco); border-radius: var(--radio); }
 .inicial { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 500 22px var(--titulo); flex: none; }
 .equipo strong { display: block; font-size: 17px; }
-.equipo small { color: var(--pizarra); }
+.equipo small { display: block; color: var(--pizarra); }
+.equipo .trat-reservar { display: inline-block; margin-top: 4px; }
 
 /* Contacto */
 .contacto { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 80px); }
@@ -318,7 +319,10 @@ input.codigo { font: 700 28px/1 var(--texto); letter-spacing: 10px; text-align: 
 .opcion-chica input { accent-color: var(--cobalto); }
 input[type=file] { padding: 10px; background: var(--porcelana); }
 @media (max-width: 560px) { .lista-simple .docs { margin-left: 0; } .mis-datos, .datos-banco dl { grid-template-columns: 1fr; gap: 2px; } .mis-datos dd, .datos-banco dd { margin-bottom: 8px; } }
-@media (max-width: 560px) { .cuenta-tabs a { padding: 12px 10px; font-size: 15px; } }
+@media (max-width: 560px) { .cuenta-tabs { flex-wrap: wrap; overflow: visible; gap: 0; } .cuenta-tabs a { padding: 10px 10px; font-size: 15px; } }
+.cuotas-mas { margin-top: 10px; }
+.cuotas-mas > summary { cursor: pointer; font-weight: 600; color: var(--pizarra); padding: 8px 0; }
+.cuotas-mas[open] > summary { margin-bottom: 10px; }
 
 /* ---- Antes y después ---- */
 .resultado { display: grid; grid-template-columns: minmax(240px, 1fr) 1.6fr; gap: clamp(24px, 5vw, 64px); align-items: center; }

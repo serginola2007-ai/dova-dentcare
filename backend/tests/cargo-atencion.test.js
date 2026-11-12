@@ -116,6 +116,15 @@ const q1 = async (sql, p) => (await db.query(sql, p)).rows[0];
     r = await req('GET', `/finanzas/rentabilidad?desde=${hoy}&hasta=${hoy}&odontologoId=${odo}`, undefined, A);
     P('Rentabilidad no se rompe con atenciones', r.s === 200 && r.j.porTratamiento.some((t) => t.tratamientoId === tr), r.j);
 
+    // 13. Portal del paciente: "Te queda por pagar" incluye la atención y baja con un pago a cuenta
+    const portal = require('../src/modules/web/portal.service');
+    const p9 = await nuevoPac('Portal');
+    await atender(await turno(p9, tr));
+    let e = await portal.cuenta({ clinicaId: 1, pacienteId: p9, verificado: true });
+    P('Portal: la atención figura y suma a "te queda por pagar"', e.atenciones.pendiente === 150000 && e.resumen.pendiente === 150000 && e.atenciones.lista.length === 1, e.resumen);
+    await db.query("INSERT INTO pagos (clinica_id, paciente_id, monto, metodo, estado, fecha) VALUES (1,$1,100000,'efectivo','pagado', now())", [p9]);
+    e = await portal.cuenta({ clinicaId: 1, pacienteId: p9, verificado: true });
+    P('Portal: un pago a cuenta la reduce', e.atenciones.pendiente === 50000 && e.resumen.pendiente === 50000, e.resumen);
   } finally {
     await db.query('UPDATE clinicas SET fecha_bloqueo_contable=$1, cargo_al_atender=$2 WHERE id=1', [cerrarAntes.f, cerrarAntes.c]);
     const cn = await db.connect();
