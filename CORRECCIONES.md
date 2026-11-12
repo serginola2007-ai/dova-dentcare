@@ -1086,3 +1086,16 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
   - Pagos muestra las cuotas vencidas y la próxima de cada plan, y las demás quedan plegadas en "Ver las cuotas que vienen después (N)". Antes era una lista larguísima;
   - en Equipo, la especialidad quedaba pegada al enlace "Reservar con…".
 - Atenciones en el portal: se reducen con los pagos a cuenta (sin cuota ni presupuesto) y con los descuentos de la cuenta.
+
+## Tanda: atenciones en Mi pago y en los avisos de cobro (12/11/2026) — migración 0064
+- **Mi pago** (el enlace que le llega al paciente): ahora muestra también las atenciones sin pagar. Se pagan informando el comprobante, como un pago a cuenta. El "Pagar ahora" online sigue siendo solo para cuotas.
+- **Avisos de cobro** (Finanzas → Avisos de cobro): nueva lista "Atenciones sin pagar", con paciente, qué se le hizo, cuánto debe y los días de atraso.
+  - Primer aviso a los 7 días de la última atención.
+  - Después se repite como una cuota vencida: cada "repetir cada" días, hasta el máximo de avisos.
+  - Salen solos con WhatsApp Business, o a mano con "Mandar por mi WhatsApp" con el mensaje ya armado.
+  - Si se le carga una atención nueva, el ciclo de avisos empieza de nuevo.
+  - Al pagar, deja de figurar.
+  - El ejemplo del mensaje está en "Configurar los avisos".
+- **Un solo cálculo**: lo que se debe de atenciones sale de un único lugar (`cargo-atencion.atencionesPendientes`) y lo usan el portal, Mi pago y los avisos. Las atenciones se reducen con los pagos a cuenta y los descuentos de la cuenta.
+- **Comprobante en revisión**: si el paciente mandó un comprobante a cuenta que está en revisión, figura "En revisión" y no se le avisa.
+- Pruebas: `tests/cobranza-atenciones.test.js` (17). Siguen bien: `cobranza.test.js` (41, con WhatsApp falso), `ui-cobranza.js` (21) y `cargo-atencion.test.js` (23).

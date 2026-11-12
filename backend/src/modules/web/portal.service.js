@@ -340,25 +340,16 @@ async function cuenta(pt) {
   for (const p of press.rows) { const r = await fac.resumenPresupuesto(pt.clinicaId, p.id); presupuestos.push({ id: p.id, fecha: p.fecha, estado: p.estado, total: r.total, pagado: r.pagado, pendiente: r.pendiente, enCuotas: conPlan.has(p.id) }); }
   const hoy = hoyIso();
   const enRevision = enviados.rows.filter((x) => x.estado === 'pendiente').reduce((s, x) => s + Number(x.monto), 0);
-  // Atenciones cargadas al atender (trabajos fuera de un presupuesto). Se pagan con pagos "a cuenta"
-  // (sin cuota ni presupuesto); los descuentos y bonificaciones de la cuenta también las reducen.
-  const at = await query("SELECT fecha::text AS fecha, motivo, monto FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND tipo='atencion' AND NOT anulado ORDER BY fecha DESC, id DESC", [pt.clinicaId, pt.pacienteId]);
-  let pendienteAtenciones = 0;
-  if (at.rowCount) {
-    const totalAt = at.rows.reduce((acc, x) => acc + Number(x.monto), 0);
-    const aCuenta = Number((await query(
-      `SELECT COALESCE((SELECT sum(monto) FROM pagos WHERE clinica_id=$1 AND paciente_id=$2 AND estado='pagado' AND cuota_id IS NULL AND presupuesto_id IS NULL),0)
-            + COALESCE((SELECT sum(monto) FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND NOT anulado AND tipo NOT IN ('recargo','atencion')),0) AS n`,
-      [pt.clinicaId, pt.pacienteId])).rows[0].n);
-    pendienteAtenciones = Math.round(Math.max(0, totalAt - aCuenta));
-  }
+  // Atenciones cargadas al atender (trabajos fuera de un presupuesto).
+  const atenc = await require('../finanzas-ext/cargo-atencion').atencionesPendientes(pt.clinicaId, pt.pacienteId);
+  const pendienteAtenciones = atenc.pendiente;
   // "Te queda por pagar" = lo mismo que lista la pestaña Pagos: cuotas sin pagar + presupuestos aceptados
   // que no están en cuotas + atenciones.
   const pendienteCuotas = cuotas.rows.reduce((acc, c) => acc + Number(c.monto), 0);
   const pendienteSueltos = presupuestos.filter((p) => p.estado === 'aceptado' && !p.enCuotas).reduce((acc, p) => acc + p.pendiente, 0);
   return {
     resumen: { pendiente: Math.round(pendienteCuotas + pendienteSueltos + pendienteAtenciones), cuotasVencidas: cuotas.rows.filter((c) => c.vencimiento < hoy).length, enRevision },
-    atenciones: { pendiente: pendienteAtenciones, lista: at.rows.slice(0, 20).map((x) => ({ fecha: x.fecha, detalle: x.motivo, monto: Number(x.monto) })) },
+    atenciones: { pendiente: atenc.pendiente, enRevision: atenc.enRevision, lista: atenc.lista.slice(0, 20).map((x) => ({ fecha: x.fecha, detalle: x.detalle, monto: x.monto })) },
     presupuestos,
     cuotas: cuotas.rows.map((c) => ({ ...c, monto: Number(c.monto), vencida: c.vencimiento < hoy })),
     pagos: pagos.rows.map((p) => ({ ...p, monto: Number(p.monto) })),

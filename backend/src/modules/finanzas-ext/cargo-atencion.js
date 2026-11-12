@@ -79,4 +79,27 @@ async function cargarAtencion(clinicaId, turnoId, usuario) {
   }
 }
 
-module.exports = { cargarAtencion, motivoParaNoCargar };
+/** Lo que el paciente debe de atenciones. Se pagan con pagos "a cuenta" (sin cuota ni presupuesto)
+ *  y las reducen los descuentos/bonificaciones de la cuenta. Fuente única para portal, Mi pago y avisos de cobro.
+ *  Devuelve { pendiente, lista, ultimaId, ultimaFecha, enRevision }. */
+async function atencionesPendientes(clinicaId, pacienteId) {
+  const at = await query(
+    "SELECT id, fecha::text AS fecha, motivo, monto FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND tipo='atencion' AND NOT anulado ORDER BY fecha DESC, id DESC",
+    [clinicaId, pacienteId]);
+  const vacio = { pendiente: 0, lista: [], ultimaId: null, ultimaFecha: null, enRevision: false };
+  if (!at.rowCount) return vacio;
+  const r = (await query(
+    `SELECT COALESCE((SELECT sum(monto) FROM pagos WHERE clinica_id=$1 AND paciente_id=$2 AND estado='pagado' AND cuota_id IS NULL AND presupuesto_id IS NULL),0)
+          + COALESCE((SELECT sum(monto) FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND NOT anulado AND tipo NOT IN ('recargo','atencion')),0) AS a_cuenta,
+            EXISTS (SELECT 1 FROM web_pagos w WHERE w.paciente_id=$2 AND w.estado='pendiente' AND w.cuota_id IS NULL AND w.presupuesto_id IS NULL) AS en_revision`,
+    [clinicaId, pacienteId])).rows[0];
+  const total = at.rows.reduce((acc, x) => acc + Number(x.monto), 0);
+  const pendiente = Math.round(Math.max(0, total - Number(r.a_cuenta)));
+  if (!pendiente) return vacio;
+  // Las que siguen impagas: se cubren primero las más viejas.
+  let resto = pendiente; const lista = [];
+  for (const x of at.rows) { if (resto <= 0) break; lista.push({ id: x.id, fecha: x.fecha, detalle: x.motivo, monto: Math.min(Number(x.monto), resto) }); resto -= Number(x.monto); }
+  return { pendiente, lista, ultimaId: at.rows[0].id, ultimaFecha: at.rows[0].fecha, enRevision: !!r.en_revision };
+}
+
+module.exports = { cargarAtencion, motivoParaNoCargar, atencionesPendientes };

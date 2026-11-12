@@ -715,7 +715,7 @@
       ...e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.cantidad_cuotas}`, detalle: `Vence el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: e.enviados.some((x) => x.cuota_id === q.id && x.estado === 'pendiente') })),
       ...e.presupuestos.filter((x) => x.estado === 'aceptado' && x.pendiente > 0 && !x.enCuotas).map((x) => ({ tipo: 'presupuesto', id: x.id, titulo: `Presupuesto del ${fechaCorta(x.fecha)}`, detalle: `Total ${gs(x.total)} · pagado ${gs(x.pagado)}`, monto: x.pendiente, aCuenta: true })),
 
-      ...(e.atenciones && e.atenciones.pendiente > 0 ? [{ tipo: 'atenciones', titulo: 'Atenciones', detalle: e.atenciones.lista.slice(0, 3).map((a) => `${fechaCorta(a.fecha)}: ${a.detalle.replace(/^Atención del [0-9/]+: /, '')}`).join(' · ') + (e.atenciones.lista.length > 3 ? ' · …' : ''), monto: e.atenciones.pendiente, aCuenta: true }] : []),
+      ...(e.atenciones && e.atenciones.pendiente > 0 ? [{ tipo: 'atenciones', titulo: 'Atenciones', detalle: e.atenciones.lista.slice(0, 3).map((a) => `${fechaCorta(a.fecha)}: ${a.detalle.replace(/^Atención del [0-9/]+: /, '')}`).join(' · ') + (e.atenciones.lista.length > 3 ? ' · …' : ''), monto: e.atenciones.pendiente, aCuenta: true, enRevision: !!e.atenciones.enRevision }] : []),
     ];
     // Cuotas: se muestran las vencidas y la próxima de cada plan; las demás quedan plegadas.
     const yaPlan = new Set();
@@ -907,13 +907,17 @@
       }
       const wa = e.whatsappClinica ? `https://wa.me/${e.whatsappClinica}?text=${encodeURIComponent(`Hola, soy ${e.nombre}. Te escribo por mi pago.`)}` : null;
       const deudas = e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.de}`, detalle: `${q.vencida ? 'Venció' : 'Vence'} el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: q.enRevision }));
+      if (e.atenciones) {
+        deudas.push({ tipo: 'atenciones', titulo: e.atenciones.lista.length > 1 ? 'Atenciones' : 'Atención', monto: e.atenciones.pendiente, enRevision: e.atenciones.enRevision, sinOnline: true,
+          detalle: e.atenciones.lista.slice(0, 3).map((a) => `${fechaCorta(a.fecha)}: ${a.detalle.replace(/^Atención del [0-9/]+: /, '')}`).join(' · ') + (e.atenciones.lista.length > 3 ? ' · …' : '') });
+      }
       const total = deudas.filter((d) => !d.enRevision).reduce((s, d) => s + d.monto, 0);
       v.innerHTML = `<div class="tarjeta-turno tarjeta-pago">
         <p class="saludo-pago">Hola, ${esc(e.nombre)}</p>
-        ${deudas.length ? `<h2>Tus cuotas pendientes</h2>
+        ${deudas.length ? `<h2>Lo que tenés pendiente</h2>
           <ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}</span></div>
-            <div class="turno-acc"><strong class="monto">${gs(d.monto)}</strong>${d.enRevision ? '<span class="estado">En revisión</span>' : `${e.pagoOnline ? `<button type="button" class="boton boton-chico" data-pagar-ahora="${d.id}">Pagar ahora</button>` : ''}${e.puedeInformar ? `<button type="button" class="${e.pagoOnline ? 'boton-texto' : 'boton boton-chico'}" data-pagar="${i}">${e.pagoOnline ? 'Ya transferí' : 'Pagar'}</button>` : ''}`}</div></li>`).join('')}</ul>
-          ${total ? `<p class="total-pago">Total pendiente: <strong>${gs(total)}</strong></p>` : ''}` : (e.presupuestos.length ? '' : '<h2>¡Estás al día!</h2><p>No tenés cuotas pendientes. Gracias.</p>')}
+            <div class="turno-acc"><strong class="monto">${gs(d.monto)}</strong>${d.enRevision ? '<span class="estado">En revisión</span>' : `${e.pagoOnline && !d.sinOnline ? `<button type="button" class="boton boton-chico" data-pagar-ahora="${d.id}">Pagar ahora</button>` : ''}${e.puedeInformar ? `<button type="button" class="${e.pagoOnline && !d.sinOnline ? 'boton-texto' : 'boton boton-chico'}" data-pagar="${i}">${e.pagoOnline && !d.sinOnline ? 'Ya transferí' : 'Pagar'}</button>` : ''}`}</div></li>`).join('')}</ul>
+          ${total ? `<p class="total-pago">Total pendiente: <strong>${gs(total)}</strong></p>` : ''}` : (e.presupuestos.length ? '' : '<h2>¡Estás al día!</h2><p>No tenés pagos pendientes. Gracias.</p>')}
         <div data-form-pago></div>
         ${e.presupuestos.map((p) => `<section class="presu-pago" data-presu="${p.id}"><h2>Presupuesto del ${esc(fechaCorta(p.fecha))}</h2>
           <ul class="lista-cuenta lista-simple">${p.items.map((i) => `<li><span>${esc(i.descripcion || 'Tratamiento')}${i.pieza ? ` · pieza ${esc(i.pieza)}` : ''}${i.cantidad > 1 ? ` × ${i.cantidad}` : ''}</span><span>${gs(i.subtotal)}</span></li>`).join('')}</ul>

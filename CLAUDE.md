@@ -241,5 +241,7 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 ## Cargo automático al atender (0063)
 - `modules/finanzas-ext/cargo-atencion.js` (`cargarAtencion`), llamado desde `agenda.service.actualizar` al pasar a `atendido` (también lo usa el flujo `finalizado`). Inserta en `ajustes_cuenta` tipo `atencion` (al debe) con `turno_id`, `tratamiento_id` y `odontologo_id`; índice único por turno. No carga si: plan en curso con ese tratamiento, presupuesto aceptado con ese tratamiento (último año), ortodoncia con caso abierto, sin tratamiento o precio 0, período cerrado, o `clinicas.cargo_al_atender=false` (`GET|PUT /api/finanzas/cargo-atencion`, en Finanzas → Cerrar meses).
 - Todo saldo trata `('recargo','atencion')` como débito; el alta manual de ajustes NO acepta `atencion`. Producción/comisiones/rentabilidad suman las atenciones (`calcularComisiones`, detalle con `atencionId`). Portal: `cuenta()` devuelve `atenciones.pendiente/lista`.
-- Pruebas: `tests/cargo-atencion.test.js`.
+- Lo pendiente de atenciones sale SOLO de `cargo-atencion.atencionesPendientes(clinicaId, pacienteId)` (total − pagos a cuenta sin cuota/presupuesto − ajustes de crédito): lo usan portal, Mi pago (`miPago().atenciones`) y avisos de cobro.
+- Avisos de cobro de atenciones (0064, `cobranza_envios.tipo='atencion'`, `referencia_id` = atención más reciente: una nueva reinicia el ciclo): primer aviso a los 7 días (`ATENCION_PLAZO`), después como cuota vencida. `listar()` devuelve `atenciones`; rutas `/api/cobranza/atencion/:id/enviar|enlace`. La plantilla de WhatsApp es la de pago.
+- Pruebas: `tests/cargo-atencion.test.js`, `tests/cobranza-atenciones.test.js`.
 

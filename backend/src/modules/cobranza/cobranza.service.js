@@ -5,6 +5,9 @@
      revisión, no se le avisa.
    - Presupuestos enviados sin respuesta: un aviso a los N días y otro una
      semana después. Nunca más que eso.
+   - Atenciones cargadas al atender (0063) sin pagar: primer aviso a los 7 días
+     de la última atención y después igual que una cuota vencida (cada "repetir
+     cada" días, hasta "max avisos"). Una atención nueva reinicia el ciclo.
    - Cada aviso lleva un enlace privado (página "Mi pago" de la web): ve lo
      que tiene pendiente, los datos para pagar, puede mandar el comprobante y,
      en un presupuesto, avisar que quiere empezar o que tiene una consulta.
@@ -28,6 +31,8 @@ const TZ = () => process.env.DOVA_TZ || 'America/Asuncion';
 const horaLocal = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ(), hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
 const urlPublica = () => (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 4000}`).replace(/\/$/, '');
 const PRESUPUESTO_SEGUNDO = 7; // el segundo aviso de un presupuesto, una semana después del primero
+const ATENCION_PLAZO = 7; // días que se dan para pagar una atención antes del primer aviso
+const TIPOS = ['cuota', 'presupuesto', 'atencion'];
 
 /* ------------------------------------------------------------ configuración */
 const CFG_COLS = 'nombre, cobranza_auto, cobranza_hora, cobranza_dias_antes, cobranza_repetir_dias, cobranza_max_avisos, presupuesto_seguimiento, presupuesto_dias';
@@ -46,6 +51,7 @@ async function configuracion(clinicaId) {
     ejemplos: {
       cuota: textoCuota({ nombre: 'Ana', clinica: c.nombre, numero: 2, de: 6, monto: 350000, vencimiento: sumarDias(hoyIso(), -3), vencida: true, enlace: `${urlPublica()}/web/mi-pago.html#t=…` }),
       presupuesto: textoPresupuesto({ nombre: 'Ana', clinica: c.nombre, total: 2500000, enlace: `${urlPublica()}/web/mi-pago.html#t=…` }),
+      atencion: textoAtencion({ nombre: 'Ana', clinica: c.nombre, monto: 150000, cantidad: 1, fecha: sumarDias(hoyIso(), -8), enlace: `${urlPublica()}/web/mi-pago.html#t=…` }),
     },
   };
 }
@@ -78,9 +84,14 @@ function textoCuota({ nombre, clinica, numero, de, monto, vencimiento, vencida, 
 function textoPresupuesto({ nombre, clinica, total, enlace }) {
   return `Hola ${nombre}, te escribimos de ${clinica}. ¿Pudiste ver el presupuesto de tu tratamiento (${gs(total)})? Acá lo podés revisar y avisarnos si querés empezar o si tenés alguna consulta: ${enlace}`;
 }
+function textoAtencion({ nombre, clinica, monto, cantidad, fecha, enlace }) {
+  const que = cantidad > 1 ? `de tus últimas atenciones por ${gs(monto)}` : `de tu atención del ${fmtDia(fecha)} por ${gs(monto)}`;
+  return `Hola ${nombre}, te escribimos de ${clinica}. Te recordamos que tenés pendiente el pago ${que}. Si ya pagaste, no tengas en cuenta este mensaje. Acá podés ver los datos para pagar y mandarnos el comprobante: ${enlace}`;
+}
 // Detalle ({{3}}) para la plantilla de WhatsApp Business.
 const detalleCuota = (x, vencida) => `la cuota ${x.numero} de ${x.cantidad_cuotas} por ${gs(x.monto)} ${vencida ? 'venció' : 'vence'} el ${fmtDia(x.vencimiento)}`;
 const detallePresupuesto = (x) => `el presupuesto de tu tratamiento por ${gs(x.total)} está esperando tu respuesta`;
+const detalleAtencion = (x) => `tenés pendiente ${gs(x.monto)} ${x.cantidad > 1 ? 'de tus últimas atenciones' : `de tu atención del ${fmtDia(x.fecha)}`}`;
 
 /* ------------------------------------------------------------ qué toca avisar */
 const SELECT_CUOTAS = `SELECT c.id, c.numero, c.monto, c.vencimiento::text AS vencimiento, pp.cantidad_cuotas, pp.id AS plan_id,
@@ -97,6 +108,24 @@ const SELECT_PRESUPUESTOS = `SELECT pr.id, pr.fecha::text AS fecha, pr.total, pr
        FROM cobranza_envios e WHERE e.tipo='presupuesto' AND e.referencia_id=pr.id) AS avisos
   FROM presupuestos pr JOIN pacientes p ON p.id=pr.paciente_id JOIN clinicas cl ON cl.id=pr.clinica_id LEFT JOIN odontologos o ON o.id=pr.odontologo_id
   WHERE pr.clinica_id=$1 AND pr.estado='enviado' AND p.activo`;
+
+// Pacientes con atenciones (último año): se calcula lo pendiente de cada uno con la misma cuenta del portal.
+const SELECT_ATENCION_PACIENTES = `SELECT DISTINCT a.paciente_id FROM ajustes_cuenta a JOIN pacientes p ON p.id=a.paciente_id
+  WHERE a.clinica_id=$1 AND a.tipo='atencion' AND NOT a.anulado AND a.fecha >= current_date - 365 AND p.activo`;
+async function atencionDePaciente(clinicaId, pacienteId) {
+  const at = await require('../finanzas-ext/cargo-atencion').atencionesPendientes(clinicaId, pacienteId);
+  if (!at.pendiente) return null;
+  const p = (await query(`SELECT p.id AS paciente_id, p.nombre, p.apellido, p.telefono, p.whatsapp, p.acepta_whatsapp, cl.nombre AS clinica_nombre, p.clinica_id
+      FROM pacientes p JOIN clinicas cl ON cl.id=p.clinica_id WHERE p.id=$1 AND p.clinica_id=$2 AND p.activo`, [pacienteId, clinicaId])).rows[0];
+  if (!p) return null;
+  const avisos = (await query(`SELECT COALESCE(json_agg(json_build_object('etapa', e.etapa, 'estado', e.estado, 'canal', e.canal, 'en', e.creado_en, 'automatico', e.automatico, 'error', e.error) ORDER BY e.etapa), '[]'::json) AS a
+      FROM cobranza_envios e WHERE e.tipo='atencion' AND e.referencia_id=$1`, [at.ultimaId])).rows[0].a;
+  return {
+    ...p, id: at.ultimaId, monto: at.pendiente, cantidad: at.lista.length, fecha: at.ultimaFecha,
+    // El "vencimiento" de una atención: unos días después de la última. Después se avisa como una cuota vencida.
+    vencimiento: sumarDias(at.ultimaFecha, ATENCION_PLAZO), en_revision: at.enRevision, avisos, detalle: at.lista.map((x) => x.detalle),
+  };
+}
 
 function motivoNoEnviable(x) {
   if (x.acepta_whatsapp === false) return 'El paciente no acepta mensajes de WhatsApp';
@@ -127,6 +156,14 @@ function etapaCuota(x, c, hoy) {
   }
   return { etapa: n + 1, toca: true, motivo: null };
 }
+// Atención: como una cuota vencida, sin aviso previo (se avisa recién cuando pasó el plazo).
+function etapaAtencion(x, c, hoy) {
+  if (x.vencimiento >= hoy) {
+    const falta = diasEntre(hoy, x.vencimiento) + 1;
+    return { etapa: 1, toca: false, motivo: `Se avisa en ${falta} día${falta === 1 ? '' : 's'} si no paga` };
+  }
+  return etapaCuota(x, { ...c, cobranza_dias_antes: 0 }, hoy);
+}
 function etapaPresupuesto(x, c, hoy) {
   if (!c.presupuesto_seguimiento) return { etapa: null, toca: false, motivo: 'Seguimiento de presupuestos apagado' };
   const env = enviados(x);
@@ -143,10 +180,12 @@ async function listar(clinicaId, { soloHoy } = {}) {
   const c = await cfgClinica(clinicaId);
   const hoy = hoyIso();
   const hasta = sumarDias(hoy, Math.max(c.cobranza_dias_antes, 7));
-  const [cuotas, press] = await Promise.all([
+  const [cuotas, press, conAt] = await Promise.all([
     query(`${SELECT_CUOTAS} AND c.vencimiento <= $2 ORDER BY c.vencimiento, p.apellido LIMIT 500`, [clinicaId, hasta]),
     query(`${SELECT_PRESUPUESTOS} ORDER BY pr.fecha LIMIT 300`, [clinicaId]),
+    query(`${SELECT_ATENCION_PACIENTES} LIMIT 300`, [clinicaId]),
   ]);
+  const ats = (await Promise.all(conAt.rows.map((r) => atencionDePaciente(clinicaId, r.paciente_id)))).filter(Boolean);
   const fmt = (x, e, tipo) => ({
     tipo, id: x.id, pacienteId: x.paciente_id, paciente: `${x.nombre} ${x.apellido}`, telefono: x.whatsapp || x.telefono || null,
     noEnviable: motivoNoEnviable(x), etapa: e.etapa, toca: e.toca && !motivoNoEnviable(x), motivo: e.motivo,
@@ -154,8 +193,10 @@ async function listar(clinicaId, { soloHoy } = {}) {
   });
   let lc = cuotas.rows.map((x) => ({ ...fmt(x, etapaCuota(x, c, hoy), 'cuota'), numero: x.numero, de: x.cantidad_cuotas, monto: Number(x.monto), vencimiento: x.vencimiento, diasAtraso: Math.max(0, diasEntre(x.vencimiento, hoy)), enRevision: x.en_revision }));
   let lp = press.rows.map((x) => ({ ...fmt(x, etapaPresupuesto(x, c, hoy), 'presupuesto'), fecha: x.fecha, total: Number(x.total), odontologo: x.odontologo_nombre, dias: diasEntre(x.enviado_desde, hoy) }));
-  if (soloHoy) { lc = lc.filter((x) => x.toca); lp = lp.filter((x) => x.toca); }
-  return { whatsappConectado: whatsapp.configurado(), automatico: c.cobranza_auto, cuotas: lc, presupuestos: lp, tocanHoy: lc.filter((x) => x.toca).length + lp.filter((x) => x.toca).length };
+  let la = ats.map((x) => ({ ...fmt(x, etapaAtencion(x, c, hoy), 'atencion'), monto: x.monto, fecha: x.fecha, cantidad: x.cantidad, detalle: x.detalle.slice(0, 3), diasAtraso: Math.max(0, diasEntre(x.vencimiento, hoy)), enRevision: x.en_revision }))
+    .sort((a, b) => b.diasAtraso - a.diasAtraso);
+  if (soloHoy) { lc = lc.filter((x) => x.toca); lp = lp.filter((x) => x.toca); la = la.filter((x) => x.toca); }
+  return { whatsappConectado: whatsapp.configurado(), automatico: c.cobranza_auto, cuotas: lc, presupuestos: lp, atenciones: la, tocanHoy: lc.filter((x) => x.toca).length + lp.filter((x) => x.toca).length + la.filter((x) => x.toca).length };
 }
 
 /* ------------------------------------------------------------ enlace privado */
@@ -167,9 +208,16 @@ async function crearEnlace(clinicaId, pacienteId) {
 
 /* ------------------------------------------------------------ envío */
 async function cargar(clinicaId, tipo, id) {
-  if (!['cuota', 'presupuesto'].includes(tipo)) throw new ApiError(400, 'Tipo inválido');
+  if (!TIPOS.includes(tipo)) throw new ApiError(400, 'Tipo inválido');
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) throw new ApiError(400, 'Identificador inválido');
+  if (tipo === 'atencion') {
+    // id = la atención más reciente del paciente; si ya hay otra más nueva o está paga, no corresponde.
+    const a = (await query("SELECT paciente_id FROM ajustes_cuenta WHERE id=$1 AND clinica_id=$2 AND tipo='atencion' AND NOT anulado", [n, clinicaId])).rows[0];
+    const x = a ? await atencionDePaciente(clinicaId, a.paciente_id) : null;
+    if (!x || x.id !== n) throw new ApiError(404, 'Esa atención ya está paga o no corresponde avisarla');
+    return x;
+  }
   const r = tipo === 'cuota'
     ? await query(`${SELECT_CUOTAS} AND c.id=$2`, [clinicaId, n])
     : await query(`${SELECT_PRESUPUESTOS} AND pr.id=$2`, [clinicaId, n]);
@@ -194,7 +242,7 @@ async function registrarComunicacion(x, tipo, contenido, usuarioId) {
      VALUES ($1,$2,'whatsapp','saliente','cobranza','enviado',$3,$4,$5,$6)`, [x.clinica_id, x.paciente_id, String(contenido).slice(0, 2000), tipo, x.id, usuarioId || null]);
 }
 function etapaDe(x, tipo, c, hoy, { manual }) {
-  const e = tipo === 'cuota' ? etapaCuota(x, c, hoy) : etapaPresupuesto(x, c, hoy);
+  const e = tipo === 'cuota' ? etapaCuota(x, c, hoy) : tipo === 'atencion' ? etapaAtencion(x, c, hoy) : etapaPresupuesto(x, c, hoy);
   if (e.etapa === null) throw new ApiError(409, e.motivo || 'No corresponde avisar');
   if (!e.toca) {
     if (!manual) throw new ApiError(409, e.motivo || 'Todavía no corresponde avisar');
@@ -205,6 +253,7 @@ function etapaDe(x, tipo, c, hoy, { manual }) {
   return e.etapa;
 }
 function textoDe(x, tipo, enlace) {
+  if (tipo === 'atencion') return textoAtencion({ nombre: x.nombre, clinica: x.clinica_nombre, monto: x.monto, cantidad: x.cantidad, fecha: x.fecha, enlace });
   return tipo === 'cuota'
     ? textoCuota({ nombre: x.nombre, clinica: x.clinica_nombre, numero: x.numero, de: x.cantidad_cuotas, monto: x.monto, vencimiento: x.vencimiento, vencida: x.vencimiento < hoyIso(), enlace })
     : textoPresupuesto({ nombre: x.nombre, clinica: x.clinica_nombre, total: x.total, enlace });
@@ -220,9 +269,9 @@ async function enviarPorApi(x, tipo, { automatico = false, usuarioId = null, man
   if (!envioId) throw new ApiError(409, 'Ese aviso ya se envió');
   const enlace = await crearEnlace(x.clinica_id, x.paciente_id);
   const tel = normalizarTelefonoPy(x.whatsapp || x.telefono);
-  const detalle = tipo === 'cuota' ? detalleCuota(x, x.vencimiento < hoyIso()) : detallePresupuesto(x);
+  const detalle = tipo === 'cuota' ? detalleCuota(x, x.vencimiento < hoyIso()) : tipo === 'atencion' ? detalleAtencion(x) : detallePresupuesto(x);
   try {
-    const id = await whatsapp.enviarPlantilla(tel, [x.nombre, x.clinica_nombre, detalle, enlace], { plantilla: tipo === 'cuota' ? whatsapp.cfg().plantillaPago : whatsapp.cfg().plantillaPresupuesto });
+    const id = await whatsapp.enviarPlantilla(tel, [x.nombre, x.clinica_nombre, detalle, enlace], { plantilla: tipo === 'presupuesto' ? whatsapp.cfg().plantillaPresupuesto : whatsapp.cfg().plantillaPago });
     await query("UPDATE cobranza_envios SET estado='enviado', proveedor_id=$2, remitente='Número de la clínica', actualizado_en=now() WHERE id=$1", [envioId, id]);
     await registrarComunicacion(x, tipo, textoDe(x, tipo, '(enlace privado)'), usuarioId);
     return { ok: true, estado: 'enviado', etapa };
@@ -272,7 +321,7 @@ async function ejecutarAutomaticos({ ignorarHora = false } = {}) {
         if (!ignorarHora && (hora < c.cobranza_hora || hora >= 20)) continue;
         const l = await listar(c.id, { soloHoy: true });
         let fallC = 0;
-        for (const x of [...l.cuotas, ...l.presupuestos].slice(0, 300)) {
+        for (const x of [...l.cuotas, ...l.presupuestos, ...(l.atenciones || [])].slice(0, 300)) {
           try {
             const det = await cargar(c.id, x.tipo, x.id);
             const r = await enviarPorApi(det, x.tipo, { automatico: true });
@@ -322,11 +371,13 @@ async function miPago(token) {
             WHERE pp.clinica_id=$1 AND pp.paciente_id=$2 AND c.estado <> 'pagada' AND pp.estado NOT IN ('cancelado','cancelada','anulado') ORDER BY c.vencimiento LIMIT 60`, [pt.clinica_id, pt.paciente_id]),
     query("SELECT id, fecha::text AS fecha, total FROM presupuestos WHERE clinica_id=$1 AND paciente_id=$2 AND estado='enviado' ORDER BY fecha DESC LIMIT 10", [pt.clinica_id, pt.paciente_id]),
   ]);
+  const atenc = await require('../finanzas-ext/cargo-atencion').atencionesPendientes(pt.clinica_id, pt.paciente_id);
   const items = press.rowCount ? (await query('SELECT presupuesto_id, descripcion, pieza, cantidad, precio_unitario FROM presupuesto_items WHERE presupuesto_id = ANY($1::int[]) ORDER BY id', [press.rows.map((p) => p.id)])).rows : [];
   return {
     nombre: pt.nombre, clinica: cfg.titulo || clin.nombre,
     whatsappClinica: normalizarTelefonoPy(cfg.whatsapp || clin.whatsapp || clin.telefono) || null,
     cuotas: cuotas.rows.map((c) => ({ id: c.id, numero: c.numero, de: c.cantidad_cuotas, monto: Number(c.monto), vencimiento: c.vencimiento, vencida: c.vencimiento < hoy, enRevision: c.en_revision })),
+    atenciones: atenc.pendiente ? { pendiente: atenc.pendiente, enRevision: atenc.enRevision, lista: atenc.lista.slice(0, 10).map((x) => ({ fecha: x.fecha, detalle: x.detalle, monto: x.monto })) } : null,
     presupuestos: press.rows.map((p) => ({ id: p.id, fecha: p.fecha, total: Number(p.total), items: items.filter((i) => i.presupuesto_id === p.id).map((i) => ({ descripcion: i.descripcion, pieza: i.pieza, cantidad: Number(i.cantidad), subtotal: Number(i.cantidad) * Number(i.precio_unitario) })) })),
     pagoOnline: await require('../cobro-online/cobro-online.service').disponible(pt.clinica_id),
     puedeInformar: !!cfg.pagos_activos && pt.web_verificado !== false,
@@ -377,11 +428,11 @@ async function registrarRespuesta(env, texto) {
   await query(`INSERT INTO comunicaciones (clinica_id, paciente_id, canal, direccion, motivo, resultado, contenido, referencia_tipo, referencia_id)
       VALUES ($1,$2,'whatsapp','entrante','cobranza','respondio',$3,$4,$5)`, [env.clinica_id, env.paciente_id, texto, env.tipo, env.referencia_id]);
   const p = (await query('SELECT nombre, apellido FROM pacientes WHERE id=$1', [env.paciente_id])).rows[0] || {};
-  await avisar(env.clinica_id, { titulo: `${p.nombre || ''} ${p.apellido || ''} respondió el aviso de ${env.tipo === 'cuota' ? 'pago' : 'presupuesto'}`.trim(), mensaje: `«${texto.slice(0, 200)}». Contestale desde el WhatsApp de la clínica.`, entidad: env.tipo, entidadId: env.referencia_id });
+  await avisar(env.clinica_id, { titulo: `${p.nombre || ''} ${p.apellido || ''} respondió el aviso de ${env.tipo === 'presupuesto' ? 'presupuesto' : 'pago'}`.trim(), mensaje: `«${texto.slice(0, 200)}». Contestale desde el WhatsApp de la clínica.`, entidad: env.tipo, entidadId: env.referencia_id });
 }
 
 module.exports = {
   configuracion, guardarConfiguracion, listar, enviarAhora, enlaceManual, ejecutarAutomaticos,
   miPago, pacientePorToken, avisar, informarPagoConEnlace, responderPresupuesto, actualizarEstadoMeta, ultimoAvisoA, registrarRespuesta,
-  _internos: { etapaCuota, etapaPresupuesto, textoCuota, textoPresupuesto },
+  _internos: { etapaCuota, etapaPresupuesto, etapaAtencion, textoCuota, textoPresupuesto, textoAtencion },
 };

@@ -56,6 +56,7 @@ const DovaFinanzas = (() => {
       </form>
       <p class="dova-nota"><strong>Así le llega una cuota vencida:</strong></p><p class="dova-rec-ejemplo">${esc(cfg.ejemplos.cuota)}</p>
       <p class="dova-nota"><strong>Así le llega un presupuesto:</strong></p><p class="dova-rec-ejemplo">${esc(cfg.ejemplos.presupuesto)}</p>
+      ${cfg.ejemplos.atencion ? `<p class="dova-nota"><strong>Así le llega una atención sin pagar</strong> (primer aviso a los 7 días; después se repite como una cuota vencida):</p><p class="dova-rec-ejemplo">${esc(cfg.ejemplos.atencion)}</p>` : ''}
       <p class="dova-nota">El enlace abre una página con lo que tiene pendiente, los datos para pagar y, si los pagos online están activos, para mandar el comprobante (llega a Página web → Pagos para revisar). En un presupuesto puede avisar que quiere empezar o que tiene una consulta: te llega a la campanita.</p>
     </details>`;
     c.innerHTML = `<div class="dova-rec-estado">
@@ -66,7 +67,8 @@ const DovaFinanzas = (() => {
       ${puedeCfg ? dibujarCfg() : ''}
       <label class="dova-check"><input type="checkbox" data-solo-hoy/> Ver solo los que toca avisar hoy</label>
       <h3 class="dova-section-title">Cuotas por vencer y vencidas</h3><div data-cuotas></div>
-      <h3 class="dova-section-title">Presupuestos sin respuesta</h3><div data-press></div>`;
+      <h3 class="dova-section-title">Presupuestos sin respuesta</h3><div data-press></div>
+      <h3 class="dova-section-title">Atenciones sin pagar</h3><div data-atenc></div>`;
     const pintar = (lista) => {
       c.querySelector('[data-cuotas]').innerHTML = lista.cuotas.length ? `<table class="dova-tabla"><thead><tr><th>Paciente</th><th>Cuota</th><th>Monto</th><th>Vence</th><th>Avisos</th><th></th></tr></thead><tbody>
         ${lista.cuotas.map((x) => `<tr><td>${linkPac(x.pacienteId, x.paciente, '')}</td><td>${x.numero} de ${x.de}</td><td>${fmtGs(x.monto)}</td>
@@ -75,6 +77,11 @@ const DovaFinanzas = (() => {
       c.querySelector('[data-press]').innerHTML = lista.presupuestos.length ? `<table class="dova-tabla"><thead><tr><th>Paciente</th><th>Presupuesto</th><th>Total</th><th>Enviado hace</th><th>Avisos</th><th></th></tr></thead><tbody>
         ${lista.presupuestos.map((x) => `<tr><td>${linkPac(x.pacienteId, x.paciente, '')}</td><td>${fmtFecha(x.fecha)}${x.odontologo ? ` <span class="dova-nota">${esc(x.odontologo)}</span>` : ''}</td><td>${fmtGs(x.total)}</td>
           <td>${x.dias} día${x.dias === 1 ? '' : 's'}</td><td>${avisos(x)}</td><td>${acciones(x)}</td></tr>`).join('')}</tbody></table>` : '<p class="dova-nota">No hay presupuestos esperando respuesta.</p>';
+      const at = lista.atenciones || [];
+      c.querySelector('[data-atenc]').innerHTML = at.length ? `<table class="dova-tabla"><thead><tr><th>Paciente</th><th>Atenciones</th><th>Debe</th><th>Última</th><th>Avisos</th><th></th></tr></thead><tbody>
+        ${at.map((x) => `<tr><td>${linkPac(x.pacienteId, x.paciente, '')}</td><td>${esc(x.detalle.map((d) => d.replace(/^Atención del [0-9/]+: /, '')).join(', '))}${x.cantidad > 3 ? ' …' : ''}</td><td>${fmtGs(x.monto)}</td>
+          <td>${fmtFecha(x.fecha)}${x.diasAtraso ? ` ${badge(`${x.diasAtraso} día${x.diasAtraso === 1 ? '' : 's'} de atraso`, 'critica')}` : ''}${x.enRevision ? ` ${badge('Comprobante en revisión', 'info')}` : ''}</td>
+          <td>${avisos(x)}</td><td>${acciones(x)}</td></tr>`).join('')}</tbody></table>` : '<p class="dova-nota">No hay atenciones sin pagar.</p>';
     };
     pintar(l);
     const recargar = () => subCobro(c);
