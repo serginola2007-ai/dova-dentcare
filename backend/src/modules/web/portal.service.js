@@ -341,8 +341,19 @@ async function cuenta(pt) {
   const hoy = hoyIso();
   const enRevision = enviados.rows.filter((x) => x.estado === 'pendiente').reduce((s, x) => s + Number(x.monto), 0);
   const pendientePres = presupuestos.filter((p) => p.estado === 'aceptado').reduce((s, p) => s + p.pendiente, 0);
+  // Atenciones cargadas al atender (trabajos fuera de un presupuesto). Lo pendiente sale de la cuenta corriente:
+  // el saldo total menos lo que falta de los presupuestos, sin pasar de lo cargado por atenciones.
+  const at = await query("SELECT fecha::text AS fecha, motivo, monto FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND tipo='atencion' AND NOT anulado ORDER BY fecha DESC, id DESC", [pt.clinicaId, pt.pacienteId]);
+  let pendienteAtenciones = 0;
+  if (at.rowCount) {
+    const movs = await require('../finanzas-ext/cuentas.service').movimientos(pt.clinicaId, pt.pacienteId);
+    const saldo = movs.length ? movs[movs.length - 1].saldo : 0;
+    const totalAt = at.rows.reduce((acc, x) => acc + Number(x.monto), 0);
+    pendienteAtenciones = Math.round(Math.max(0, Math.min(totalAt, saldo - pendientePres)));
+  }
   return {
-    resumen: { pendiente: pendientePres, cuotasVencidas: cuotas.rows.filter((c) => c.vencimiento < hoy).length, enRevision },
+    resumen: { pendiente: pendientePres + pendienteAtenciones, cuotasVencidas: cuotas.rows.filter((c) => c.vencimiento < hoy).length, enRevision },
+    atenciones: { pendiente: pendienteAtenciones, lista: at.rows.slice(0, 20).map((x) => ({ fecha: x.fecha, detalle: x.motivo, monto: Number(x.monto) })) },
     presupuestos,
     cuotas: cuotas.rows.map((c) => ({ ...c, monto: Number(c.monto), vencida: c.vencimiento < hoy })),
     pagos: pagos.rows.map((p) => ({ ...p, monto: Number(p.monto) })),

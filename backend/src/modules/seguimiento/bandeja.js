@@ -61,9 +61,9 @@ const DETECCIONES = {
     JOIN LATERAL (SELECT
         (SELECT COALESCE(SUM(total),0) FROM presupuestos WHERE paciente_id=p.id AND estado='aceptado')
       - (SELECT COALESCE(SUM(monto),0) FROM pagos WHERE paciente_id=p.id AND estado='pagado')
-      - (SELECT COALESCE(SUM(CASE WHEN tipo='recargo' THEN -monto ELSE monto END),0) FROM ajustes_cuenta WHERE paciente_id=p.id AND NOT anulado) AS saldo,
+      - (SELECT COALESCE(SUM(CASE WHEN tipo IN ('recargo','atencion') THEN -monto ELSE monto END),0) FROM ajustes_cuenta WHERE paciente_id=p.id AND NOT anulado) AS saldo,
         (SELECT max(fecha) FROM pagos WHERE paciente_id=p.id AND estado='pagado') AS ultimo_pago,
-        (SELECT min(fecha) FROM presupuestos WHERE paciente_id=p.id AND estado='aceptado') AS desde_pres) s ON true
+        (SELECT min(f) FROM (SELECT min(fecha) AS f FROM presupuestos WHERE paciente_id=p.id AND estado='aceptado' UNION ALL SELECT min(fecha) FROM ajustes_cuenta WHERE paciente_id=p.id AND tipo IN ('recargo','atencion') AND NOT anulado) d) AS desde_pres) s ON true
     LEFT JOIN LATERAL (SELECT count(*) n, SUM(c.monto) monto, min(c.vencimiento) desde FROM cuotas c JOIN planes_pago pp ON pp.id=c.plan_pago_id
         WHERE pp.paciente_id=p.id AND pp.estado <> 'cancelado' AND c.estado='pendiente' AND c.vencimiento < $2::date) cv ON true
     WHERE p.clinica_id=$1 AND p.activo AND (cv.n > 0 OR (s.saldo > 0 AND (s.ultimo_pago IS NULL OR s.ultimo_pago::date < $2::date - 30)))`,

@@ -714,6 +714,8 @@
     const deudas = [
       ...e.cuotas.map((q) => ({ tipo: 'cuota', id: q.id, titulo: `Cuota ${q.numero} de ${q.cantidad_cuotas}`, detalle: `Vence el ${fechaCorta(q.vencimiento)}`, monto: q.monto, vencida: q.vencida, enRevision: e.enviados.some((x) => x.cuota_id === q.id && x.estado === 'pendiente') })),
       ...e.presupuestos.filter((x) => x.estado === 'aceptado' && x.pendiente > 0 && !x.enCuotas).map((x) => ({ tipo: 'presupuesto', id: x.id, titulo: `Presupuesto del ${fechaCorta(x.fecha)}`, detalle: `Total ${gs(x.total)} · pagado ${gs(x.pagado)}`, monto: x.pendiente, aCuenta: true })),
+
+      ...(e.atenciones && e.atenciones.pendiente > 0 ? [{ tipo: 'atenciones', titulo: 'Atenciones', detalle: e.atenciones.lista.slice(0, 3).map((a) => `${fechaCorta(a.fecha)}: ${a.detalle.replace(/^Atención del [0-9/]+: /, '')}`).join(' · ') + (e.atenciones.lista.length > 3 ? ' · …' : ''), monto: e.atenciones.pendiente, aCuenta: true }] : []),
     ];
     p.innerHTML = `<h2>Lo que te queda por pagar</h2>
       ${deudas.length ? `<ul class="lista-cuenta">${deudas.map((d, i) => `<li class="turno-item ${d.vencida ? 'vencida' : ''}"><div><strong>${esc(d.titulo)}</strong><br><span class="ayuda">${esc(d.detalle)}${d.vencida ? ' · vencida' : ''}</span></div>

@@ -203,7 +203,11 @@ const DovaAgenda = (() => {
       const ok = await confirmar(nuevo === 'cancelado' ? '¿Cancelar el turno?' : '¿Marcar que no asistió?', `${esc(t.paciente_nombre)} ${esc(t.paciente_apellido || '')} — ${fmtFecha(t.fecha)} ${hora5(t.hora_inicio)}`, nuevo === 'cancelado' ? 'Cancelar turno' : 'No asistió');
       if (!ok) return;
     }
-    try { await DOVA.patch(`/agenda/${t.id}/estado`, { estado: nuevo }); toast('Turno actualizado', 'ok'); alTerminar(); } catch (ex) { toast(ex.message, 'error'); }
+    try {
+      const r = await DOVA.patch(`/agenda/${t.id}/estado`, { estado: nuevo });
+      toast(r && r.cargoAtencion ? `Turno atendido · se cargaron ${X.fmtGs(r.cargoAtencion.monto)} a la cuenta del paciente` : 'Turno actualizado', 'ok');
+      alTerminar();
+    } catch (ex) { toast(ex.message, 'error'); }
   }
 
   // Enlace de WhatsApp con un mensaje para confirmar el turno (solo turnos por venir con teléfono).

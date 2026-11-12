@@ -271,6 +271,18 @@ const DovaFinanzas = (() => {
     const guardar = async (v) => { try { await DOVA.put('/finanzas/bloqueo-contable', { fechaBloqueo: v }); X.toast('Cierre actualizado', 'ok'); subCierre(c); } catch (e) { X.toast(e.message, 'error'); } };
     c.querySelector('[data-f]').addEventListener('submit', (e) => { e.preventDefault(); guardar(e.target.f.value || null); });
     c.querySelector('[data-quitar]').addEventListener('click', () => guardar(null));
+    // Cargo automático al atender
+    const ca = await DOVA.get('/finanzas/cargo-atencion').catch(() => null);
+    if (!ca) return;
+    const caja = document.createElement('div'); caja.className = 'dova-ext-caja';
+    caja.innerHTML = `<h4>Cargo automático al atender</h4>
+      <p>Al marcar un turno como atendido, DOVA carga el tratamiento a la cuenta del paciente al precio que le corresponde (su lista de precios y lo que cubre su seguro).
+      No lo carga si ese trabajo ya está en un plan de tratamiento en curso, en un presupuesto aceptado o en un caso de ortodoncia abierto. Un cargo que no correspondía se anula desde la cuenta corriente del paciente.</p>
+      <label class="dova-ext-check"><input type="checkbox" data-ca ${ca.activo ? 'checked' : ''}/> Cargar las atenciones a la cuenta del paciente</label>`;
+    c.appendChild(caja);
+    caja.querySelector('[data-ca]').addEventListener('change', async (e) => {
+      try { await DOVA.put('/finanzas/cargo-atencion', { activo: e.target.checked }); X.toast(e.target.checked ? 'Las atenciones se cargan solas' : 'Las atenciones ya no se cargan solas', 'ok'); } catch (ex) { e.target.checked = !e.target.checked; X.toast(ex.message, 'error'); }
+    });
   }
 
   return { finanzas };

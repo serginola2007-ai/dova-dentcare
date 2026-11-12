@@ -109,7 +109,7 @@ router.use('/ajustes', crearRecurso({
   borrado: false, creadoPor: 'usuario_id', orden: 't.fecha DESC, t.id DESC', joinPaciente: true,
   selectExtra: 'u.nombre AS usuario_nombre', joins: 'LEFT JOIN usuarios u ON u.id=t.usuario_id',
   campos: {
-    tipo: { tipo: 'enum', valores: [...s.AJUSTES_CREDITO, ...s.AJUSTES_DEBITO], requerido: true, soloCrear: true },
+    tipo: { tipo: 'enum', valores: [...s.AJUSTES_CREDITO, 'recargo'], requerido: true, soloCrear: true },
     monto: { tipo: 'numero', requerido: true, min: 1, soloCrear: true },
     motivo: { tipo: 'texto', requerido: true, max: 250 },
     fecha: { tipo: 'fecha', soloCrear: true },
@@ -217,6 +217,18 @@ r.put('/bloqueo-contable', requirePermiso('clinica.config.manage'), h(async (req
   await query('UPDATE clinicas SET fecha_bloqueo_contable=$2 WHERE id=$1', [req.clinicaId, f]);
   await auditoria.registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: 'cierre_contable', modulo: 'finanzas', entidadId: req.clinicaId, detalle: { fechaBloqueo: f } });
   return { fechaBloqueo: f };
+}));
+
+// Cargo automático al atender (ver cargo-atencion.js): se puede apagar por clínica.
+r.get('/cargo-atencion', requirePermiso('pagos.view', 'clinica.config.manage', 'cuenta_corriente.view'), h(async (req) => {
+  const x = await query('SELECT cargo_al_atender FROM clinicas WHERE id=$1', [req.clinicaId]);
+  return { activo: !!x.rows[0].cargo_al_atender };
+}));
+r.put('/cargo-atencion', requirePermiso('clinica.config.manage'), h(async (req) => {
+  if (typeof req.body.activo !== 'boolean') throw new ApiError(400, 'Indicá si queda activo (sí o no)');
+  await query('UPDATE clinicas SET cargo_al_atender=$2 WHERE id=$1', [req.clinicaId, req.body.activo]);
+  await auditoria.registrar({ clinicaId: req.clinicaId, usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre, accion: 'cargo_al_atender', modulo: 'finanzas', entidadId: req.clinicaId, detalle: { activo: req.body.activo } });
+  return { activo: req.body.activo };
 }));
 
 router.use('/', r);

@@ -91,7 +91,7 @@ async function preparar(clinicaId, odontologoId, fechaTxt, permisos) {
     query(`SELECT p.id AS paciente_id,
                   COALESCE((SELECT SUM(total) FROM presupuestos pr WHERE pr.clinica_id=$1 AND pr.paciente_id=p.id AND pr.estado='aceptado'),0)
                 - COALESCE((SELECT SUM(monto) FROM pagos pg WHERE pg.clinica_id=$1 AND pg.paciente_id=p.id AND pg.estado='pagado'),0)
-                - COALESCE((SELECT SUM(CASE WHEN a.tipo='recargo' THEN -a.monto ELSE a.monto END) FROM ajustes_cuenta a WHERE a.clinica_id=$1 AND a.paciente_id=p.id AND NOT a.anulado),0) AS saldo
+                - COALESCE((SELECT SUM(CASE WHEN a.tipo IN ('recargo','atencion') THEN -a.monto ELSE a.monto END) FROM ajustes_cuenta a WHERE a.clinica_id=$1 AND a.paciente_id=p.id AND NOT a.anulado),0) AS saldo
              FROM pacientes p WHERE p.clinica_id=$1 AND p.id = ANY($2::int[])`, [clinicaId, ids]),
   ]);
 

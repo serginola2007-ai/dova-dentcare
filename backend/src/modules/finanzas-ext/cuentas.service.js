@@ -2,7 +2,7 @@
 
    Criterio contable (coherente con el resumen que ya mostraba DOVA):
    - DEBE: presupuestos ACEPTADOS (lo que el paciente se comprometió a pagar)
-           + ajustes de tipo "recargo".
+           + ajustes de tipo "recargo" + atenciones cargadas solas al atender ("atencion").
    - HABER: pagos con estado "pagado" + ajustes que reducen deuda
            (descuento, bonificación, cortesía, incobrable, nota de crédito).
    - Saldo > 0: el paciente debe. Saldo < 0: saldo a favor (anticipo).
@@ -12,7 +12,7 @@ const { ApiError } = require('../../middlewares/error.middleware');
 const { hoyIso } = require('../../utils/recurso');
 
 const AJUSTES_CREDITO = ['descuento', 'bonificacion', 'cortesia', 'incobrable', 'nota_credito'];
-const AJUSTES_DEBITO = ['recargo'];
+const AJUSTES_DEBITO = ['recargo', 'atencion']; // 'atencion' lo genera solo DOVA al atender (cargo-atencion.js)
 
 function diasEntre(desdeIso, hastaIso) {
   return Math.round((Date.parse(`${hastaIso}T12:00:00Z`) - Date.parse(`${String(desdeIso).slice(0, 10)}T12:00:00Z`)) / 86400000);
@@ -29,7 +29,7 @@ async function movimientos(clinicaId, pacienteId) {
     ...pres.rows.map((p) => ({ fecha: fechaDe(p.fecha), tipo: 'presupuesto', referenciaId: p.id, concepto: `Presupuesto #${p.id} aceptado`, debe: Number(p.total), haber: 0 })),
     ...pagos.rows.map((p) => ({ fecha: fechaDe(p.fecha), tipo: 'pago', referenciaId: p.id, concepto: `Pago ${p.metodo}${p.concepto ? ' — ' + p.concepto : ''}`, debe: 0, haber: Number(p.monto) })),
     ...ajustes.rows.map((a) => ({
-      fecha: fechaDe(a.fecha), tipo: 'ajuste', subtipo: a.tipo, referenciaId: a.id, concepto: `${a.tipo.replace('_', ' ')}: ${a.motivo}`,
+      fecha: fechaDe(a.fecha), tipo: 'ajuste', subtipo: a.tipo, referenciaId: a.id, turnoId: a.turno_id || undefined, concepto: a.tipo === 'atencion' ? a.motivo : `${a.tipo.replace('_', ' ')}: ${a.motivo}`,
       debe: AJUSTES_DEBITO.includes(a.tipo) ? Number(a.monto) : 0, haber: AJUSTES_CREDITO.includes(a.tipo) ? Number(a.monto) : 0, usuario: a.usuario_nombre,
     })),
   ].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.debe ? -1 : 1));
@@ -71,7 +71,7 @@ async function reporteAntiguedad(clinicaId) {
   const pacs = await query(
     `SELECT DISTINCT p.id, p.nombre, p.apellido, p.telefono, p.whatsapp FROM pacientes p
       WHERE p.clinica_id=$1 AND (EXISTS (SELECT 1 FROM presupuestos pr WHERE pr.paciente_id=p.id AND pr.estado='aceptado')
-                              OR EXISTS (SELECT 1 FROM ajustes_cuenta a WHERE a.paciente_id=p.id AND a.tipo='recargo' AND NOT a.anulado))`, [clinicaId]);
+                              OR EXISTS (SELECT 1 FROM ajustes_cuenta a WHERE a.paciente_id=p.id AND a.tipo IN ('recargo','atencion') AND NOT a.anulado))`, [clinicaId]);
   const filas = [];
   const totales = { saldo: 0, '0_30': 0, '31_60': 0, '61_90': 0, '90_mas': 0 };
   for (const p of pacs.rows) {
@@ -106,6 +106,13 @@ async function calcularComisiones(clinicaId, { odontologoId, desde, hasta }) {
        FROM sesiones_tratamiento s JOIN planes_tratamiento pt ON pt.id=s.plan_id JOIN pacientes p ON p.id=pt.paciente_id
       WHERE pt.clinica_id=$1 AND s.estado='realizada' AND s.fecha BETWEEN $2 AND $3 AND COALESCE(s.odontologo_id, pt.odontologo_id) IS NOT NULL ${filtro}
       ORDER BY s.fecha`, params);
+  // Atenciones cargadas solas al marcar "atendido" (trabajos fuera de un plan): también son producción.
+  const at = await query(
+    `SELECT a.id, a.fecha, a.odontologo_id, a.tratamiento_id, a.monto, COALESCE(tr.nombre, 'Atención') AS tratamiento, p.nombre AS paciente_nombre, p.apellido AS paciente_apellido
+       FROM ajustes_cuenta a JOIN pacientes p ON p.id=a.paciente_id LEFT JOIN tratamientos tr ON tr.id=a.tratamiento_id
+      WHERE a.clinica_id=$1 AND a.tipo='atencion' AND NOT a.anulado AND a.fecha BETWEEN $2 AND $3 AND a.odontologo_id IS NOT NULL
+        ${odontologoId ? `AND a.odontologo_id=$${params.length}` : ''}
+      ORDER BY a.fecha`, params);
   const reglas = await query('SELECT * FROM comision_reglas WHERE clinica_id=$1 AND activa', [clinicaId]);
   const lab = await query(
     `SELECT odontologo_id, COALESCE(sum(costo),0) AS costo FROM laboratorio
@@ -126,6 +133,16 @@ async function calcularComisiones(clinicaId, { odontologoId, desde, hasta }) {
     o.comisionBruta += valor * pct / 100;
     if (!regla) o.sinRegla++;
     o.detalle.push({ sesionId: s.id, fecha: s.fecha, paciente: `${s.paciente_nombre} ${s.paciente_apellido}`, plan: s.plan_nombre, valor, porcentaje: pct, comision: Math.round(valor * pct) / 100 });
+  }
+  for (const a of at.rows) {
+    const regla = reglas.rows.find((r) => r.odontologo_id === a.odontologo_id && r.tratamiento_id && r.tratamiento_id === a.tratamiento_id)
+      || reglas.rows.find((r) => r.odontologo_id === a.odontologo_id && !r.tratamiento_id);
+    const valor = Number(a.monto); const pct = regla ? Number(regla.porcentaje) : 0;
+    const o = por[a.odontologo_id] || (por[a.odontologo_id] = { odontologoId: a.odontologo_id, odontologo: nombre[a.odontologo_id], produccion: 0, comisionBruta: 0, sesiones: 0, detalle: [], reglaGeneral: reglas.rows.find((r) => r.odontologo_id === a.odontologo_id && !r.tratamiento_id) || null, sinRegla: 0 });
+    o.produccion += valor; o.sesiones++;
+    o.comisionBruta += valor * pct / 100;
+    if (!regla) o.sinRegla++;
+    o.detalle.push({ atencionId: a.id, fecha: a.fecha, paciente: `${a.paciente_nombre} ${a.paciente_apellido || ''}`.trim(), plan: `${a.tratamiento} (atención)`, tratamientoId: a.tratamiento_id, tratamiento: a.tratamiento, valor, porcentaje: pct, comision: Math.round(valor * pct) / 100 });
   }
   const resultado = Object.values(por).map((o) => {
     const costoLab = labPor[o.odontologoId] || 0;
@@ -221,7 +238,7 @@ async function verificarBloqueoContable(clinicaId, fecha) {
  *  Por tratamiento no incluye laboratorio (el trabajo de laboratorio no está atado a un tratamiento): ese costo se muestra por odontólogo y en el total. */
 async function rentabilidad(clinicaId, { desde, hasta, odontologoId }) {
   const com = await calcularComisiones(clinicaId, { odontologoId, desde, hasta });
-  const sesIds = com.odontologos.flatMap((o) => o.detalle.map((d) => d.sesionId));
+  const sesIds = com.odontologos.flatMap((o) => o.detalle.filter((d) => d.sesionId).map((d) => d.sesionId));
   const redondear = (n) => Math.round(n * 100) / 100;
   const info = sesIds.length ? (await query(
     `SELECT s.id, COALESCE(t.id,0) AS tratamiento_id, COALESCE(t.nombre, 'Sin tratamiento del catálogo') AS tratamiento,
@@ -235,7 +252,7 @@ async function rentabilidad(clinicaId, { desde, hasta, odontologoId }) {
   for (const o of com.odontologos) {
     let insumos = 0;
     for (const d of o.detalle) {
-      const x = porSes[d.sesionId]; if (!x) continue;
+      const x = d.atencionId ? { tratamiento_id: d.tratamientoId || 0, tratamiento: d.tratamiento, costo_insumos: 0, insumos_sin_precio: 0 } : porSes[d.sesionId]; if (!x) continue;
       const ci = Number(x.costo_insumos); insumos += ci; insumosSinPrecio += x.insumos_sin_precio;
       const t = trat[x.tratamiento_id] || (trat[x.tratamiento_id] = { tratamientoId: x.tratamiento_id || null, tratamiento: x.tratamiento, sesiones: 0, produccion: 0, costoInsumos: 0, comision: 0 });
       t.sesiones += 1; t.produccion += d.valor; t.costoInsumos += ci; t.comision += d.comision;

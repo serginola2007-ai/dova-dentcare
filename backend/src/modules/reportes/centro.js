@@ -243,7 +243,7 @@ const SQL_SALDOS = `SELECT pa.apellido || ', ' || pa.nombre AS paciente, COALESC
     (SELECT COALESCE(SUM(monto),0) FROM pagos WHERE paciente_id=pa.id AND estado='pagado') AS pagado,
     (SELECT COALESCE(SUM(total),0) FROM presupuestos WHERE paciente_id=pa.id AND estado='aceptado')
       - (SELECT COALESCE(SUM(monto),0) FROM pagos WHERE paciente_id=pa.id AND estado='pagado')
-      - (SELECT COALESCE(SUM(CASE WHEN tipo='recargo' THEN -monto ELSE monto END),0) FROM ajustes_cuenta WHERE paciente_id=pa.id AND NOT anulado) AS saldo,
+      - (SELECT COALESCE(SUM(CASE WHEN tipo IN ('recargo','atencion') THEN -monto ELSE monto END),0) FROM ajustes_cuenta WHERE paciente_id=pa.id AND NOT anulado) AS saldo,
     (SELECT max((fecha AT TIME ZONE 'America/Asuncion')::date) FROM pagos WHERE paciente_id=pa.id AND estado='pagado') AS ultimo_pago
   FROM pacientes pa WHERE pa.clinica_id=$1 AND pa.activo`;
 

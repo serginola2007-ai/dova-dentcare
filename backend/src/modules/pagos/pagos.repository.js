@@ -66,8 +66,8 @@ async function resumenPaciente(clinicaId, pacienteId) {
   // Ajustes de cuenta corriente (descuentos, bonificaciones, incobrables
   // restan deuda; recargos suman). Ver finanzas-ext/cuentas.service.js.
   const ajustes = await query(
-    `SELECT COALESCE(SUM(CASE WHEN tipo='recargo' THEN monto ELSE 0 END),0) AS debitos,
-            COALESCE(SUM(CASE WHEN tipo<>'recargo' THEN monto ELSE 0 END),0) AS creditos
+    `SELECT COALESCE(SUM(CASE WHEN tipo IN ('recargo','atencion') THEN monto ELSE 0 END),0) AS debitos,
+            COALESCE(SUM(CASE WHEN tipo NOT IN ('recargo','atencion') THEN monto ELSE 0 END),0) AS creditos
        FROM ajustes_cuenta WHERE clinica_id=$1 AND paciente_id=$2 AND NOT anulado`,
     [clinicaId, pacienteId]
   );

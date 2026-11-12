@@ -237,3 +237,9 @@ Local: crear `backend/.env` a partir de `backend/.env.example` con un Postgres l
 - Vistas `boca` (arcadas en elipse; en mixta la temporal va por dentro) y `filas`; animación por `left/top/transform` con `--demora`. Piezas fuera de la dentición: clase `odo-fuera`. Vista en `localStorage('dova-odonto-vista')`; dentición en `pacientes.odontograma_denticion` (0061, NULL = automática por edad) vía `PUT /odontograma/paciente/:id/denticion`.
 - Editor (`editorHtml`), historial (`GET /odontograma/paciente/:id/historial`, foto del día en el front + lista de cambios) e impresión (`DovaExt.imprimir` con SVG armado en filas). Cada pieza sigue siendo `<button class="dova-pieza pieza-<estado>" data-ver-pieza>` dentro de `.dova-odontograma-grid` (expediente y `presupuestoDesdeOdontograma` no cambian).
 - Todas las rutas validan paciente (y odontólogo) contra la clínica (`exigirPaciente`). Pruebas: `tests/odontograma.test.js` (28), `tests/ui-odontograma.js` (37).
+
+## Cargo automático al atender (0063)
+- `modules/finanzas-ext/cargo-atencion.js` (`cargarAtencion`), llamado desde `agenda.service.actualizar` al pasar a `atendido` (también lo usa el flujo `finalizado`). Inserta en `ajustes_cuenta` tipo `atencion` (al debe) con `turno_id`, `tratamiento_id` y `odontologo_id`; índice único por turno. No carga si: plan en curso con ese tratamiento, presupuesto aceptado con ese tratamiento (último año), ortodoncia con caso abierto, sin tratamiento o precio 0, período cerrado, o `clinicas.cargo_al_atender=false` (`GET|PUT /api/finanzas/cargo-atencion`, en Finanzas → Cerrar meses).
+- Todo saldo trata `('recargo','atencion')` como débito; el alta manual de ajustes NO acepta `atencion`. Producción/comisiones/rentabilidad suman las atenciones (`calcularComisiones`, detalle con `atencionId`). Portal: `cuenta()` devuelve `atenciones.pendiente/lista`.
+- Pruebas: `tests/cargo-atencion.test.js`.
+

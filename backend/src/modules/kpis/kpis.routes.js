@@ -104,7 +104,8 @@ router.get('/serie-mensual', requirePermiso('kpis.view', 'reportes.view'), h(asy
      SELECT to_char(m.mes, 'YYYY-MM') AS periodo,
        (SELECT COALESCE(sum(monto),0) FROM pagos WHERE clinica_id=$1 AND estado='pagado' AND date_trunc('month', fecha AT TIME ZONE 'America/Asuncion')::date = m.mes) AS cobranza,
        (SELECT COALESCE(sum(pt.precio*(1-COALESCE(pt.descuento,0)/100)/GREATEST(pt.sesiones_totales,1)),0) FROM sesiones_tratamiento s JOIN planes_tratamiento pt ON pt.id=s.plan_id
-          WHERE pt.clinica_id=$1 AND s.estado='realizada' AND date_trunc('month', s.fecha)::date = m.mes) AS produccion,
+          WHERE pt.clinica_id=$1 AND s.estado='realizada' AND date_trunc('month', s.fecha)::date = m.mes)
+       + (SELECT COALESCE(sum(monto),0) FROM ajustes_cuenta WHERE clinica_id=$1 AND tipo='atencion' AND NOT anulado AND date_trunc('month', fecha)::date = m.mes) AS produccion,
        (SELECT count(*) FROM pacientes WHERE clinica_id=$1 AND date_trunc('month', creado_en)::date = m.mes) AS pacientes_nuevos,
        (SELECT count(*) FROM turnos WHERE clinica_id=$1 AND estado='atendido' AND date_trunc('month', fecha)::date = m.mes) AS turnos_atendidos,
        (SELECT count(*) FROM turnos WHERE clinica_id=$1 AND estado='no_asistio' AND date_trunc('month', fecha)::date = m.mes) AS inasistencias

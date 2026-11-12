@@ -1058,3 +1058,22 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - Detalle del turno:
   - botón "WhatsApp" que abre el chat del paciente con un mensaje listo para confirmar el turno (solo para turnos por venir y con teléfono);
   - botón "Dar otro turno" en turnos atendidos, cancelados o a los que el paciente no vino, con el paciente y el odontólogo ya elegidos.
+
+## Tanda: cargo automático al atender (12/11/2026) — migración 0063
+- Al marcar "atendido" un turno con tratamiento, DOVA carga ese trabajo a la cuenta del paciente, al precio que le corresponde: su lista de precios y lo que cubre su seguro.
+  - El aviso dice cuánto se cargó.
+  - También pasa al terminar la atención desde el flujo de la sala.
+- No se carga cuando:
+  - el trabajo está en un plan de tratamiento en curso;
+  - está en un presupuesto aceptado del último año;
+  - es un control de un caso de ortodoncia abierto, porque se cobra por cuotas;
+  - el turno no tiene tratamiento o el precio es 0;
+  - la fecha está en un mes cerrado.
+- Cada turno genera un solo cargo. Si no correspondía, se anula desde la cuenta corriente y no se vuelve a generar.
+- Se puede apagar en Finanzas → Cerrar meses → "Cargo automático al atender". Viene encendido.
+- Las atenciones cuentan en:
+  - el saldo de la ficha, la cuenta corriente, "quién debe", el seguimiento y Mi día;
+  - la producción, las comisiones, la rentabilidad y la serie mensual;
+  - el portal del paciente: "Te queda por pagar" y la línea "Atenciones" en Pagos, con su botón para pagar.
+- Los turnos que ya estaban atendidos no se cargan para atrás.
+- Pruebas: `tests/cargo-atencion.test.js` (21). Siguen bien: rentabilidad, kits, ortodoncia, Mi día, informes y correcciones-sim3.

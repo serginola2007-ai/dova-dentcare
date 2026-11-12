@@ -580,7 +580,7 @@ const DovaFicha = (() => {
       root: c.querySelector('[data-prev]'), titulo: 'Aplicaciones preventivas', endpoint: '/especialidades/preventivos', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
       descripcion: 'Sellantes, flúor y profilaxis actualizan solos el próximo control.',
       puedeCrear: ed, puedeEditar: ed, puedeBorrar: ed,
-      columnas: [{ t: 'Fecha', v: (r) => fmtFecha(r.fecha) }, { t: 'Tipo', v: (r) => esc(etiqueta(r.tipo)) }, { t: 'Pieza', v: (r) => esc(r.pieza || '-') }, { t: 'Producto / lote', v: (r) => esc([r.producto, r.lote].filter(Boolean).join(' / ') || '-') }, { t: 'Retención', v: (r) => (r.estado_retencion ? badge(etiqueta(r.estado_retencion), r.estado_retencion === 'perdida' ? 'critica' : r.estado_retencion === 'parcial' ? 'atencion' : 'ok') : '-') }],
+      columnas: [{ t: 'Fecha', v: (r) => fmtFecha(r.fecha) }, { t: 'Tipo', v: (r) => esc(etiqueta(r.tipo)) + (r.tipo === 'atencion' ? ' <span class="dova-nota">automática</span>' : '') }, { t: 'Pieza', v: (r) => esc(r.pieza || '-') }, { t: 'Producto / lote', v: (r) => esc([r.producto, r.lote].filter(Boolean).join(' / ') || '-') }, { t: 'Retención', v: (r) => (r.estado_retencion ? badge(etiqueta(r.estado_retencion), r.estado_retencion === 'perdida' ? 'critica' : r.estado_retencion === 'parcial' ? 'atencion' : 'ok') : '-') }],
       campos: [
         { k: 'tipo', label: 'Tipo', tipo: 'select', req: true, opciones: OPC(['sellante', 'fluor_barniz', 'fluor_gel', 'profilaxis', 'ionomero_preventivo', 'clorhexidina', 'diamino_fluoruro_plata', 'infiltracion_resina', 'otro']) },
         { k: 'pieza', label: 'Pieza (si aplica)', tipo: 'pieza' }, { k: 'fecha', label: 'Fecha', tipo: 'fecha' }, { k: 'odontologoId', label: 'Odontólogo', tipo: 'select', opciones: ods },
@@ -899,7 +899,7 @@ const DovaFicha = (() => {
     const ed = puede('ajustes.manage');
     X.tablaCrud({
       root: c.querySelector('[data-ajustes]'), titulo: 'Ajustes de cuenta', endpoint: '/finanzas/ajustes', query: `pacienteId=${pid}`, fijos: { pacienteId: pid },
-      descripcion: 'Descuentos, bonificaciones, cortesías, incobrables y notas de crédito reducen la deuda; los recargos la aumentan. Un ajuste no se borra: se anula.',
+      descripcion: 'Descuentos, bonificaciones, cortesías, incobrables y notas de crédito reducen la deuda; los recargos la aumentan. Las atenciones se cargan solas al marcar un turno como atendido (si el trabajo no está en un plan ni en un presupuesto): si no correspondía cobrarla, anulala. Nada se borra: se anula.',
       puedeCrear: ed,
       columnas: [{ t: 'Fecha', v: (r) => fmtFecha(r.fecha) }, { t: 'Tipo', v: (r) => esc(etiqueta(r.tipo)) }, { t: 'Monto', v: (r) => fmtGs(r.monto) }, { t: 'Motivo', v: (r) => esc(r.motivo) }, { t: 'Por', v: (r) => esc(r.usuario_nombre || '-') }, { t: 'Estado', v: (r) => (r.anulado ? badge('Anulado', 'critica') : badge('Vigente', 'ok')) }],
       campos: [{ k: 'tipo', label: 'Tipo', tipo: 'select', req: true, opciones: OPC(['descuento', 'bonificacion', 'cortesia', 'incobrable', 'nota_credito', 'recargo']) }, { k: 'monto', label: 'Monto (Gs.)', tipo: 'numero', req: true, min: 1 }, { k: 'fecha', label: 'Fecha', tipo: 'fecha' }, { k: 'motivo', label: 'Motivo', req: true, ancho: 'completo' }],

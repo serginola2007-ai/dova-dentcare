@@ -182,6 +182,9 @@ async function actualizar(clinicaId, id, datos, usuario) {
           fecha: String(actual.fecha).slice(0, 10), odontologoId: actual.odontologo_id,
         }, usuario);
       } catch (e) { console.error('[recalls] no se pudo programar el recall automático:', e.message); }
+      // Cargo a la cuenta del paciente si ese trabajo no está en un plan ni en un presupuesto (nunca bloquea el cambio).
+      const cargo = await require('../finanzas-ext/cargo-atencion').cargarAtencion(clinicaId, Number(id), usuario);
+      if (turno && typeof turno === 'object') turno.cargoAtencion = cargo.monto ? { monto: cargo.monto, ajusteId: cargo.ajusteId } : null;
     }
   }
   if (Object.keys(cambiosRelevantes).length > 0) {
