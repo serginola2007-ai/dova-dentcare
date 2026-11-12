@@ -1099,3 +1099,18 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - **Un solo cálculo**: lo que se debe de atenciones sale de un único lugar (`cargo-atencion.atencionesPendientes`) y lo usan el portal, Mi pago y los avisos. Las atenciones se reducen con los pagos a cuenta y los descuentos de la cuenta.
 - **Comprobante en revisión**: si el paciente mandó un comprobante a cuenta que está en revisión, figura "En revisión" y no se le avisa.
 - Pruebas: `tests/cobranza-atenciones.test.js` (17). Siguen bien: `cobranza.test.js` (41, con WhatsApp falso), `ui-cobranza.js` (21) y `cargo-atencion.test.js` (23).
+
+## Tanda: portal del paciente más limpio y amigable (12/11/2026)
+- **Saludo cercano**: dice "Buen día / Buenas tardes / Buenas noches" con el nombre del paciente y una línea de qué hay en la página. "Cerrar sesión" queda discreto arriba a la derecha.
+- **Tres tarjetas de resumen** al entrar, cada una con su acción:
+  - **Tu próximo turno**: día, hora y profesional, con "Confirmar que voy". Si no tiene turno, "Reservar turno".
+  - **Te queda por pagar**: el monto y las cuotas vencidas en rojo, con "Ver y pagar". Si no debe nada, "Estás al día" en verde.
+  - **Tu tratamiento**: el nombre, la sesión en la que va y una barra de avance. Si no tiene tratamiento, el próximo control con "Reservar".
+- **Pestañas**: ahora son botones grandes y fáciles de tocar. En el celular, al tocar una se baja directo a esa sección.
+- **Turnos**:
+  - los próximos tienen el día destacado y "Cancelar" más discreto;
+  - de los anteriores se ven los últimos 5 con su estado (Atendido / Cancelado / No asististe) y el resto en "Ver todos".
+- **Listas y formularios**: van en tarjetas blancas, sin líneas sobrantes. Cuando no hay nada, se muestra un recuadro con el mensaje (y "Reservar un turno" donde corresponde).
+- **Tratamientos en curso**: muestran una barra de avance por sesiones.
+- **Mis datos**: nombre, cédula y nacimiento ordenados en una grilla.
+- Probado en escritorio y en celular: sin desbordes ni errores de consola. `ui-sesiones` del portal sigue en 21/21.

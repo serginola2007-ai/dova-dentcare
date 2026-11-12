@@ -657,10 +657,13 @@
   async function paginaCuenta() {
     const c = $('[data-cuenta]'); const ses = sesion();
     if (!ses) { location.replace(`ingresar.html?volver=${encodeURIComponent('mi-cuenta.html' + location.hash)}`); return; }
-    const SECC = [['turnos', 'Turnos'], ['salud', 'Mi tratamiento'], ['pagos', 'Pagos'], ['comprobantes', 'Comprobantes'], ['datos', 'Mis datos']];
-    c.innerHTML = `<div class="cuenta-cab"><div><p class="lema">Mi cuenta</p><h1>Hola, ${esc(ses.nombre)}</h1></div>
-        <div class="cuenta-cab-acc"><a class="boton" href="reservar.html">Reservar turno</a><button type="button" class="boton-texto" data-salir>Cerrar sesión</button></div></div>
-      <div class="cuenta-resumen" data-resumen></div>
+    const SECC = [['turnos', 'Turnos'], ['salud', 'Tratamiento'], ['pagos', 'Pagos'], ['comprobantes', 'Comprobantes'], ['datos', 'Mis datos']];
+    const h = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Asuncion' }).format(new Date()));
+    const saludo = h < 12 ? 'Buen día' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+    c.innerHTML = `<div class="cuenta-cab"><div><p class="cuenta-saludo">${saludo},</p><h1>${esc(String(ses.nombre || '').split(' ')[0] || 'bienvenido')}</h1>
+        <p class="cuenta-sub">Acá tenés tus turnos, tu tratamiento y tus pagos.</p></div>
+        <button type="button" class="boton-texto cuenta-salir" data-salir>Cerrar sesión</button></div>
+      <div class="cuenta-inicio" data-resumen></div>
       <nav class="cuenta-tabs" aria-label="Mi cuenta">${SECC.map(([k, t]) => `<a href="#${k}" data-tab="${k}">${t}</a>`).join('')}</nav>
       <div class="cuenta-panel" data-panel aria-live="polite"></div>`;
     $('[data-salir]', c).addEventListener('click', async () => { try { await cuentaApi('/salir', { method: 'POST' }); } catch (_e) { /* igual se cierra acá */ } cerrarSesion(); location.href = 'index.html'; });
@@ -672,37 +675,80 @@
       try { await ({ turnos: panelTurnos, salud: panelSalud, pagos: panelPagos, comprobantes: panelComprobantes, datos: panelDatos })[sec](p); }
       catch (e) { p.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
     };
-    window.addEventListener('hashchange', mostrar);
+    // En el celular, al tocar una pestaña (o "Ver y pagar") se baja hasta la sección elegida.
+    window.addEventListener('hashchange', async () => { await mostrar(); if (window.innerWidth <= 760) { const n = $('.cuenta-tabs', c); if (n) n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
     resumenCuenta();
     mostrar();
   }
+  // Íconos de línea (sin emojis) para las tarjetas del resumen.
+  const ICO = {
+    turno: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+    pago: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>',
+    trat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l4 1.5L12 4l2 1.5L18 4l1.5 5-2.5 6-1.5 5h-2l-1.5-5-1.5 5h-2L7 15 4.5 9z"/></svg>',
+  };
+  const tarjeta = (ico, etiqueta, cuerpo, pie, clase = '') => `<article class="tarjeta-res ${clase}"><div class="tr-cab"><span class="tr-ico">${ICO[ico]}</span><span class="tr-et">${etiqueta}</span></div><div class="tr-cuerpo">${cuerpo}</div>${pie ? `<div class="tr-pie">${pie}</div>` : ''}</article>`;
   async function resumenCuenta() {
     const r = $('[data-resumen]'); if (!r) return;
-    try {
-      const e = await cuentaApi('/estado');
-      if (e.sinVerificar) { r.innerHTML = `<div class="cuenta-verificar"><span>Cuenta lista</span><p>${esc(SIN_VERIFICAR)}</p></div>`; return; }
-      r.innerHTML = `<div><span>Te queda por pagar</span><strong>${gs(e.resumen.pendiente)}</strong></div>
-        <div><span>Cuotas vencidas</span><strong class="${e.resumen.cuotasVencidas ? 'alerta' : ''}">${e.resumen.cuotasVencidas}</strong></div>
-        ${e.resumen.enRevision ? `<div><span>Pagos en revisión</span><strong>${gs(e.resumen.enRevision)}</strong></div>` : ''}`;
-    } catch (_e) { r.innerHTML = ''; }
+    const [t, e, d] = await Promise.all([cuentaApi('/turnos').catch(() => null), cuentaApi('/estado').catch(() => null), cuentaApi('/clinico').catch(() => null)]);
+    const tarjetas = [];
+    // Próximo turno
+    const prox = t && t.proximos[0];
+    tarjetas.push(prox
+      ? tarjeta('turno', 'Tu próximo turno', `<strong class="tr-grande">${esc(mayus(fechaLarga(prox.fecha)))}</strong><span>${esc(prox.hora)} h${prox.odontologo ? ` · ${esc(prox.odontologo)}` : ''}</span>`,
+        prox.confirmado ? '<span class="estado ok">Confirmaste que venís</span>' : `<button type="button" class="boton boton-chico" data-conf-res="${prox.id}">Confirmar que voy</button>`)
+      : tarjeta('turno', 'Tu próximo turno', '<strong class="tr-grande">No tenés turnos reservados</strong><span>Elegí el día y el horario que te queden bien.</span>', '<a class="boton boton-chico" href="reservar.html">Reservar turno</a>'));
+    // Pagos
+    if (e && e.sinVerificar) tarjetas.push(tarjeta('pago', 'Tus pagos', `<span>${esc(SIN_VERIFICAR)}</span>`, ''));
+    else if (e) {
+      const debe = e.resumen.pendiente > 0;
+      tarjetas.push(debe
+        ? tarjeta('pago', 'Te queda por pagar', `<strong class="tr-grande">${gs(e.resumen.pendiente)}</strong>${e.resumen.cuotasVencidas ? `<span class="tr-alerta">${e.resumen.cuotasVencidas} cuota${e.resumen.cuotasVencidas === 1 ? '' : 's'} vencida${e.resumen.cuotasVencidas === 1 ? '' : 's'}</span>` : '<span>Podés pagar desde acá o en la clínica.</span>'}${e.resumen.enRevision ? `<span>${gs(e.resumen.enRevision)} en revisión</span>` : ''}`,
+          '<a class="boton boton-chico boton-claro" href="#pagos">Ver y pagar</a>', e.resumen.cuotasVencidas ? 'alerta' : '')
+        : tarjeta('pago', 'Tus pagos', `<strong class="tr-grande">Estás al día</strong><span>No tenés pagos pendientes.${e.resumen.enRevision ? ` ${gs(e.resumen.enRevision)} en revisión.` : ''}</span>`, '<a class="tr-link" href="#comprobantes">Ver mis comprobantes</a>', 'ok'));
+    }
+    // Tratamiento
+    if (d) {
+      const act = d.tratamientos.filter((x) => x.estado !== 'finalizado');
+      const ctrl = d.controles[0];
+      if (act.length) {
+        const x = act[0]; const tot = Number(x.sesiones_totales) || 0; const hechas = Number(x.sesiones_realizadas) || 0;
+        tarjetas.push(tarjeta('trat', 'Tu tratamiento', `<strong class="tr-grande">${esc(x.nombre)}</strong>${tot > 1 ? `<span>Sesión ${hechas} de ${tot}</span><span class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${hechas}"><span style="width:${Math.round((hechas / tot) * 100)}%"></span></span>` : `<span>${esc(EST_PLAN[x.estado] || '')}</span>`}${act.length > 1 ? `<span>y ${act.length - 1} más</span>` : ''}`,
+          '<a class="tr-link" href="#salud">Ver mi tratamiento</a>'));
+      } else if (ctrl) {
+        tarjetas.push(tarjeta('trat', 'Tu próximo control', `<strong class="tr-grande">${esc(ctrl.nombre)}</strong><span${ctrl.vencido ? ' class="tr-alerta"' : ''}>${ctrl.vencido ? `Te correspondía el ${esc(fechaCorta(ctrl.fecha))}` : `Para el ${esc(fechaCorta(ctrl.fecha))}`}</span>`, '<a class="boton boton-chico boton-claro" href="reservar.html">Reservar</a>'));
+      } else {
+        tarjetas.push(tarjeta('trat', 'Tu tratamiento', '<strong class="tr-grande">Nada en curso</strong><span>Cuando empieces un tratamiento, vas a ver acá cómo avanza.</span>', '<a class="tr-link" href="#salud">Ver recetas y estudios</a>'));
+      }
+    }
+    r.innerHTML = tarjetas.join('');
+    $$('[data-conf-res]', r).forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try { await cuentaApi(`/turnos/${b.dataset.confRes}/confirmar`, { method: 'POST' }); aviso('¡Gracias! Confirmaste tu asistencia.'); resumenCuenta(); if (location.hash === '' || location.hash === '#turnos') window.dispatchEvent(new HashChangeEvent('hashchange')); } catch (ex) { aviso(ex.message); b.disabled = false; }
+    }));
   }
 
   async function panelTurnos(p) {
     const t = await cuentaApi('/turnos');
-    const tarjeta = (x) => `<li class="turno-item">
-        <div><strong>${esc(mayus(fechaLarga(x.fecha)))} a las ${esc(x.hora)}</strong><br><span class="ayuda">${esc(x.motivo || 'Consulta')} con ${esc(x.odontologo)}</span></div>
+    const MES = (f) => new Intl.DateTimeFormat('es-PY', { month: 'short', timeZone: 'UTC' }).format(new Date(`${String(f).slice(0, 10)}T12:00:00Z`)).replace('.', '');
+    const DIA = (f) => Number(String(f).slice(8, 10));
+    const tarjeta = (x) => `<li class="turno-item turno-prox">
+        <div class="turno-fecha" aria-hidden="true"><strong>${DIA(x.fecha)}</strong><span>${esc(MES(x.fecha))}</span></div>
+        <div class="turno-info"><strong>${esc(mayus(fechaLarga(x.fecha)))}, ${esc(x.hora)} h</strong><span class="ayuda">${esc(x.motivo || 'Consulta')}${x.odontologo ? ` con ${esc(x.odontologo)}` : ''}</span></div>
         <div class="turno-acc">${x.confirmado ? '<span class="estado ok">Confirmado</span>' : `<button type="button" class="boton boton-chico" data-conf="${x.id}">Confirmar que voy</button>`}
-          ${x.puedeCancelar ? `<button type="button" class="boton boton-chico boton-peligro" data-canc="${x.id}">Cancelar</button>` : ''}</div></li>`;
-    const ESTADO_T = { atendido: 'Atendido', cancelado: 'Cancelado', no_asistio: 'No asistió', reprogramado: 'Reprogramado' };
-    p.innerHTML = `<h2>Próximos turnos</h2>
-      ${t.proximos.length ? `<ul class="lista-cuenta">${t.proximos.map(tarjeta).join('')}</ul>` : '<p class="vacio">No tenés turnos próximos. <a href="reservar.html">Reservá uno</a>.</p>'}
-      ${t.proximos.some((x) => !x.puedeCancelar) ? `<p class="ayuda">Online se puede cancelar hasta ${t.cancelacionHoras} h antes. Si falta menos, escribinos.</p>` : ''}
-      <h2 style="margin-top:32px">Anteriores</h2>
-      ${t.anteriores.length ? `<ul class="lista-cuenta lista-simple">${t.anteriores.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.hora)}</span><span>${esc(x.motivo || 'Consulta')}</span><span class="ayuda">${esc(ESTADO_T[x.estado] || (x.vigente ? '' : 'Pasado'))}</span></li>`).join('')}</ul>` : '<p class="vacio">Todavía no hay turnos anteriores.</p>'}`;
-    $$('[data-conf]', p).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.conf}/confirmar`, { method: 'POST' }); aviso('¡Gracias! Confirmaste tu asistencia.'); panelTurnos(p); } catch (e) { aviso(e.message); b.disabled = false; } }));
+          ${x.puedeCancelar ? `<button type="button" class="boton-texto boton-texto-peligro" data-canc="${x.id}">Cancelar</button>` : ''}</div></li>`;
+    const ESTADO_T = { atendido: ['Atendido', 'ok'], cancelado: ['Cancelado', 'gris'], no_asistio: ['No asististe', 'gris'], reprogramado: ['Reprogramado', 'gris'] };
+    const fila = (x) => { const e = ESTADO_T[x.estado] || [x.vigente ? '' : 'Pasado', 'gris']; return `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.hora)}</span><span>${esc(x.motivo || 'Consulta')}</span>${e[0] ? `<span class="estado ${e[1]}">${esc(e[0])}</span>` : ''}</li>`; };
+    const VISIBLES = 5;
+    p.innerHTML = `<div class="panel-cab"><h2>Próximos turnos</h2><a class="boton boton-chico" href="reservar.html">Reservar turno</a></div>
+      ${t.proximos.length ? `<ul class="lista-cuenta">${t.proximos.map(tarjeta).join('')}</ul>` : '<div class="vacio vacio-caja"><p>No tenés turnos reservados.</p><a class="boton boton-chico" href="reservar.html">Reservar un turno</a></div>'}
+      ${t.proximos.some((x) => !x.puedeCancelar) ? `<p class="ayuda" style="margin-top:8px">Online se puede cancelar hasta ${t.cancelacionHoras} h antes. Si falta menos, escribinos.</p>` : ''}
+      <h2 class="panel-sub">Turnos anteriores</h2>
+      ${t.anteriores.length ? `<ul class="lista-cuenta lista-simple">${t.anteriores.slice(0, VISIBLES).map(fila).join('')}</ul>
+        ${t.anteriores.length > VISIBLES ? `<details class="cuotas-mas"><summary>Ver todos (${t.anteriores.length})</summary><ul class="lista-cuenta lista-simple">${t.anteriores.slice(VISIBLES).map(fila).join('')}</ul></details>` : ''}` : '<p class="vacio">Todavía no hay turnos anteriores.</p>'}`;
+    $$('[data-conf]', p).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.conf}/confirmar`, { method: 'POST' }); aviso('¡Gracias! Confirmaste tu asistencia.'); panelTurnos(p); resumenCuenta(); } catch (e) { aviso(e.message); b.disabled = false; } }));
     $$('[data-canc]', p).forEach((b) => b.addEventListener('click', async () => {
       if (b.dataset.seguro !== '1') { b.dataset.seguro = '1'; b.textContent = 'Tocá de nuevo para cancelar'; return; }
-      b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.canc}/cancelar`, { method: 'POST' }); aviso('Cancelaste el turno.'); panelTurnos(p); } catch (e) { aviso(e.message); b.disabled = false; }
+      b.disabled = true; try { await cuentaApi(`/turnos/${b.dataset.canc}/cancelar`, { method: 'POST' }); aviso('Cancelaste el turno.'); panelTurnos(p); resumenCuenta(); } catch (e) { aviso(e.message); b.disabled = false; }
     }));
   }
 
@@ -735,7 +781,7 @@
         : '<p class="vacio">No tenés pagos pendientes.</p>'}
       ${!e.pagosActivos ? '<p class="ayuda">Los pagos online no están activos. Podés pagar en la clínica.</p>' : `<p style="margin-top:12px"><button type="button" class="boton-texto" data-pagar="libre">Hacer otro pago (seña o a cuenta)</button></p>`}
       <div data-form-pago></div>
-      <h2 style="margin-top:32px">Pagos que enviaste</h2>
+      <h2 class="panel-sub">Pagos que enviaste</h2>
       ${e.enviados.length ? `<ul class="lista-cuenta lista-simple">${e.enviados.map((x) => `<li><span>${esc(fechaCorta(x.creado_en))}</span><span><strong>${gs(x.monto)}</strong> · ${x.metodo === 'qr' ? 'QR' : 'Transferencia'}</span>
           <span class="estado ${ESTADO_PAGO[x.estado][1]}">${ESTADO_PAGO[x.estado][0]}</span>${x.motivo_rechazo ? `<span class="motivo">Motivo: ${esc(x.motivo_rechazo)}</span>` : ''}</li>`).join('')}</ul>`
         : '<p class="vacio">Todavía no enviaste pagos desde la web.</p>'}`;
@@ -971,17 +1017,18 @@
     const activos = d.tratamientos.filter((t) => t.estado !== 'finalizado'); const terminados = d.tratamientos.filter((t) => t.estado === 'finalizado');
     const trat = (t) => `<li class="turno-item"><div><strong>${esc(t.nombre)}</strong>${t.pieza ? ` <span class="ayuda">· pieza ${esc(t.pieza)}</span>` : ''}<br>
         <span class="ayuda">${esc(EST_PLAN[t.estado] || t.estado)}${t.odontologo ? ` · ${esc(t.odontologo)}` : ''}${t.sesiones_totales > 1 ? ` · sesión ${t.sesiones_realizadas} de ${t.sesiones_totales}` : ''}</span>
+        ${t.sesiones_totales > 1 && t.estado !== 'finalizado' ? `<span class="progreso" aria-hidden="true"><span style="width:${Math.round((Number(t.sesiones_realizadas) / Number(t.sesiones_totales)) * 100)}%"></span></span>` : ''}
         ${t.etapas.length ? `<ol class="etapas-portal">${t.etapas.map((e) => `<li class="${e.estado}"><span aria-hidden="true">${EST_ETAPA[e.estado] || '○'}</span> ${esc(e.nombre)}</li>`).join('')}</ol>` : ''}</div></li>`;
     p.innerHTML = `<h2>Próximos controles</h2>
-      ${d.controles.length ? `<ul class="lista-cuenta lista-simple">${d.controles.map((c) => `<li><span>${esc(c.nombre)}</span><span>${c.vencido ? `<strong class="alerta">Te correspondía el ${esc(fechaCorta(c.fecha))}</strong>` : esc(fechaCorta(c.fecha))}</span><span><a class="boton-texto" href="reservar.html">Reservar</a></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés controles programados.</p>'}
-      <h2 style="margin-top:32px">Tratamientos en curso</h2>
+      ${d.controles.length ? `<ul class="lista-cuenta lista-simple">${d.controles.map((c) => `<li><span>${esc(c.nombre)}</span><span>${c.vencido ? `<strong class="alerta">Te correspondía el ${esc(fechaCorta(c.fecha))}</strong>` : esc(fechaCorta(c.fecha))}</span><span><a class="boton-texto" href="reservar.html">Reservar</a></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés controles programados por ahora.</p>'}
+      <h2 class="panel-sub">Tratamientos en curso</h2>
       ${activos.length ? `<ul class="lista-cuenta">${activos.map(trat).join('')}</ul>` : '<p class="vacio">No tenés tratamientos en curso.</p>'}
       ${terminados.length ? `<details style="margin-top:12px"><summary>Tratamientos terminados (${terminados.length})</summary><ul class="lista-cuenta">${terminados.map(trat).join('')}</ul></details>` : ''}
-      <h2 style="margin-top:32px">Presupuestos</h2>
+      <h2 class="panel-sub">Presupuestos</h2>
       ${d.presupuestos.length ? `<ul class="lista-cuenta lista-simple">${d.presupuestos.map((x) => `<li><span>${esc(fechaCorta(x.fecha))}</span><span><strong>${gs(x.total)}</strong> · ${esc(EST_PRES[x.estado] || x.estado)}</span><span class="docs"><button type="button" class="boton-texto" data-pres="${x.id}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés presupuestos.</p>'}
-      <h2 style="margin-top:32px">Recetas</h2>
+      <h2 class="panel-sub">Recetas</h2>
       ${d.recetas.length ? `<ul class="lista-cuenta lista-simple">${d.recetas.map((r) => `<li><span>${esc(fechaCorta(r.fecha))}</span><span>${esc(r.items.map((i) => [i.medicamento, i.dosis, i.frecuencia].filter(Boolean).join(' ')).join(' · ') || 'Indicaciones')}${r.odontologo ? ` <span class="ayuda">· ${esc(r.odontologo)}</span>` : ''}</span><span class="docs"><button type="button" class="boton-texto" data-receta="${r.id}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">No tenés recetas.</p>'}
-      <h2 style="margin-top:32px">Estudios</h2>
+      <h2 class="panel-sub">Estudios</h2>
       ${d.estudios.length ? `<ul class="lista-cuenta lista-simple">${d.estudios.map((e) => `<li><span>${e.fecha ? esc(fechaCorta(e.fecha)) : ''}</span><span>${esc(TIPO_EST[e.tipo] || 'Estudio')}${e.pieza ? ` · pieza ${esc(e.pieza)}` : ''}${e.descripcion ? ` <span class="ayuda">· ${esc(e.descripcion)}</span>` : ''}</span><span class="docs"><button type="button" class="boton-texto" data-estudio="${e.id}" data-ext="${e.mime === 'application/pdf' ? 'pdf' : e.mime === 'image/png' ? 'png' : 'jpg'}">Descargar</button></span></li>`).join('')}</ul>` : '<p class="vacio">Tu odontólogo todavía no compartió estudios con vos.</p>'}`;
     $$('[data-pres]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/presupuestos/${b.dataset.pres}`, `presupuesto-${b.dataset.pres}.pdf`)));
     $$('[data-receta]', p).forEach((b) => b.addEventListener('click', () => bajarPdf(`/recetas/${b.dataset.receta}`, `receta-${b.dataset.receta}.pdf`)));
