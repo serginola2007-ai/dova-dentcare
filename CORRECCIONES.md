@@ -1114,3 +1114,6 @@ Sin cambios para el usuario: todo funciona igual. Cambia cómo está ordenado el
 - **Tratamientos en curso**: muestran una barra de avance por sesiones.
 - **Mis datos**: nombre, cédula y nacimiento ordenados en una grilla.
 - Probado en escritorio y en celular: sin desbordes ni errores de consola. `ui-sesiones` del portal sigue en 21/21.
+
+## Tanda: textos de estado en la ficha (12/11/2026)
+- En el Resumen de la ficha, los planes de tratamiento mostraban el estado en crudo ("en_proceso"): ahora dice "En curso". Lo mismo con el estado de los presupuestos ("Aceptado", "Enviado"…).

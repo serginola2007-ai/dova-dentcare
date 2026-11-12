@@ -230,7 +230,7 @@ const DovaFichaPaciente = (() => {
           <tbody>
             ${(planes || []).map((p) => `
               <tr>
-                <td>${esc(p.nombre)}</td><td>${p.sesiones_realizadas}/${p.sesiones_totales}</td><td>${esc(p.estado)}</td>
+                <td>${esc(p.nombre)}</td><td>${p.sesiones_realizadas}/${p.sesiones_totales}</td><td>${esc(window.DovaExt ? DovaExt.etiqueta(p.estado) : p.estado)}</td>
                 <td><button class="dova-btn-link" data-ver-plan="${p.id}">Ver etapas</button></td>
               </tr>
             `).join('') || '<tr><td colspan="4">Este paciente todavía no tiene planes de tratamiento.</td></tr>'}
@@ -277,7 +277,7 @@ const DovaFichaPaciente = (() => {
           <tbody>
             ${(presupuestos || []).map((p) => `
               <tr>
-                <td>${fmtFecha(p.fecha)}</td><td>${fmtGs(p.total)}</td><td>${esc(p.estado)}</td>
+                <td>${fmtFecha(p.fecha)}</td><td>${fmtGs(p.total)}</td><td>${esc(window.DovaExt ? DovaExt.etiqueta(p.estado) : p.estado)}</td>
                 <td><button class="dova-btn-link" data-descargar-presupuesto="${p.id}">Descargar PDF</button></td>
               </tr>
             `).join('') || '<tr><td colspan="4">Sin presupuestos.</td></tr>'}
